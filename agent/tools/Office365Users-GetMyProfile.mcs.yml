@@ -1,0 +1,23 @@
+mcs.metadata:
+  componentName: Office 365 Users - Get my profile
+kind: TaskDialog
+modelDisplayName: Get my profile
+modelDescription: Returns the signed-in user's profile (display name, mail, userPrincipalName, job title). Call once at the start of a digest to know who the user is.
+outputs:
+  - propertyName: displayName
+
+  - propertyName: mail
+
+  - propertyName: userPrincipalName
+
+  - propertyName: jobTitle
+
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: fc_DailyDigest.shared_office365users.shared-office365users-8e2f4b6a-1c3d-4a5e-b7f9-0d2c4e6a8b1f
+  connectionProperties:
+    mode: Invoker
+
+  operationId: MyProfile_V2
+
+outputMode: All

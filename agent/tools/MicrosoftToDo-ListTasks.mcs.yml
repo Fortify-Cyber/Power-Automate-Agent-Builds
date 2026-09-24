@@ -1,0 +1,14 @@
+mcs.metadata:
+  componentName: Microsoft To Do - List tasks in a to-do list
+kind: TaskDialog
+modelDisplayName: List tasks in a to-do list
+modelDescription: Lists tasks in one Microsoft To Do list, including title, status, importance, dueDateTime, and reminderDateTime. Use $top 200. Keep only tasks whose status is not completed.
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: fc_DailyDigest.shared_todo.shared-todo-3a7c9e1b-5d2f-4b8a-a6c4-9e1f3b5d7a2c
+  connectionProperties:
+    mode: Invoker
+
+  operationId: ListToDosByFolderV2
+
+outputMode: All

@@ -1,0 +1,26 @@
+mcs.metadata:
+  componentName: Daily Digest
+  description: Reviews the signed-in user's inbox, To Do, and Planner tasks and produces a prioritized daily briefing of what needs their attention.
+kind: GptComponentMetadata
+displayName: Daily Digest
+# Instructions are maintained in agent/instructions.md and injected at build time.
+instructions: ""
+conversationStarters:
+  - title: Run my daily digest
+    text: Run my daily digest
+
+  - title: What needs a reply?
+    text: Which emails are waiting on my reply?
+
+  - title: What's overdue?
+    text: What tasks are overdue or due today?
+
+  - title: Digest since Friday
+    text: Run my daily digest for everything since Friday
+
+gptCapabilities:
+  webBrowsing: false
+
+aISettings:
+  model:
+    modelNameHint: GPT5Chat

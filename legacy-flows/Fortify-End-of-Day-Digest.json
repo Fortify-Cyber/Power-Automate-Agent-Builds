@@ -1,0 +1,321 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "fc_sharedoffice365_dailydigest"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Weekday_end_of_day": {
+          "recurrence": {
+            "frequency": "Week",
+            "interval": 1,
+            "timeZone": "Eastern Standard Time",
+            "schedule": {
+              "weekDays": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday"
+              ],
+              "hours": [
+                "17"
+              ],
+              "minutes": [
+                0
+              ]
+            }
+          },
+          "evaluatedRecurrence": {
+            "frequency": "Week",
+            "interval": 1,
+            "schedule": {
+              "hours": [
+                "17"
+              ],
+              "minutes": [
+                0
+              ],
+              "weekDays": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday"
+              ]
+            },
+            "timeZone": "Eastern Standard Time"
+          },
+          "metadata": {
+            "operationMetadataId": "abefddae-fc49-4270-8005-94c6f0c611a5"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Cutoff_time": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "64c0247e-7063-446b-9af7-e7887db4cb7e"
+          },
+          "type": "Compose",
+          "inputs": "@addHours(utcNow(), mul(-1, 12))"
+        },
+        "Get_inbox_mail": {
+          "runAfter": {
+            "Cutoff_time": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7a1e4d84-90da-4b5f-b921-0c36aca8674b"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "GetEmailsV3",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "folderPath": "Inbox",
+              "fetchOnlyUnread": false,
+              "includeAttachments": false,
+              "top": 150,
+              "importance": "Any"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_sent_mail": {
+          "runAfter": {
+            "Get_inbox_mail": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "955441f4-1d33-4b06-baa3-ec36a9ae9d65"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "GetEmailsV3",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "folderPath": "Sent Items",
+              "fetchOnlyUnread": false,
+              "includeAttachments": false,
+              "top": 150,
+              "importance": "Any"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Replied_conversations": {
+          "runAfter": {
+            "Get_sent_mail": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "aa7ef2e4-0fad-4d42-bcdb-5a9b808fd367"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@outputs('Get_sent_mail')?['body/value']",
+            "select": "@item()?['conversationId']"
+          }
+        },
+        "Needs_action": {
+          "runAfter": {
+            "Replied_conversations": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "60a49300-7bea-4099-83a9-331191a80cca"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('Get_inbox_mail')?['body/value']",
+            "where": "@and(greaterOrEquals(ticks(item()?['receivedDateTime']), ticks(outputs('Cutoff_time'))), not(contains(body('Replied_conversations'), item()?['conversationId'])))"
+          }
+        },
+        "Score_items": {
+          "runAfter": {
+            "Needs_action": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "48029910-a5b1-4188-a24c-8ad3235e7e75"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Needs_action')",
+            "select": {
+              "Rank": "@if(or(equals(toLower(coalesce(item()?['importance'], 'normal')), 'high'), greater(length(intersection(split(toLower('urgent,asap,eod,today,deadline,signature,execute,wire'), ','), split(toLower(coalesce(item()?['subject'], '')), ' '))), 0)), 1, if(contains(toLower(coalesce(item()?['toRecipients'], '')), toLower('mgalbo@fortifycyber.com')), 2, 3))",
+              "From": "@coalesce(item()?['from'], '')",
+              "Subject": "@coalesce(item()?['subject'], '(no subject)')",
+              "Received": "@coalesce(item()?['receivedDateTime'], '')",
+              "Preview": "@if(greater(length(coalesce(item()?['bodyPreview'], '')), 220), concat(substring(coalesce(item()?['bodyPreview'], ''), 0, 220), '...'), coalesce(item()?['bodyPreview'], ''))",
+              "Link": "@coalesce(item()?['webLink'], '')"
+            }
+          }
+        },
+        "High_priority": {
+          "runAfter": {
+            "Score_items": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ef2f6145-4dcc-4b77-94fd-cfddd02222f4"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Score_items')",
+            "where": "@equals(item()?['Rank'], 1)"
+          }
+        },
+        "Addressed_to_you": {
+          "runAfter": {
+            "High_priority": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a59607ce-bceb-4e50-934d-1ff33c0e086d"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Score_items')",
+            "where": "@equals(item()?['Rank'], 2)"
+          }
+        },
+        "For_awareness": {
+          "runAfter": {
+            "Addressed_to_you": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "caa96596-75d2-4c80-8d30-5efe585460b2"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Score_items')",
+            "where": "@equals(item()?['Rank'], 3)"
+          }
+        },
+        "Build_digest_html": {
+          "runAfter": {
+            "Awareness_html": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "65617cbc-1b64-4cea-b7de-4ee73d863612"
+          },
+          "type": "Compose",
+          "inputs": "@concat('<div style=\"font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;color:#1a1a1a;max-width:760px\"><h2 style=\"margin:0 0 4px 0;font-size:20px\">End of day summary</h2><p style=\"margin:0 0 18px 0;color:#666;font-size:13px\">', formatDateTime(utcNow(), 'dddd, MMMM d, yyyy'), ' &middot; ', string(length(body('Score_items'))), ' items from the last 12 hours</p>', if(equals(length(body('High_priority')), 0), '', concat('<h3 style=\"font-size:15px;margin:18px 0 6px 0;color:#b3261e\">Priority &mdash; ', string(length(body('High_priority'))), '</h3>', join(body('High_html'), ''))), if(equals(length(body('Addressed_to_you')), 0), '', concat('<h3 style=\"font-size:15px;margin:18px 0 6px 0;color:#1a56a0\">Addressed to you &mdash; ', string(length(body('Addressed_to_you'))), '</h3>', join(body('To_you_html'), ''))), if(equals(length(body('For_awareness')), 0), '', concat('<h3 style=\"font-size:15px;margin:18px 0 6px 0;color:#5a5a5a\">For awareness &mdash; ', string(length(body('For_awareness'))), '</h3>', join(body('Awareness_html'), ''))), if(equals(length(body('Score_items')), 0), '<p style=\"color:#666\">Nothing needs a response. Inbox is clear.</p>', ''), '<p style=\"margin-top:22px;color:#999;font-size:11px;border-top:1px solid #eee;padding-top:10px\">Fortify Daily Digest. Threads you already replied to are excluded.</p></div>')"
+        },
+        "Send_digest": {
+          "runAfter": {
+            "Build_digest_html": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d0f689dd-962d-4372-b4c0-f675cf335a26"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/To": "mgalbo@fortifycyber.com",
+              "emailMessage/Subject": "@concat('End of day summary - ', string(length(body('Score_items'))), ' items - ', formatDateTime(utcNow(), 'MMM d'))",
+              "emailMessage/Body": "@outputs('Build_digest_html')",
+              "emailMessage/Importance": "Normal"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "High_html": {
+          "runAfter": {
+            "For_awareness": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cea89f02-788d-4031-a1f6-26c98f92442e"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('High_priority')",
+            "select": "@concat('<div style=\"padding:10px 12px;margin-bottom:6px;border-left:3px solid #b3261e;background:#fbf1f0\"><div style=\"font-weight:600\"><a href=\"', item()?['Link'], '\" style=\"color:#1a1a1a;text-decoration:none\">', item()?['Subject'], '</a></div><div style=\"color:#666;font-size:12px;margin:2px 0 4px 0\">', item()?['From'], '</div><div style=\"color:#444;font-size:13px\">', item()?['Preview'], '</div></div>')"
+          }
+        },
+        "To_you_html": {
+          "runAfter": {
+            "High_html": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6c2522f8-b340-4cf9-bf9e-d1715eb2dcfb"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Addressed_to_you')",
+            "select": "@concat('<div style=\"padding:10px 12px;margin-bottom:6px;border-left:3px solid #1a56a0;background:#f2f6fc\"><div style=\"font-weight:600\"><a href=\"', item()?['Link'], '\" style=\"color:#1a1a1a;text-decoration:none\">', item()?['Subject'], '</a></div><div style=\"color:#666;font-size:12px;margin:2px 0 4px 0\">', item()?['From'], '</div><div style=\"color:#444;font-size:13px\">', item()?['Preview'], '</div></div>')"
+          }
+        },
+        "Awareness_html": {
+          "runAfter": {
+            "To_you_html": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "212371f7-4c76-4715-a6bf-d83bd25bfdbc"
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('For_awareness')",
+            "select": "@concat('<div style=\"padding:6px 12px;border-left:3px solid #d0d0d0\"><a href=\"', item()?['Link'], '\" style=\"color:#1a1a1a\">', item()?['Subject'], '</a> <span style=\"color:#888;font-size:12px\">&mdash; ', item()?['From'], '</span></div>')"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

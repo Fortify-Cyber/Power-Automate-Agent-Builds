@@ -1,0 +1,211 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_todo": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "name": "shared-todo-d24301b8-b2f9-4a44-8e6d-a17e2bc89ce9",
+          "connectionReferenceLogicalName": "new_sharedtodo_37220"
+        },
+        "api": {
+          "name": "shared_todo"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "name": "shared-office365-a0a382ef-d8cd-4ded-87bc-89fe3d3b2b1a",
+          "connectionReferenceLogicalName": "new_sharedoffice365_07bb8"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "Eastern Standard Time",
+            "schedule": {
+              "hours": [
+                "7"
+              ],
+              "minutes": [
+                0
+              ]
+            }
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Initialize_variable": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AllTasks",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "List_all_to-do_lists_(V2)": {
+          "runAfter": {
+            "Initialize_variable": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_todo",
+              "operationId": "GetAllTodoListsV2",
+              "connectionName": "shared_todo"
+            }
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@body('Filter_array_1')",
+          "actions": {
+            "List_to-do's_by_folder_(V2)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "folderId": "@items('Apply_to_each')?['id']",
+                  "$top": 999
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_todo",
+                  "operationId": "ListToDosByFolderV2",
+                  "connectionName": "shared_todo"
+                }
+              }
+            },
+            "Select": {
+              "runAfter": {
+                "List_to-do's_by_folder_(V2)": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Select",
+              "inputs": {
+                "from": "@body('List_to-do''s_by_folder_(V2)')",
+                "select": {
+                  "List": "@{items('Apply_to_each')?['displayName']}",
+                  "Owner": "@{if(items('Apply_to_each')?['isOwner'], 'Me', 'Shared with me')}",
+                  "Task": "@{item()?['title']}",
+                  "Status": "@{item()?['status']}",
+                  "Importance": "@{item()?['importance']}",
+                  "Due Date": "@{if(equals(string(item()?['dueDateTime']),''),'',formatDateTime(item()?['dueDateTime']?['dateTime'],'MMM d, yyyy'))}",
+                  "Reminder": "@{if(equals(string(item()?['reminderDateTime']),''),'',formatDateTime(item()?['reminderDateTime']?['dateTime'],'MMM d, yyyy h:mm tt'))}",
+                  "Created": "@{formatDateTime(item()?['createdDateTime'],'MMM d, yyyy')}",
+                  "Notes": "@{item()?['body']?['content']}"
+                }
+              }
+            },
+            "Apply_to_each_1": {
+              "foreach": "@body('Select')",
+              "actions": {
+                "Append_to_array_variable": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "AllTasks",
+                    "value": "@items('Apply_to_each_1')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Filter_array_1": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "Filter_array": {
+          "runAfter": {
+            "Apply_to_each": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@variables('AllTasks')",
+            "where": "@not(equals(item()?['Status'],'completed'))"
+          }
+        },
+        "Create_HTML_table": {
+          "runAfter": {
+            "Filter_array": [
+              "Succeeded"
+            ]
+          },
+          "type": "Table",
+          "inputs": {
+            "from": "@body('Filter_array')",
+            "format": "HTML"
+          }
+        },
+        "Send_an_email_(V2)": {
+          "runAfter": {
+            "Create_HTML_table": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "emailMessage/To": "<personal-address-redacted>;mgalbo@fortifycyber.com",
+              "emailMessage/Subject": "Fortify Daily Tasks - @{formatDateTime(convertFromUtc(utcNow(),'Eastern Standard Time'),'dddd, MMMM d, yyyy')}",
+              "emailMessage/Body": "<p class=\"editor-paragraph\">Good morning - here are your open tasks across all Outlook task lists:</p><p class=\"editor-paragraph\">@{body('Create_HTML_table')}</p>",
+              "emailMessage/Importance": "Normal"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "operationId": "SendEmailV2",
+              "connectionName": "shared_office365"
+            }
+          }
+        },
+        "Filter_array_1": {
+          "runAfter": {
+            "List_all_to-do_lists_(V2)": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('List_all_to-do_lists_(V2)')",
+            "where": "@not(equals(item()?['wellknownListName'],'flaggedEmails'))"
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

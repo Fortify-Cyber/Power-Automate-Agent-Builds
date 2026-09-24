@@ -1,0 +1,30 @@
+mcs.metadata:
+  componentName: Office 365 Outlook - Get sent emails
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: folderPath
+    value: Sent Items
+
+  - kind: ManualTaskInput
+    propertyName: fetchOnlyUnread
+    value: false
+
+  - kind: ManualTaskInput
+    propertyName: includeAttachments
+    value: false
+
+modelDisplayName: Get sent emails
+modelDescription: "Gets messages the signed-in user sent, from Sent Items. Use it to find conversations the user already replied to (match on conversationId and compare sent time with received time). Use searchQuery with KQL such as sent>=2026-01-25 and top (use 150)."
+outputs:
+  - propertyName: value
+
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: fc_DailyDigest.shared_office365.shared-office365-5d1c8a3e-7b42-4f0e-9c61-2a8f3e4b7d10
+  connectionProperties:
+    mode: Invoker
+
+  operationId: GetEmailsV3
+
+outputMode: All
