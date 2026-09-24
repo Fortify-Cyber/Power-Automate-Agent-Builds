@@ -177,6 +177,11 @@ def build(version=None):
     agent_text = (AGENT / "agent.mcs.yml").read_text(encoding="utf-8")
     agent_meta = load_yaml(AGENT / "agent.mcs.yml")["mcs.metadata"]
     instructions = (AGENT / "instructions.md").read_text(encoding="utf-8")
+    # Copilot Studio parses {...} in instructions as Power Fx and fails to publish.
+    for n, line in enumerate(instructions.splitlines(), 1):
+        if "{" in line or "}" in line:
+            sys.exit(f"agent/instructions.md:{n}: curly braces are parsed as Power Fx by Copilot Studio; "
+                     "use [square brackets] for placeholders")
     components.append((f"{bot}.gpt.default", COMPONENT_TYPE["gpt"], agent_meta["componentName"],
                        agent_meta.get("description"), gpt_component_data(agent_text, instructions)))
 

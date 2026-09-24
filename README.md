@@ -39,6 +39,8 @@ Then finish the rollout in Copilot Studio and the Microsoft 365 admin center: [d
 ## Changing the digest
 Most changes are edits to [`agent/instructions.md`](agent/instructions.md): what counts as urgent, sections, tone, length. After editing, bump `version` in `agent/solution.yml`, rebuild, and redeploy.
 
+> Don't use `{curly braces}` in the instructions. Copilot Studio parses them as Power Fx, and the agent will fail to publish. Use `[square brackets]` for placeholders. The build script enforces this.
+
 ## Reviewing flows with the Power Platform CLI
 ```powershell
 pac auth create --environment https://<env>.crm.dynamics.com
