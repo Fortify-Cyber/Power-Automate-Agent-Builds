@@ -10,6 +10,6 @@ beginDialog:
       id: sendMessage_M0LuhV
       activity:
         text:
-          - "Hi, I'm {System.Bot.Name}. I review your inbox, To Do, and Planner and tell you what needs your attention. Say **Run my daily digest** to start."
+          - "Hi, I'm {System.Bot.Name}. I review your inbox and tell you which emails need your attention. Say **Email me my digest** to start."
         speak:
           - Hi, I'm {System.Bot.Name}. Say run my daily digest to get started.

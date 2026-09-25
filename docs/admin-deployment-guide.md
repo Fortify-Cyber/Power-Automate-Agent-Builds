@@ -3,7 +3,7 @@
 For the client's IT administrator. Plan on about 30 minutes for the deployment, then a one-week pilot.
 
 ## What you're deploying
-**Daily Digest** is a Copilot Studio agent that appears in Microsoft 365 Copilot, Teams and Outlook. When an employee asks it to *"Run my daily digest"*, or schedules that prompt, it reviews **their own** inbox, Microsoft To Do and Planner tasks and returns a prioritized briefing.
+**Daily Digest** is a Copilot Studio agent that appears in Microsoft 365 Copilot, Teams and Outlook. When an employee asks it to *"Run my daily digest"*, or schedules that prompt, it reviews **their own** inbox and returns a prioritized briefing of the emails that need attention, and emails it to them if asked.
 
 - **No app registration, no service account, no mailbox-wide permissions.** Every tool runs with the signed-in user's own credentials (Copilot Studio "end-user credentials"), so a user can only ever see their own data.
 - **Read-only, except for one locked-down send.** The agent can't delete, move or reply to mail. Its only write action is **Email me my digest**. That tool fixes the recipient to the signed-in user (`=System.User.Email`) and blanks CC, BCC, From and Reply-To, so neither a prompt nor a malicious email can redirect it.
@@ -17,7 +17,7 @@ For the client's IT administrator. Plan on about 30 minutes for the deployment, 
 | Licenses | Microsoft 365 Copilot for every user who will use the agent |
 | Environment | A Power Platform environment with Dataverse. The tenant's **default environment** works. A dedicated production environment (e.g. "Copilot Agents") is better if you have the Dataverse capacity. |
 | Roles | *System Administrator* in that environment (import and publish), and *Global Admin*, *AI Administrator* or *Teams Administrator* (approve and deploy the agent) |
-| DLP | In the environment's data policy, **Office 365 Outlook, Office 365 Users, Microsoft To Do (Business), Planner** and **Microsoft Copilot Studio** must all be in the same group (normally *Business*) |
+| DLP | In the environment's data policy, **Office 365 Outlook, Office 365 Users** and **Microsoft Copilot Studio** must all be in the same group (normally *Business*) |
 | Tooling | [Power Platform CLI](https://aka.ms/PowerPlatformCLI) and Python 3 with PyYAML (to build from source), or just the prebuilt solution zip |
 
 ## Step 1: Get the environment URL
@@ -43,7 +43,7 @@ Or import it by hand: make.powerapps.com → select the environment → **Soluti
 
 ## Step 4: Verify in Copilot Studio
 1. Open [copilotstudio.microsoft.com](https://copilotstudio.microsoft.com), select the environment, then open **Daily Digest**.
-2. **Tools**: confirm the six tools are listed (Get my profile, Get inbox emails, Get sent emails, List to-do lists, List tasks in a to-do list, List my Planner tasks) and that each one's authentication is **End user credentials**. If a tool shows a connection warning, open it and create or select a connection.
+2. **Tools**: confirm the four tools are listed (Get my profile, Get inbox emails, Get sent emails, Email me my digest) and that each one's authentication is **End user credentials**. If a tool shows a connection warning, open it and create or select a connection.
 3. **Test** pane: type `Run my daily digest`, approve the connection prompts, and check that the digest renders.
 
 ## Step 5: Publish to Microsoft 365 Copilot and Teams
@@ -73,7 +73,8 @@ Or import it by hand: make.powerapps.com → select the environment → **Soluti
 1. Edit the source (`agent/instructions.md`, `agent/tools/`, `agent/topics/`).
 2. Increase `version` in `agent/solution.yml` (e.g. `1.0.1.0`).
 3. Re-run the deploy script. The import upgrades the solution in place and republishes the agent.
-4. Content changes reach users automatically. Changing the agent's name, icon or channel settings may require admin re-approval (step 6).
+4. **Removing a tool or topic?** Importing only adds and updates components. It never deletes them. After importing a version that drops a tool, delete that tool in Copilot Studio (**Tools** → the tool → **…** → **Delete**), then **Publish**.
+5. Content changes reach users automatically. Changing the agent's name, icon or channel settings may require admin re-approval (step 6).
 
 ## Monitoring and governance
 - **Usage**: Copilot Studio → the agent → **Analytics**.
@@ -84,8 +85,8 @@ Or import it by hand: make.powerapps.com → select the environment → **Soluti
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
-| Import fails with a DLP error | Put the five connectors listed under Prerequisites in the same DLP group |
-| The agent says it can't reach Outlook, To Do or Planner | The user needs to approve the connection prompt the first time. In Teams, open the agent chat and run it once interactively. |
+| Import fails with a DLP error | Put the three connectors listed under Prerequisites in the same DLP group |
+| The agent says it can't reach Outlook | The user needs to approve the connection prompt the first time. In Teams, open the agent chat and run it once interactively. |
 | First run ends with "Sorry, I wasn't able to respond to that" under a permission card | Expected on first use. The user clicks **Allow** on every connection card (up to four), then runs the digest again. |
 | Agent missing in Copilot for some users | Check the Integrated apps assignment. Allow up to 24 hours. |
 | "Schedule" isn't offered in the agent chat | Scheduled prompts for custom agents are still rolling out. Users can schedule `@Daily Digest run my daily digest` from Copilot Chat instead, or run it on demand. See the user guide. |

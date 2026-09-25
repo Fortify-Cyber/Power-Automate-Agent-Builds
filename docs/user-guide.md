@@ -1,13 +1,12 @@
 # Your Daily Digest ☀️
 
-**Daily Digest** is a Copilot agent that reads your inbox, Microsoft To Do and Planner and gives you one short briefing of what needs your attention:
+**Daily Digest** is a Copilot agent that reads your inbox and gives you one short briefing of the emails that need your attention:
 
 - 🔴 **Needs attention now**: urgent requests, approvals and deadlines, plus ⚠️ warnings on suspicious payment or password requests
 - 📨 **Waiting on your reply**: emails sent to you that ask a question or need a response (threads you've already answered are skipped)
-- ✅ **Tasks**: overdue, due today and due this week
 - 👀 **For awareness**: everything else, kept brief
 
-It only sees **your** mail and tasks. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
+It only sees **your** mail. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
 
 Setup takes about **5 minutes, once**: send yourself your first digest (Part 1), then schedule it for every weekday morning (Part 2).
 
@@ -15,7 +14,7 @@ Setup takes about **5 minutes, once**: send yourself your first digest (Part 1),
 
 ## Part 1: Send yourself your first digest (about 3 minutes)
 
-You have to do this once by hand so Daily Digest can ask for permission to read your mail and tasks and to email you. A scheduled digest can't ask for permission, so it would fail if you skipped this.
+You have to do this once by hand so Daily Digest can ask for permission to read your mail and to email you. A scheduled digest can't ask for permission, so it would fail if you skipped this.
 
 ### Step 1: Open Microsoft 365 Copilot
 Use whichever you prefer. They all work the same way:
@@ -36,8 +35,8 @@ Use whichever you prefer. They all work the same way:
 
 ### Step 3: Email yourself the digest
 1. Click the **Email me my digest** suggestion, or type `Run my daily digest and email it to me` and press **Enter**.
-2. **The first time only**, you'll see cards asking for permission to connect to *Office 365 Outlook*, *Office 365 Users*, *Microsoft To Do* and *Planner*, and to send the digest to your inbox. Click **Allow** (or **Connect** / **Sign in**) on each one. They appear one after another.
-3. Wait 20–60 seconds while it reads your mail and tasks. The digest appears in the chat, ending with **"📧 Also emailed to your inbox."**
+2. **The first time only**, you'll see cards asking for permission to connect to *Office 365 Outlook* and *Office 365 Users*, and to send the digest to your inbox. Click **Allow** (or **Connect** / **Sign in**) on each one. They appear one after another.
+3. Wait 20–60 seconds while it reads your mail. The digest appears in the chat, ending with **"📧 Also emailed to your inbox."**
 4. Check your **Outlook inbox** for an email titled **Daily Digest - [today's date]**. If it's not there, check **Junk**.
 
 > 📸 *Screenshot: the connection permission card with the Allow button.*
@@ -121,7 +120,7 @@ After the digest appears, you can ask things like:
 - "What's overdue?"
 
 ## Tips
-1. **Flag an email** in Outlook, or add a task in **To Do** or **Planner**, and it shows up in the next digest.
+1. **Flagged emails** that arrived in the review window are treated as needing attention.
 2. **Mondays automatically cover the weekend**, so nothing from Friday evening onward is missed.
 3. **If your digest stops arriving**, check your **Junk** folder first, then **Scheduled prompts**. It may have reached its end date or number of runs. Use **Edit schedule** to extend it.
 4. **The digest is AI-generated.** Open the linked email before acting on anything important, and **always confirm payment or bank-detail changes by phone**.

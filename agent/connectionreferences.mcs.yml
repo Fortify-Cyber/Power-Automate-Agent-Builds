@@ -9,11 +9,3 @@ connectionReferences:
   - connectionReferenceLogicalName: fc_DailyDigest.shared_office365users.shared-office365users-8e2f4b6a-1c3d-4a5e-b7f9-0d2c4e6a8b1f
     displayName: Daily Digest - Office 365 Users
     connectorId: /providers/Microsoft.PowerApps/apis/shared_office365users
-
-  - connectionReferenceLogicalName: fc_DailyDigest.shared_todo.shared-todo-3a7c9e1b-5d2f-4b8a-a6c4-9e1f3b5d7a2c
-    displayName: Daily Digest - Microsoft To Do
-    connectorId: /providers/Microsoft.PowerApps/apis/shared_todo
-
-  - connectionReferenceLogicalName: fc_DailyDigest.shared_planner.shared-planner-6b8d0f2a-4c6e-4d1a-8f3b-5a7c9e1d3f6b
-    displayName: Daily Digest - Planner
-    connectorId: /providers/Microsoft.PowerApps/apis/shared_planner

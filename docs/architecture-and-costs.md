@@ -41,8 +41,6 @@ Daily Digest agent (Copilot Studio, client's Power Platform environment)
    │  tools, each running with the employee's own credentials
    ├── Office 365 Users  → Get my profile
    ├── Office 365 Outlook → Get inbox emails / Get sent emails   (Graph HTTP request, pinned to GET)
-   ├── Microsoft To Do    → List lists / List tasks              (read-only)
-   ├── Planner            → List my tasks                        (read-only)
    └── Office 365 Outlook → Email me my digest   (recipient locked to the signed-in user)
    ▼
 Prioritized digest in chat, and in the user's inbox when requested (the scheduled prompt asks for it)
