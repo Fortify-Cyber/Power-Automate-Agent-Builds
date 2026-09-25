@@ -40,7 +40,11 @@ Import-Module Microsoft.Graph.Authentication
 $connect = @{ Scopes = @("Sites.Manage.All"); NoWelcome = $true }
 if ($TenantId) { $connect.TenantId = $TenantId }
 if ($UseDeviceCode) { $connect.UseDeviceCode = $true }
-Connect-MgGraph @connect
+# Reuse an existing Graph sign-in that already has the scope we need.
+$ctx = Get-MgContext
+if (-not ($ctx -and $ctx.Scopes -contains "Sites.Manage.All" -and (-not $TenantId -or $ctx.TenantId -eq $TenantId))) {
+    Connect-MgGraph @connect
+}
 
 function Invoke-Graph([string]$Method, [string]$Path, $Body) {
     $req = @{ Method = $Method; Uri = "https://graph.microsoft.com/v1.0$Path"; OutputType = "PSObject" }

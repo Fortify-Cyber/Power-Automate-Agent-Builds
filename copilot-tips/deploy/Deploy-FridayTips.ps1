@@ -85,7 +85,7 @@ pac auth select --name $authName | Out-Null
 # --- 4. Connections
 Write-Host "[4/5] Looking for connections..."
 $listing = (pac connection list --environment $envUrl) -join "`n"
-$envId = ((pac org who) -join "`n" | Select-String -Pattern "Environment ID:\s*([0-9a-fA-F-]{36})").Matches.Groups[1].Value
+$envId = ((pac org who) -join "`n" | Select-String -Pattern "Environment ID:\s*(\S+)").Matches.Groups[1].Value
 $connLink = if ($envId) { "https://make.powerautomate.com/environments/$envId/connections" } else { "https://make.powerautomate.com/connections" }
 
 function Find-Connection([string]$Api, [string]$Given) {
