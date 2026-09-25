@@ -74,7 +74,7 @@ environmentVariables:
     default: The Copilot Tips Team
   - schemaName: fc_FCT_BrandColor
     displayName: Friday Tips - Brand color
-    description: Header and button color as a hex code, e.g. #1b2a4a
+    description: "Header and button color as a hex code, e.g. #1b2a4a"
     type: String
     default: "#1b2a4a"
   - schemaName: fc_FCT_SendTime

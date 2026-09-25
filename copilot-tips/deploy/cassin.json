@@ -1,0 +1,17 @@
+{
+  "_comment": "Cassin go-live settings for Deploy-FridayTips.ps1. Replace every <...> value before running.",
+  "EnvironmentUrl": "<https://cassin-env.crm.dynamics.com>",
+  "TenantId": "<cassin-tenant-id>",
+  "SiteUrl": "<https://cassin.sharepoint.com/sites/...>",
+  "ListName": "Friday Copilot Tips",
+  "FirstFriday": "<first Friday, e.g. 2026-10-16>",
+  "Recipients": "<all-staff distribution list address>",
+  "Reviewer": "<reviewer's Cassin account>",
+  "SharedMailbox": "<copilot-tips shared mailbox, or none>",
+  "OrgName": "Cassin & Cassin LLP",
+  "SignOff": "The Cassin AI Team",
+  "BrandColor": "#1b2a4a",
+  "SendTime": "09:00",
+  "AutoSend": false,
+  "TestMode": false
+}

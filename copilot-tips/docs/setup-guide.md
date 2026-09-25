@@ -15,6 +15,25 @@ Set it up once in **Fortify** and test it there. Then repeat steps 1–5 in **Ca
 
 > **Who should own the flow?** The flow runs as whoever creates its connections. In Fortify that can be you. In Cassin, use a Cassin account that won't be disabled, such as a service account or a Cassin IT admin, so the tips don't stop if someone leaves.
 
+## Fastest: one command
+`deploy/Deploy-FridayTips.ps1` does steps 1–3 for you. It creates the list, loads the tips, imports the solution with every setting filled in, wires up the connections and turns the flow on.
+
+1. Install the [Power Platform CLI](https://aka.ms/PowerPlatformCLI) (`dotnet tool install --global Microsoft.PowerApps.CLI.Tool`) and PowerShell 7.
+2. Fill in `deploy/fortify.json` (or `deploy/cassin.json`): the environment URL, SharePoint site, recipients and reviewer.
+3. Run it:
+   ```powershell
+   ./copilot-tips/deploy/Deploy-FridayTips.ps1 -Config ./copilot-tips/deploy/fortify.json
+   ```
+   Add `-UseDeviceCode` if you're in a remote shell. You then sign in with a code at microsoft.com/devicelogin.
+4. **First time only:** pac can't create the three connections (SharePoint, Office 365 Outlook, Approvals), because each needs a browser sign-in. If one is missing, the script prints a direct link. Create the connection there (**+ New connection**, about a minute), then re-run the script with `-SkipList`.
+5. Go to step 4 (Test) below.
+
+Re-running is safe. The list script skips tips that are already there, and the import upgrades the solution in place and re-applies the settings from the config file. To change a setting later, edit the config file and re-run with `-SkipList`, or change it in the portal.
+
+> **Find the environment URL:** Power Platform admin center → **Manage → Environments** → the environment → **Environment URL**. Or run `pac env list`.
+
+The manual steps below do the same thing by hand.
+
 ---
 
 ## Step 1: Create the SharePoint list and load the tips

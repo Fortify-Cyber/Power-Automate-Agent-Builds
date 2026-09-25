@@ -25,7 +25,9 @@ param(
     [datetime]$FirstFriday,
     [string]$TipsCsv = (Join-Path $PSScriptRoot "../tips/tips.csv"),
     [string]$TenantId,
-    [switch]$SkipImport
+    [switch]$SkipImport,
+    # Sign in with a code at https://microsoft.com/devicelogin (for remote or headless shells)
+    [switch]$UseDeviceCode
 )
 $ErrorActionPreference = "Stop"
 
@@ -37,6 +39,7 @@ Import-Module Microsoft.Graph.Authentication
 
 $connect = @{ Scopes = @("Sites.Manage.All"); NoWelcome = $true }
 if ($TenantId) { $connect.TenantId = $TenantId }
+if ($UseDeviceCode) { $connect.UseDeviceCode = $true }
 Connect-MgGraph @connect
 
 function Invoke-Graph([string]$Method, [string]$Path, $Body) {

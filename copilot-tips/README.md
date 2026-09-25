@@ -41,6 +41,8 @@ tips/tips.csv              the tip library: 20 tips from Microsoft Support / Lea
 solution.yml               solution, flow, connections and settings (environment variables)
 build/build_tips_solution.py  builds the importable solution zip; also renders previews and checks links
 scripts/New-TipsList.ps1   creates the SharePoint list and loads the tips
+deploy/Deploy-FridayTips.ps1  one command: list + tips, import with settings, connections, flow on
+deploy/fortify.json, cassin.json  per-organization settings for the deploy script
 docs/setup-guide.md        step by step: Fortify test, then Cassin go-live
 docs/reviewer-guide.md     for the reviewer: the weekly routine, editing and adding tips
 ```
@@ -50,7 +52,11 @@ docs/reviewer-guide.md     for the reviewer: the weekly routine, editing and add
 pip install pyyaml
 python3 copilot-tips/build/build_tips_solution.py --previews   # -> out/FridayCopilotTips_1_0_0_0.zip + out/previews/
 ```
-Then follow [docs/setup-guide.md](docs/setup-guide.md).
+Then deploy with one command (fill in the config file first):
+```powershell
+./copilot-tips/deploy/Deploy-FridayTips.ps1 -Config ./copilot-tips/deploy/fortify.json
+```
+The full walkthrough, including testing, is in [docs/setup-guide.md](docs/setup-guide.md).
 
 ## Changing things
 - **Tip content:** edit the rows in the SharePoint list. Changes take effect the next time the flow runs; there's nothing to redeploy. To add tips to the library for future clients, add rows to `tips/tips.csv` and run the build with `--verify-links`.
