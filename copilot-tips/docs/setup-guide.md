@@ -114,6 +114,7 @@ With **Recipients = your address** and **Test mode = Yes**:
 - **Send from shared mailbox:** Send As permission is missing, or hasn't taken effect yet (it can take up to an hour).
 - **Get queued tips:** the site URL or list name is wrong.
 - **Mark tip as sent:** the connection account can't edit the list.
+- **"Flow save failed … DynamicOperationRequestClientFailure … refresh token has expired due to inactivity"** when you turn the flow on: the flow is reusing an old connection whose sign-in expired. A connection that hasn't been used for 90 days can still show as *Connected* in `pac connection list`. Go to **Connections**, open that connection, select **Fix connection** (or **Edit**), sign in again, then turn the flow on.
 
 ## Step 5: Go live
 1. Set **Test mode = No**.
