@@ -2,7 +2,7 @@
 uniqueName: FortifyDailyDigest
 displayName: Fortify Daily Digest
 description: Copilot agent that produces a prioritized daily digest of each employee's email and tasks.
-version: 1.0.0.5
+version: 1.0.0.6
 publisher:
   uniqueName: FortifyCyber
   displayName: Fortify Cyber

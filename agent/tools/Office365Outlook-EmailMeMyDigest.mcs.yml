@@ -31,6 +31,10 @@ inputs:
     propertyName: Importance
     value: Normal
 
+  - kind: AutomaticTaskInput
+    propertyName: Body
+    description: The complete digest as simple HTML (h2, h3, p, ol, ul, li, b, i, and a tags only), with every value taken from an email HTML-escaped.
+
 modelDisplayName: Email me my digest
 modelDescription: "Emails the finished digest to the signed-in user's own inbox. The recipient, CC, BCC, sender, and subject are fixed by the tool; you only provide the HTML body (Body). Call it at most once per digest, and only when the user asked for the digest to be emailed. Never use it to send anything else."
 action:
