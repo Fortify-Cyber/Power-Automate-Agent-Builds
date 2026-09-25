@@ -88,5 +88,6 @@ Or import it by hand: make.powerapps.com → select the environment → **Soluti
 | Import fails with a DLP error | Put the three connectors listed under Prerequisites in the same DLP group |
 | The agent says it can't reach Outlook | The user needs to approve the connection prompt the first time. In Teams, open the agent chat and run it once interactively. |
 | First run ends with "Sorry, I wasn't able to respond to that" under a permission card | Expected on first use. The user clicks **Allow** on every connection card (up to four), then runs the digest again. |
+| "This agent is currently unavailable. It has reached its usage limit." | The user most likely has no Microsoft 365 Copilot license, so their usage needs Copilot Credits the tenant doesn't have. Check **Users → Active users → [user] → Licenses and apps**. Either deploy the agent only to a group of Copilot-licensed users, assign a license, or set up pay-as-you-go Copilot Credits (roughly $0.25–$0.30 per digest). |
 | Agent missing in Copilot for some users | Check the Integrated apps assignment. Allow up to 24 hours. |
 | "Schedule" isn't offered in the agent chat | Scheduled prompts for custom agents are still rolling out. Users can schedule `@Daily Digest run my daily digest` from Copilot Chat instead, or run it on demand. See the user guide. |
