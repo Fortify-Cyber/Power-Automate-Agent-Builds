@@ -7,7 +7,7 @@ inputs:
     value: GET
 
 modelDisplayName: Get sent emails
-modelDescription: "Read-only Microsoft Graph GET against the signed-in user's own Sent Items, used to find conversations the user already replied to. Uri must be exactly: https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$filter=sentDateTime ge [START]&$orderby=sentDateTime desc&$top=250&$select=conversationId,sentDateTime where [START] is 7 days before now in ISO 8601 UTC, e.g. 2026-09-18T00:00:00Z."
+modelDescription: "Read-only Microsoft Graph GET against the signed-in user's own Sent Items, used to find conversations the user already replied to. Uri must be exactly: https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$filter=sentDateTime ge [START]&$orderby=sentDateTime desc&$top=100&$select=conversationId,sentDateTime where [START] is 7 days before now in ISO 8601 UTC, e.g. 2026-09-18T00:00:00Z."
 action:
   kind: InvokeConnectorTaskAction
   connectionReference: fc_DailyDigest.shared_office365.shared-office365-5d1c8a3e-7b42-4f0e-9c61-2a8f3e4b7d10
