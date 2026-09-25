@@ -9,6 +9,9 @@ conversationStarters:
   - title: Run my daily digest
     text: Run my daily digest
 
+  - title: Email me my digest
+    text: Run my daily digest and email it to me
+
   - title: What needs a reply?
     text: Which emails are waiting on my reply?
 

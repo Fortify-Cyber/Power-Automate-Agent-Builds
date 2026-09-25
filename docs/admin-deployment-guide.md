@@ -6,7 +6,7 @@ For the client's IT administrator. Plan on about 30 minutes for the deployment, 
 **Daily Digest** is a Copilot Studio agent that appears in Microsoft 365 Copilot, Teams and Outlook. When an employee asks it to *"Run my daily digest"*, or schedules that prompt, it reviews **their own** inbox, Microsoft To Do and Planner tasks and returns a prioritized briefing.
 
 - **No app registration, no service account, no mailbox-wide permissions.** Every tool runs with the signed-in user's own credentials (Copilot Studio "end-user credentials"), so a user can only ever see their own data.
-- **Read-only.** The agent can't send, delete or move mail.
+- **Read-only, except for one locked-down send.** The agent can't delete, move or reply to mail. Its only write action is **Email me my digest**. That tool fixes the recipient to the signed-in user (`=System.User.Email`) and blanks CC, BCC, From and Reply-To, so neither a prompt nor a malicious email can redirect it.
 - **Web search is off.** Mailbox content is never sent to Bing.
 - **No extra cost for Microsoft 365 Copilot-licensed users.** Microsoft zero-rates Copilot Studio agent usage by Copilot-licensed users running as themselves. See [architecture-and-costs.md](architecture-and-costs.md).
 

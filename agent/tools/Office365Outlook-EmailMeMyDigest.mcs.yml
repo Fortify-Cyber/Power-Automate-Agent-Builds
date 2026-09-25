@@ -1,0 +1,45 @@
+mcs.metadata:
+  componentName: Office 365 Outlook - Email me my digest
+kind: TaskDialog
+inputs:
+  # The recipient is always the signed-in user; nothing in a prompt or email can change it.
+  - kind: ManualTaskInput
+    propertyName: To
+    value: =System.User.Email
+
+  - kind: ManualTaskInput
+    propertyName: Cc
+    value: =Blank()
+
+  - kind: ManualTaskInput
+    propertyName: Bcc
+    value: =Blank()
+
+  - kind: ManualTaskInput
+    propertyName: From
+    value: =Blank()
+
+  - kind: ManualTaskInput
+    propertyName: ReplyTo
+    value: =Blank()
+
+  - kind: ManualTaskInput
+    propertyName: Subject
+    value: ="Daily Digest - " & Text(Today(), "dddd, mmmm d")
+
+  - kind: ManualTaskInput
+    propertyName: Importance
+    value: Normal
+
+modelDisplayName: Email me my digest
+modelDescription: "Emails the finished digest to the signed-in user's own inbox. The recipient, CC, BCC, sender, and subject are fixed by the tool; you only provide the HTML body (Body). Call it at most once per digest, and only when the user asked for the digest to be emailed. Never use it to send anything else."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: fc_DailyDigest.shared_office365.shared-office365-5d1c8a3e-7b42-4f0e-9c61-2a8f3e4b7d10
+  connectionProperties:
+    usageDescription: Daily Digest needs permission to email your digest to your own inbox.
+    mode: Invoker
+
+  operationId: SendEmailV2
+
+outputMode: All

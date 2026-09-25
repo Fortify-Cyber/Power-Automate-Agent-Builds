@@ -7,7 +7,7 @@
 - ✅ **Tasks**: overdue, due today and due this week
 - 👀 **For awareness**: everything else, kept brief
 
-It only sees **your** mail and tasks. It can't send, delete or move anything, and nothing is shared with anyone else.
+It only sees **your** mail and tasks. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
 
 Setup takes about **5 minutes, once**: run the digest the first time (Part 1), then schedule it (Part 2).
 
@@ -49,14 +49,15 @@ Use whichever you prefer. They all work the same way:
 
 ---
 
-## Part 2: Get it every weekday morning automatically (about 2 minutes)
+## Part 2: Get it in your inbox every weekday morning (about 2 minutes)
 
 ### Step 4: Schedule the prompt
 1. Stay in the **Daily Digest** chat from Part 1.
-2. Move your mouse over **your own message** `Run my daily digest` (the one you typed or clicked, not the digest reply). A small row of icons appears under or beside it.
-3. Click **Schedule this prompt**. It's a clock icon. If you only see **…** (More options), click that first and then **Schedule this prompt**.
+2. Click the **Email me my digest** suggestion, or type `Run my daily digest and email it to me` and press **Enter**. Check that the digest appears in the chat **and** arrives in your Outlook inbox. The first time, you may be asked to **Allow** Outlook to send the email.
+3. Move your mouse over **that message** (the one you just sent, not the digest reply). A small row of icons appears under or beside it.
+4. Click **Schedule this prompt**. It's a clock icon. If you only see **…** (More options), click that first and then **Schedule this prompt**.
 
-> 📸 *Screenshot: hovering over the "Run my daily digest" message, with the Schedule this prompt icon highlighted.*
+> 📸 *Screenshot: hovering over the "Run my daily digest and email it to me" message, with the Schedule this prompt icon highlighted.*
 
 ### Step 5: Choose when it runs
 A scheduling panel opens. Fill it in like this:
@@ -67,7 +68,7 @@ A scheduling panel opens. Fill it in like this:
 | **Start** | Tomorrow's date |
 | **Time** | Before you usually start work, e.g. **7:30 AM**. It uses your own time zone. |
 | **How many times it runs / End** | The **largest number or latest end date** allowed. If there's a limit, you'll need to reschedule when it ends. See Tip 3 below. |
-| **Email me / Notify me when the response is ready** | **On**, so you get an email each morning with a link to your digest |
+| **Email me / Notify me when the response is ready** | **Off**. Your digest already arrives in your inbox, so this would only add a second email. |
 
 Then click **Save**.
 
@@ -75,12 +76,12 @@ Then click **Save**.
 
 ### Step 6: Confirm it's scheduled
 1. At the top right of Copilot, click **…** (**Settings and more**), then **Scheduled prompts**.
-2. You should see **Run my daily digest**, with **Daily Digest** and the time you chose.
+2. You should see **Run my daily digest and email it to me**, with **Daily Digest** and the time you chose.
 3. Optional: click **Run now** to test it straight away.
 
 > 📸 *Screenshot: the Scheduled prompts page.*
 
-**That's it.** Each weekday morning your digest runs by itself. It appears in Copilot's **Chats** list, shown in **bold** with a clock icon, and if you turned on email notifications you'll also get an email with a link to it.
+**That's it.** Each weekday morning your digest runs by itself and lands in your **Outlook inbox** with the subject **Daily Digest - [today's date]**. It also appears in Copilot's **Chats** list, shown in **bold** with a clock icon, where you can ask follow-up questions.
 
 ---
 
@@ -89,11 +90,11 @@ Then click **Save**.
 Microsoft is still rolling out scheduling for agents. If you don't see the option in Step 4, schedule it from the main Copilot chat instead:
 
 1. In Copilot, click **New chat**. Use the main Copilot chat, not the Daily Digest agent chat.
-2. Type `@Daily Digest run my daily digest`. When you type `@`, a list of agents appears. Choose **Daily Digest** from it, then type the rest.
+2. Type `@Daily Digest run my daily digest and email it to me`. When you type `@`, a list of agents appears. Choose **Daily Digest** from it, then type the rest.
 3. Press **Enter** and check that the digest appears.
 4. Hover over your message and click **Schedule this prompt**, then continue from **Step 5** above.
 
-If neither way works yet, just open Daily Digest each morning and click **Run my daily digest**. It takes one click.
+If neither way works yet, open Daily Digest each morning and click **Email me my digest**. It takes one click.
 
 ---
 
@@ -122,7 +123,7 @@ After the digest appears, you can ask things like:
 ## Tips
 1. **Flag an email** in Outlook, or add a task in **To Do** or **Planner**, and it shows up in the next digest.
 2. **Mondays automatically cover the weekend**, so nothing from Friday evening onward is missed.
-3. **If your digest stops arriving**, check **Scheduled prompts**. It may have reached its end date or number of runs. Use **Edit schedule** to extend it.
+3. **If your digest stops arriving**, check your **Junk** folder first, then **Scheduled prompts**. It may have reached its end date or number of runs. Use **Edit schedule** to extend it.
 4. **The digest is AI-generated.** Open the linked email before acting on anything important, and **always confirm payment or bank-detail changes by phone**.
 
 ## Something wrong or missing?

@@ -42,9 +42,10 @@ Daily Digest agent (Copilot Studio, client's Power Platform environment)
    ├── Office 365 Users  → Get my profile
    ├── Office 365 Outlook → Get inbox emails / Get sent emails   (Graph HTTP request, pinned to GET)
    ├── Microsoft To Do    → List lists / List tasks              (read-only)
-   └── Planner            → List my tasks                        (read-only)
+   ├── Planner            → List my tasks                        (read-only)
+   └── Office 365 Outlook → Email me my digest   (recipient locked to the signed-in user)
    ▼
-Prioritized digest returned in chat (+ optional email notification from scheduled prompts)
+Prioritized digest in chat, and in the user's inbox when requested (the scheduled prompt asks for it)
 ```
 Everything stays inside the Microsoft 365 / Power Platform service boundary. Web browsing is turned off for the agent.
 
