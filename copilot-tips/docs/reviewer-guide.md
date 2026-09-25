@@ -52,7 +52,7 @@ To keep the master library in this repo up to date (so future clients start with
 ```bash
 python3 copilot-tips/build/build_tips_solution.py --previews --verify-links
 ```
-This checks every link and renders each tip to `out/previews/` so you can see them all at once.
+This checks every link and renders each tip to `out/previews/`. Open `all-tips.html` there to see them all at once.
 
 ## Resending or reusing a tip
 Set its Status back to **Queued** and give it a new Planned Friday.

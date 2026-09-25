@@ -16,7 +16,6 @@ Template syntax: {{Field}} is replaced with a tip field (HTML-escaped) or a sett
 """
 import argparse
 import csv
-import html
 import json
 import pathlib
 import re
@@ -151,10 +150,15 @@ def compile_flow(parts, expr):
     return "".join(out)
 
 
+def esc_html(s):
+    """Escape exactly like the flow does (& < > " only)."""
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
 def steps_html(steps):
     """TipSteps: one step per line in SharePoint (" | " between steps in tips.csv)."""
     lines = [s.strip() for s in re.split(r"\r?\n|\s\|\s", steps) if s.strip()]
-    return "".join(f"{STEP_LI}{html.escape(s, quote=True)}</li>" for s in lines)
+    return "".join(f"{STEP_LI}{esc_html(s)}</li>" for s in lines)
 
 
 # ---------------------------------------------------------------- flow definition
@@ -744,20 +748,28 @@ def previews(org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Tips Te
     shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True)
     tips = load_tips()
-    links = []
+    links, bodies = [], []
     for n, t in enumerate(tips, 1):
-        e = lambda s: html.escape(s.strip(), quote=True)
+        e = lambda s: esc_html(s.strip())
         values = {k: e(t[k]) for k in TIP_COLUMNS if k != "TipSteps"}
         values.update(StepsHtml=steps_html(t["TipSteps"]), OrgName=e(org), SignOff=e(sign_off),
                       BrandColor=color, IssueDate=f"Week {n}", PreviewBanner="")
         name = f"{n:02d}-{re.sub(r'[^a-z0-9]+', '-', t['Title'].lower()).strip('-')}.html"
-        (folder / name).write_text(render_local(parts, values), encoding="utf-8")
+        page = render_local(parts, values)
+        (folder / name).write_text(page, encoding="utf-8")
+        body = re.search(r"<body[^>]*>(.*)</body>", page, flags=re.S).group(1)
+        bodies.append(f'<h2 style="font-family:Segoe UI,Arial,sans-serif;text-align:center;margin:40px 0 0 0;">'
+                      f'Week {n} &middot; {e(t["Subject"])}</h2>{body}')
         links.append(f'<li><a href="{name}">{e(t["Subject"])}</a> <small>({e(t["WorksWith"])})</small></li>')
     (folder / "index.html").write_text(
         "<!DOCTYPE html><meta charset='utf-8'><title>Friday Copilot Tips</title>"
         f"<body style='font-family:Segoe UI,Arial,sans-serif'><h1>Friday Copilot Tips</h1><ol>{''.join(links)}</ol>",
         encoding="utf-8")
-    print(f"Rendered {len(tips)} previews to {folder.relative_to(REPO)}/index.html")
+    (folder / "all-tips.html").write_text(
+        "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Friday Copilot Tips: all emails</title></head>"
+        f"<body style='margin:0;background-color:#f3f4f6;color:#1f2933;'>{''.join(bodies)}</body></html>", encoding="utf-8")
+    print(f"Rendered {len(tips)} previews to {folder.relative_to(REPO)}/ (index.html, all-tips.html)")
 
 
 def verify_links():
