@@ -1,8 +1,8 @@
 {
   "_comment": "Fortify test settings for Deploy-FridayTips.ps1. Replace every <...> value before running.",
-  "EnvironmentUrl": "<https://yourorg.crm.dynamics.com>",
+  "EnvironmentUrl": "https://org44f2ca29.crm.dynamics.com",
   "TenantId": "",
-  "SiteUrl": "<https://fortifycyber.sharepoint.com/sites/...>",
+  "SiteUrl": "https://fortifycyber.sharepoint.com/sites/AI",
   "ListName": "Friday Copilot Tips",
   "FirstFriday": "2026-10-02",
   "Recipients": "mgalbo@fortifycyber.com",

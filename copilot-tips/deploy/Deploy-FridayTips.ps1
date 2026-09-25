@@ -75,12 +75,18 @@ if ($SkipList) {
 # --- 3. Sign in to the environment
 Write-Host "[3/5] Signing in to $envUrl ..."
 $authName = "FridayTips-" + ([Uri]$envUrl).Host.Split(".")[0]
-$authArgs = @("auth", "create", "--name", $authName, "--environment", $envUrl)
-if ($cfg.TenantId) { $authArgs += @("--tenant", $cfg.TenantId) }
-if ($UseDeviceCode) { $authArgs += "--deviceCode" }
-pac @authArgs
-if ($LASTEXITCODE) { throw "pac auth create failed" }
-pac auth select --name $authName | Out-Null
+$envHost = ([Uri]$envUrl).Host
+if (((pac auth list) -join "`n") -match [regex]::Escape($envHost)) {
+    # Already signed in to this environment: reuse that profile.
+    pac org select --environment $envUrl | Out-Null
+} else {
+    $authArgs = @("auth", "create", "--name", $authName, "--environment", $envUrl)
+    if ($cfg.TenantId) { $authArgs += @("--tenant", $cfg.TenantId) }
+    if ($UseDeviceCode) { $authArgs += "--deviceCode" }
+    pac @authArgs
+    if ($LASTEXITCODE) { throw "pac auth create failed" }
+    pac auth select --name $authName | Out-Null
+}
 
 # --- 4. Connections
 Write-Host "[4/5] Looking for connections..."
