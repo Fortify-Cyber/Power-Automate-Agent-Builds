@@ -1,0 +1,94 @@
+# Solution packaging metadata used by copilot-tips/build/build_tips_solution.py
+uniqueName: FridayCopilotTips
+displayName: Friday Copilot Tips
+description: Weekly Microsoft Copilot tip email. Previews each tip to a reviewer for approval, then sends it to the organization on Friday morning.
+version: 1.0.0.0
+publisher:
+  uniqueName: FortifyCyber
+  displayName: Fortify Cyber
+  prefix: fc
+  optionValuePrefix: 83972
+
+flow:
+  id: 366f5ecd-a39c-4c60-b11c-4871a02c8a8f
+  name: Friday Copilot Tip
+  description: >-
+    Thursday 10:00 AM Eastern: takes the next Queued tip from the SharePoint list, emails a
+    preview to the reviewer and waits for Approve/Reject. On Approve it sends the tip to the
+    organization on Friday morning and marks it Sent. Settings are the "Friday Tips - ..."
+    environment variables.
+  # Eastern Time. To change, edit TIME_ZONE in the build script (Windows time zone name).
+  weeklyPreview:
+    day: Thursday
+    hour: 10
+
+# Connections the flow uses. The importer is asked to pick or create one for each.
+connectionReferences:
+  sharepoint:
+    logicalName: fc_FridayTips_SharePoint
+    displayName: Friday Tips - SharePoint
+    api: shared_sharepointonline
+  outlook:
+    logicalName: fc_FridayTips_Outlook
+    displayName: Friday Tips - Office 365 Outlook
+    api: shared_office365
+  approvals:
+    logicalName: fc_FridayTips_Approvals
+    displayName: Friday Tips - Approvals
+    api: shared_approvals
+
+# Environment variables: the per-organization settings. Set them when you import
+# (Fortify for testing, then Cassin), or later in Solutions > Friday Copilot Tips.
+environmentVariables:
+  - schemaName: fc_FCT_SiteUrl
+    displayName: Friday Tips - SharePoint site URL
+    description: Site that holds the tips list, e.g. https://contoso.sharepoint.com/sites/IT
+    type: String
+  - schemaName: fc_FCT_ListName
+    displayName: Friday Tips - List name
+    description: Name of the SharePoint list created by scripts/New-TipsList.ps1.
+    type: String
+    default: Friday Copilot Tips
+  - schemaName: fc_FCT_Recipients
+    displayName: Friday Tips - Recipients
+    description: Who gets the weekly tip. Usually the all-staff distribution list. Use your own address while testing. Separate several with semicolons.
+    type: String
+  - schemaName: fc_FCT_ApproverEmail
+    displayName: Friday Tips - Reviewer email
+    description: Gets the Thursday preview and the Approve/Reject request. Separate several with semicolons (first to respond decides).
+    type: String
+  - schemaName: fc_FCT_SharedMailbox
+    displayName: Friday Tips - Send from shared mailbox
+    description: Optional. Shared mailbox address to send from (the flow owner needs Send As). Leave as "none" to send from the flow owner's mailbox.
+    type: String
+    default: none
+  - schemaName: fc_FCT_OrgName
+    displayName: Friday Tips - Organization name
+    description: Shown in the email header.
+    type: String
+    default: Fortify Cyber
+  - schemaName: fc_FCT_SignOff
+    displayName: Friday Tips - Sign-off
+    description: Who the email is signed by.
+    type: String
+    default: The Copilot Tips Team
+  - schemaName: fc_FCT_BrandColor
+    displayName: Friday Tips - Brand color
+    description: Header and button color as a hex code, e.g. #1b2a4a
+    type: String
+    default: "#1b2a4a"
+  - schemaName: fc_FCT_SendTime
+    displayName: Friday Tips - Friday send time
+    description: 24-hour Eastern time the approved tip goes out on Friday, e.g. 09:00
+    type: String
+    default: "09:00"
+  - schemaName: fc_FCT_AutoSend
+    displayName: Friday Tips - Send without review
+    description: No (default) = the reviewer must approve every tip. Yes = skip the review and send the next queued tip automatically; the reviewer still gets a copy.
+    type: Boolean
+    default: "no"
+  - schemaName: fc_FCT_SendNow
+    displayName: Friday Tips - Test mode
+    description: Yes = skip the wait for Friday and send as soon as the tip is approved. Use while testing, then set back to No.
+    type: Boolean
+    default: "no"

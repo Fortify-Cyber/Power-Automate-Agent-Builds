@@ -41,6 +41,9 @@ Most changes are edits to [`agent/instructions.md`](agent/instructions.md): what
 
 > Don't use `{curly braces}` in the instructions. Copilot Studio parses them as Power Fx, and the agent will fail to publish. Use `[square brackets]` for placeholders. The build script enforces this.
 
+## Also in this repo: Friday Copilot Tips
+[`copilot-tips/`](copilot-tips/README.md) holds a weekly all-staff email with one Microsoft Copilot tip. It's a Power Automate flow that previews each tip to a reviewer for approval on Thursday, then sends it on Friday morning. Tips live in a SharePoint list, pre-loaded with 20 tips linked to Microsoft's own articles and videos. The flow is packaged as a solution, so you can test it in Fortify and then import the same zip into a client tenant.
+
 ## Reviewing flows with the Power Platform CLI
 ```powershell
 pac auth create --environment https://<env>.crm.dynamics.com
