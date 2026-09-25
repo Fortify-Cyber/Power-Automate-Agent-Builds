@@ -29,11 +29,12 @@ The flow builds HTML for each group and emails it.
 | 3 | 🟠 Medium | **Reply detection is wrong for active threads.** A conversation is dropped if *any* sent message exists in it. | A new question that arrives after your last reply is hidden. These are often the most important messages. | A message is excluded only if you replied *after* it arrived. |
 | 4 | 🟠 Medium | **Weekend gap.** The window is always the last 12 hours. | Monday's digest misses everything from Friday 5 PM to Monday 5 AM. | Monday runs cover everything since Friday. |
 | 5 | 🟠 Medium | **Keyword match splits on spaces only** (`split(subject, ' ')`) | "URGENT:", "ASAP!" and "(EOD)" never match, because the punctuation stays attached. | The agent matches whole words and ignores punctuation, and also uses judgment ("a client asking for a signed contract by tomorrow" counts even without a keyword). |
-| 6 | 🟡 Low | **Fetches the latest 150 messages, then filters by time** | A busy inbox can push relevant mail past message 150. | Uses a date-bounded `searchQuery` (`received>=…`). |
+| 6 | 🟡 Low | **Fetches the latest 150 messages, then filters by time** | A busy inbox can push relevant mail past message 150. | Filters by received date on the server and follows paging. |
 | 7 | 🟡 Low | No filter for automated or bulk senders | Newsletters and notifications fill "For awareness". | Automated and bulk mail is counted but not listed. |
 | 8 | 🟡 Low | "Addressed to you" doesn't separate To from CC in practice, and there's no check for a question or request | Weak signal for "needs reply". | Requires the user to be on the To line *and* a question or request to be present. |
 | 9 | 🟡 Low | No error handling (no Scope/try-catch, no run-after on failure) | If a connector call fails, no digest is sent and nobody is told. | The agent continues with the other sources and notes what was unavailable. |
-| 10 | 🟡 Low | Date header uses `utcNow()` without time-zone conversion | The date label can be wrong for runs near midnight UTC. | The agent works in the user's local date. |
+| 10 | 🟠 Medium | **Subject links never worked.** `Get emails (V3)` doesn't return a `webLink` field, so `coalesce(webLink, '')` is always empty. | Clicking a subject in the digest opens nothing. | The agent reads mail through a read-only Graph GET that returns the real `webLink`. |
+| 11 | 🟡 Low | Date header uses `utcNow()` without time-zone conversion | The date label can be wrong for runs near midnight UTC. | The agent works in the user's local date. |
 
 ## Daily Outlook Task Digest
 
