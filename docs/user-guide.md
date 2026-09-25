@@ -9,13 +9,13 @@
 
 It only sees **your** mail and tasks. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
 
-Setup takes about **5 minutes, once**: run the digest the first time (Part 1), then schedule it (Part 2).
+Setup takes about **5 minutes, once**: send yourself your first digest (Part 1), then schedule it for every weekday morning (Part 2).
 
 ---
 
-## Part 1: Run your first digest (about 2 minutes)
+## Part 1: Send yourself your first digest (about 3 minutes)
 
-You have to do this once by hand so Daily Digest can ask for permission to read your mail and tasks. A scheduled digest can't ask for permission, so it would fail if you skipped this.
+You have to do this once by hand so Daily Digest can ask for permission to read your mail and tasks and to email you. A scheduled digest can't ask for permission, so it would fail if you skipped this.
 
 ### Step 1: Open Microsoft 365 Copilot
 Use whichever you prefer. They all work the same way:
@@ -28,24 +28,25 @@ Use whichever you prefer. They all work the same way:
 ### Step 2: Find Daily Digest
 1. In the left-hand panel of Copilot, look under **Agents** for **Daily Digest**. It has a small robot icon.
 2. If you don't see it, click **All agents** (or **Get agents**), type **Daily Digest** in the search box, and select it.
-3. The agent opens in its own chat. The title at the top says **Daily Digest**, and you'll see suggestion buttons such as *Run my daily digest*.
+3. The agent opens in its own chat. The title at the top says **Daily Digest**, and you'll see suggestion buttons such as *Email me my digest*.
 
 > Still can't find it? It can take up to 24 hours to appear after IT rolls it out. After that, contact IT.
 
 > 📸 *Screenshot: the Agents list with Daily Digest highlighted.*
 
-### Step 3: Run it
-1. Click the **Run my daily digest** suggestion, or type `Run my daily digest` and press **Enter**.
-2. **The first time only**, you'll see a card asking for permission to connect to *Office 365 Outlook*, *Office 365 Users*, *Microsoft To Do* and *Planner*. Click **Allow** (or **Connect** / **Sign in**) for each one. You may see up to four prompts, one after another.
-3. Wait 20–60 seconds while it reads your mail and tasks. Your digest then appears in the chat.
+### Step 3: Email yourself the digest
+1. Click the **Email me my digest** suggestion, or type `Run my daily digest and email it to me` and press **Enter**.
+2. **The first time only**, you'll see cards asking for permission to connect to *Office 365 Outlook*, *Office 365 Users*, *Microsoft To Do* and *Planner*, and to send the digest to your inbox. Click **Allow** (or **Connect** / **Sign in**) on each one. They appear one after another.
+3. Wait 20–60 seconds while it reads your mail and tasks. The digest appears in the chat, ending with **"📧 Also emailed to your inbox."**
+4. Check your **Outlook inbox** for an email titled **Daily Digest - [today's date]**. If it's not there, check **Junk**.
 
 > 📸 *Screenshot: the connection permission card with the Allow button.*
 
 > **"Web search is off"** at the top of the chat is not an error. Daily Digest never searches the web, so your email content stays inside Microsoft 365. You can close the notice with the **X**.
 
-> **Seeing "Sorry, I wasn't able to respond to that"?** That's normal on the first run: Copilot sometimes stops while the permission cards are still waiting. **Scroll up** and click **Allow** on every permission card (there can be up to four), then send **Run my daily digest** again. From then on your permissions are saved and it runs normally.
+> **Seeing "Sorry, I wasn't able to respond to that"?** That's normal on the first run: Copilot sometimes stops while the permission cards are still waiting. **Scroll up** and click **Allow** on every permission card (there can be up to four), then click **Email me my digest** again. From then on your permissions are saved and it runs normally.
 
-**Check it once:** click a subject line and make sure it opens the right email in Outlook. If anything looks wrong, tell IT (see the end of this guide).
+**Check it once:** in the email, click a subject line and make sure it opens the right message in Outlook. If anything looks wrong, tell IT (see the end of this guide).
 
 ---
 
@@ -53,9 +54,8 @@ Use whichever you prefer. They all work the same way:
 
 ### Step 4: Schedule the prompt
 1. Stay in the **Daily Digest** chat from Part 1.
-2. Click the **Email me my digest** suggestion, or type `Run my daily digest and email it to me` and press **Enter**. Check that the digest appears in the chat **and** arrives in your Outlook inbox. The first time, you may be asked to **Allow** Outlook to send the email.
-3. Move your mouse over **that message** (the one you just sent, not the digest reply). A small row of icons appears under or beside it.
-4. Click **Schedule this prompt**. It's a clock icon. If you only see **…** (More options), click that first and then **Schedule this prompt**.
+2. Move your mouse over **your message** "Run my daily digest and email it to me" (the one you sent in Step 3, not the digest reply). A small row of icons appears under or beside it.
+3. Click **Schedule this prompt**. It's a clock icon. If you only see **…** (More options), click that first and then **Schedule this prompt**.
 
 > 📸 *Screenshot: hovering over the "Run my daily digest and email it to me" message, with the Schedule this prompt icon highlighted.*
 
@@ -91,7 +91,7 @@ Microsoft is still rolling out scheduling for agents. If you don't see the optio
 
 1. In Copilot, click **New chat**. Use the main Copilot chat, not the Daily Digest agent chat.
 2. Type `@Daily Digest run my daily digest and email it to me`. When you type `@`, a list of agents appears. Choose **Daily Digest** from it, then type the rest.
-3. Press **Enter** and check that the digest appears.
+3. Press **Enter** and check that the digest appears and arrives in your inbox.
 4. Hover over your message and click **Schedule this prompt**, then continue from **Step 5** above.
 
 If neither way works yet, open Daily Digest each morning and click **Email me my digest**. It takes one click.
