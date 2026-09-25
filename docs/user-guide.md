@@ -41,6 +41,8 @@ Use whichever you prefer. They all work the same way:
 
 > 📸 *Screenshot: the connection permission card with the Allow button.*
 
+> **Seeing "Sorry, I wasn't able to respond to that"?** That's normal on the first run: Copilot sometimes stops while the permission cards are still waiting. **Scroll up** and click **Allow** on every permission card (there can be up to four), then send **Run my daily digest** again. From then on your permissions are saved and it runs normally.
+
 **Check it once:** click a subject line and make sure it opens the right email in Outlook. If anything looks wrong, tell IT (see the end of this guide).
 
 ---

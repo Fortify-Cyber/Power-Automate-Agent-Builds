@@ -86,5 +86,6 @@ Or import it by hand: make.powerapps.com → select the environment → **Soluti
 |---|---|
 | Import fails with a DLP error | Put the five connectors listed under Prerequisites in the same DLP group |
 | The agent says it can't reach Outlook, To Do or Planner | The user needs to approve the connection prompt the first time. In Teams, open the agent chat and run it once interactively. |
+| First run ends with "Sorry, I wasn't able to respond to that" under a permission card | Expected on first use. The user clicks **Allow** on every connection card (up to four), then runs the digest again. |
 | Agent missing in Copilot for some users | Check the Integrated apps assignment. Allow up to 24 hours. |
 | "Schedule" isn't offered in the agent chat | Scheduled prompts for custom agents are still rolling out. Users can schedule `@Daily Digest run my daily digest` from Copilot Chat instead, or run it on demand. See the user guide. |
