@@ -2,9 +2,11 @@
 
 **Daily Digest** is a Copilot agent that reads your inbox and gives you one short briefing of the emails that need your attention:
 
-- 🔴 **Needs attention now**: urgent requests, approvals and deadlines, plus ⚠️ warnings on suspicious payment or password requests
+- 🔴 **High priority**: urgent requests, approvals and deadlines from people you work with, plus ⚠️ warnings on suspicious payment or password requests
 - 📨 **Waiting on your reply**: emails sent to you that ask a question or need a response (threads you've already answered are skipped)
-- 👀 **For awareness**: everything else, kept brief
+- 📰 **Updates**: FYIs and status updates from colleagues and contacts, kept to one line each
+
+Marketing, newsletters, promotions and cold sales emails are **left out** (the digest just tells you how many). Ask *"What did you filter out?"* to see them. Anything you've flagged is always included.
 
 It only sees **your** mail. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
 
@@ -116,6 +118,7 @@ You can have up to **10** scheduled prompts in total.
 After the digest appears, you can ask things like:
 - "Draft a reply to #2" (it writes the draft in the chat for you to copy; it can't send it)
 - "Tell me more about the Contoso email"
+- "What did you filter out?"
 - "Run my digest for everything since Friday"
 - "What's overdue?"
 

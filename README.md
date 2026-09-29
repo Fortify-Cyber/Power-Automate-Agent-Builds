@@ -6,7 +6,7 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 
 ## How it works
 - Employees open **Daily Digest** in Microsoft 365 Copilot, Teams or Outlook and say *"Run my daily digest"*, or schedule that prompt for every weekday morning.
-- The agent reads **their own** inbox and sent items through connector tools that run with the user's own credentials. It returns a prioritized briefing (🔴 needs attention now, 📨 waiting on your reply, 👀 for awareness) and can email it to the user's own inbox.
+- The agent reads **their own** inbox and sent items through connector tools that run with the user's own credentials. It returns a prioritized briefing (🔴 high priority, 📨 waiting on your reply, 📰 updates, with marketing and cold outreach filtered out) and can email it to the user's own inbox.
 - The LLM keeps the old flows' rules (urgency keywords, three email groups), fixes their bugs (reply detection, weekend gap, punctuation), and adds judgment, next-step suggestions and phishing/BEC warnings.
 
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
