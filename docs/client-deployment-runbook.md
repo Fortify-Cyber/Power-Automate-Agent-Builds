@@ -11,7 +11,8 @@ For the client's Microsoft 365 / Power Platform administrator. About **15 minute
 
 ## 1. Check the data policy (2 min)
 1. Go to **https://admin.powerplatform.microsoft.com** → **Security → Data and privacy → Data policy** (or **Policies → Data policies**).
-2. For the policy that covers your target environment (usually the **default** environment), make sure these three connectors are in the **same** group, normally **Business**:
+2. **No policies listed?** Then nothing is restricted. Skip to step 2. (If you add a data policy later, include the rule below or Daily Digest will stop working.)
+3. Otherwise, for the policy that covers your target environment (usually the **default** environment), make sure these three connectors are in the **same** group, normally **Business**:
    - **Office 365 Outlook**
    - **Office 365 Users**
    - **Microsoft Copilot Studio**
