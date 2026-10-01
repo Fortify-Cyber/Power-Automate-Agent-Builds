@@ -345,7 +345,7 @@ def build_flow(cfg, parts):
         ("Send_label", {"type": "Compose", "inputs": send_label}),
         ("When_text", {"type": "Compose", "inputs": (
             f"@{{if({P('fc_FCT_SendNow')}, if({P('fc_FCT_AutoSend')}, 'right away (test mode is on)', "
-            f"'as soon as it is approved (test mode is on)'), "
+            f"'immediately (test mode is on)'), "
             f"concat('on ', outputs('Send_label'), ' {TZ_LABEL}'))}}")}),
         ("Get_queued_tips", api_action("sharepoint", "GetItems", {
             "dataset": SITE, "table": LIST, "$filter": "Status eq 'Queued'",
