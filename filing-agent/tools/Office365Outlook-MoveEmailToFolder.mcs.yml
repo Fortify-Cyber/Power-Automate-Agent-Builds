@@ -8,7 +8,7 @@ inputs:
 
   - kind: AutomaticTaskInput
     propertyName: folderPath
-    description: The id of the destination folder the user confirmed, exactly as returned by Get my mail folders. Never a folder name or path.
+    description: "The destination folder as Id:: followed immediately by the folder's id exactly as returned by Get my mail folders, for example Id::AAMkAD... (no space). Without the Id:: prefix Outlook treats the value as a folder name and fails."
 
   # Always the signed-in user's own mailbox; never a shared or delegated mailbox.
   - kind: ManualTaskInput

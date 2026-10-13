@@ -1,4 +1,4 @@
-# Filing Assistant: pilot guide (v1.0.2.4)
+# Filing Assistant: pilot guide (v1.0.2.5)
 
 For Fortify. **Filing Assistant** is a small, separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md).
 
@@ -24,7 +24,7 @@ Every reply ends with *Filing Assistant v[version]*, so you can see which build 
 | Get emails to file | Graph GET: one call per replied value (102, 103, 104) plus completed flags. Exchange only accepts one exact value per call for this marker, compared with `cast(ep/value, Edm.Int32)`. |
 | Get my mail folders | Graph GET `/me/mailFolders/delta`: the whole folder tree as a flat list |
 | Find where threads are filed | Graph GET: emails in the same conversations, in any folder |
-| Move email to a folder | *Move email (V2)*. Move only, fixed to the user's own mailbox. |
+| Move email to a folder | *Move email (V2)*. Move only, fixed to the user's own mailbox. The folder must be passed as `Id::<folder id>`: a bare id is read as a folder name and fails with 404 "Specified folder ... does not exist". |
 
 The model is pinned to GPT-5.5 Chat (`GPT55Chat`).
 
@@ -37,7 +37,7 @@ Click-to-confirm card, filing to two folders, matching on the email body, rememb
 ## Install and test (Fortify dev environment)
 ```bash
 python3 build/build_solution.py --source filing-agent
-# -> out/FortifyFilingAssistant_1_0_2_4.zip
+# -> out/FortifyFilingAssistant_1_0_2_5.zip
 ```
 1. **Import:** make.powerapps.com → dev environment → **Solutions → Import solution** → the zip. Pick your Office 365 Outlook connection.
 2. **Clean up:** an unmanaged import never removes old components. When upgrading from 1.0.1.x, delete the **Find emails to file** topic and the **Read mail for filing** tool in Copilot Studio (and the **Test** topic and **Send an HTTP request** tool if they're still there). Delete the **Fortify Daily Digest (Pilot)** solution from dev if it's still there.
