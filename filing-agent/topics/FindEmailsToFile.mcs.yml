@@ -32,6 +32,11 @@ beginDialog:
         binding:
           Response: Topic.R102
 
+    - kind: SetVariable
+      id: set_body_r102
+      variable: Topic.B102
+      value: =IfError(ParseJSON(Text(Topic.R102)), Topic.R102)
+
     - kind: BeginDialog
       id: get_replied_all
       input:
@@ -42,6 +47,11 @@ beginDialog:
       output:
         binding:
           Response: Topic.R103
+
+    - kind: SetVariable
+      id: set_body_r103
+      variable: Topic.B103
+      value: =IfError(ParseJSON(Text(Topic.R103)), Topic.R103)
 
     - kind: BeginDialog
       id: get_forwarded
@@ -54,6 +64,11 @@ beginDialog:
         binding:
           Response: Topic.R104
 
+    - kind: SetVariable
+      id: set_body_r104
+      variable: Topic.B104
+      value: =IfError(ParseJSON(Text(Topic.R104)), Topic.R104)
+
     - kind: BeginDialog
       id: get_completed
       input:
@@ -65,6 +80,11 @@ beginDialog:
         binding:
           Response: Topic.RC
 
+    - kind: SetVariable
+      id: set_body_rc
+      variable: Topic.BC
+      value: =IfError(ParseJSON(Text(Topic.RC)), Topic.RC)
+
     # 2. One typed list of every email returned, in call order.
     - kind: SetVariable
       id: set_emails
@@ -72,10 +92,10 @@ beginDialog:
       value: |-
         =With(
           {
-            t1: Table(Topic.R102.value),
-            t2: Table(Topic.R103.value),
-            t3: Table(Topic.R104.value),
-            t4: Table(Topic.RC.value)
+            t1: Table(Topic.B102.value),
+            t2: Table(Topic.B103.value),
+            t3: Table(Topic.B104.value),
+            t4: Table(Topic.BC.value)
           },
           With(
             {n1: CountRows(t1), n2: CountRows(t2), n3: CountRows(t3), n4: CountRows(t4)},
@@ -108,12 +128,12 @@ beginDialog:
     - kind: SetVariable
       id: set_count_replied
       variable: Topic.CountReplied
-      value: =CountRows(Table(Topic.R102.value)) + CountRows(Table(Topic.R103.value)) + CountRows(Table(Topic.R104.value))
+      value: =CountRows(Table(Topic.B102.value)) + CountRows(Table(Topic.B103.value)) + CountRows(Table(Topic.B104.value))
 
     - kind: SetVariable
       id: set_count_completed
       variable: Topic.CountCompleted
-      value: =CountRows(Table(Topic.RC.value))
+      value: =CountRows(Table(Topic.BC.value))
 
     # 3. Each email once; read, not still flagged, and not already shown in this conversation.
     - kind: SetVariable
@@ -146,11 +166,19 @@ beginDialog:
               variable: Topic.Batch
               value: =""
 
+            - kind: SetVariable
+              id: set_debug
+              variable: Topic.Debug
+              value: |-
+                ="Diagnostics: replied search response blank: " & IsBlank(Topic.R102) &
+                " · parsed rows: " & CountRows(Table(Topic.B102.value)) &
+                " · as text: " & Left(IfError(Text(Topic.R102), "(not text)"), 300)
+
             - kind: SendActivity
               id: send_none
               activity:
                 text:
-                  - "📁 Nothing is ready to file right now. I look for Inbox emails you've replied to, forwarded, or flagged and marked complete.\n\n*Found {Topic.CountReplied} emails you replied to or forwarded and {Topic.CountCompleted} with a completed flag; none are left to show.*\n\n*Filing Assistant v@@VERSION@@*"
+                  - "📁 Nothing is ready to file right now. I look for Inbox emails you've replied to, forwarded, or flagged and marked complete.\n\n*Found {Topic.CountReplied} emails you replied to or forwarded and {Topic.CountCompleted} with a completed flag; none are left to show.*\n\n`{Topic.Debug}`\n\n*Filing Assistant v@@VERSION@@*"
 
             - kind: EndDialog
               id: end_none
@@ -169,18 +197,23 @@ beginDialog:
           Response: Topic.F1
 
     - kind: SetVariable
+      id: set_body_f1
+      variable: Topic.BF1
+      value: =IfError(ParseJSON(Text(Topic.F1)), Topic.F1)
+
+    - kind: SetVariable
       id: set_folders_1
       variable: Topic.FolderRaw
       value: |-
         =ForAll(
-          Table(Topic.F1.value) As r,
+          Table(Topic.BF1.value) As r,
           {Id: Text(r.Value.id), Name: Text(r.Value.displayName), Parent: Text(r.Value.parentFolderId)}
         )
 
     - kind: SetVariable
       id: set_next_1
       variable: Topic.NextLink
-      value: =Text(Topic.F1.'@odata.nextLink')
+      value: =Text(Topic.BF1.'@odata.nextLink')
 
     - kind: ConditionGroup
       id: cond_folders_2
@@ -201,6 +234,11 @@ beginDialog:
                   Response: Topic.F2
 
             - kind: SetVariable
+              id: set_body_f2
+              variable: Topic.BF2
+              value: =IfError(ParseJSON(Text(Topic.F2)), Topic.F2)
+
+            - kind: SetVariable
               id: set_folders_2
               variable: Topic.FolderRaw
               value: |-
@@ -208,7 +246,7 @@ beginDialog:
                   {
                     a: Topic.FolderRaw,
                     b: ForAll(
-                      Table(Topic.F2.value) As r,
+                      Table(Topic.BF2.value) As r,
                       {Id: Text(r.Value.id), Name: Text(r.Value.displayName), Parent: Text(r.Value.parentFolderId)}
                     )
                   },
@@ -221,7 +259,7 @@ beginDialog:
             - kind: SetVariable
               id: set_next_2
               variable: Topic.NextLink
-              value: =Text(Topic.F2.'@odata.nextLink')
+              value: =Text(Topic.BF2.'@odata.nextLink')
 
     - kind: ConditionGroup
       id: cond_folders_3
@@ -242,6 +280,11 @@ beginDialog:
                   Response: Topic.F3
 
             - kind: SetVariable
+              id: set_body_f3
+              variable: Topic.BF3
+              value: =IfError(ParseJSON(Text(Topic.F3)), Topic.F3)
+
+            - kind: SetVariable
               id: set_folders_3
               variable: Topic.FolderRaw
               value: |-
@@ -249,7 +292,7 @@ beginDialog:
                   {
                     a: Topic.FolderRaw,
                     b: ForAll(
-                      Table(Topic.F3.value) As r,
+                      Table(Topic.BF3.value) As r,
                       {Id: Text(r.Value.id), Name: Text(r.Value.displayName), Parent: Text(r.Value.parentFolderId)}
                     )
                   },
@@ -262,7 +305,7 @@ beginDialog:
             - kind: SetVariable
               id: set_next_3
               variable: Topic.NextLink
-              value: =Text(Topic.F3.'@odata.nextLink')
+              value: =Text(Topic.BF3.'@odata.nextLink')
 
     - kind: SetVariable
       id: set_partial
@@ -323,11 +366,16 @@ beginDialog:
           Response: Topic.T1
 
     - kind: SetVariable
+      id: set_body_t1
+      variable: Topic.BT1
+      value: =IfError(ParseJSON(Text(Topic.T1)), Topic.T1)
+
+    - kind: SetVariable
       id: set_threads_1
       variable: Topic.Threads
       value: |-
         =ForAll(
-          Table(Topic.T1.value) As r,
+          Table(Topic.BT1.value) As r,
           {Conv: Text(r.Value.conversationId), Folder: Text(r.Value.parentFolderId), Received: DateTimeValue(Text(r.Value.receivedDateTime))}
         )
 
@@ -349,6 +397,11 @@ beginDialog:
                   Response: Topic.T2
 
             - kind: SetVariable
+              id: set_body_t2
+              variable: Topic.BT2
+              value: =IfError(ParseJSON(Text(Topic.T2)), Topic.T2)
+
+            - kind: SetVariable
               id: set_threads_2
               variable: Topic.Threads
               value: |-
@@ -356,7 +409,7 @@ beginDialog:
                   {
                     a: Topic.Threads,
                     b: ForAll(
-                      Table(Topic.T2.value) As r,
+                      Table(Topic.BT2.value) As r,
                       {Conv: Text(r.Value.conversationId), Folder: Text(r.Value.parentFolderId), Received: DateTimeValue(Text(r.Value.receivedDateTime))}
                     )
                   },
