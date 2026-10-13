@@ -3,7 +3,7 @@
 For the client's Microsoft 365 / Power Platform administrator. About **15 minutes**, done in a browser on your normal work device.
 
 **You need:**
-- the file `FortifyDailyDigest_1_0_0_7_managed.zip`
+- the latest package, for example `FortifyDailyDigest_1_0_0_8_managed.zip`
 - an account with **System Administrator** on the target Power Platform environment, plus **Global**, **AI** or **Teams Administrator** for step 5
 - Microsoft 365 Copilot licenses for the people who will use it (users without one get "This agent is currently unavailable")
 
@@ -20,7 +20,7 @@ For the client's Microsoft 365 / Power Platform administrator. About **15 minute
 ## 2. Import the solution (5 min)
 1. Go to **https://make.powerapps.com**. At the top right, select the environment to install into (your **default** environment is fine).
 2. In the left menu, click **Solutions → Import solution**.
-3. Click **Browse**, choose `FortifyDailyDigest_1_0_0_7_managed.zip`, then click **Next**.
+3. Click **Browse**, choose the package (for example `FortifyDailyDigest_1_0_0_8_managed.zip`), then click **Next**.
 4. If asked about **connections**, select or create connections for *Office 365 Outlook* and *Office 365 Users* with your own account. They're only used for testing; every employee's digest runs with **their own** sign-in.
 5. Click **Import** and wait for the green *"Solution imported successfully"* banner (1–3 minutes). **Fortify Daily Digest** then appears in the list as *Managed*.
 
@@ -45,6 +45,14 @@ For the client's Microsoft 365 / Power Platform administrator. About **15 minute
 Send the announcement and the user guide. Each person sets up their weekday digest once, in about 5 minutes.
 
 ---
+
+## Upgrading to a new version (about 5 minutes)
+Use this when Fortify sends an updated package and Daily Digest is already installed.
+1. **Import:** in **https://make.powerautomate.com** (or Power Apps), select the same environment, then **Solutions → Import solution** → choose the new package → **Next**. If asked, keep the default **Upgrade** option, then click **Import**. The version number in the Solutions list changes (for example to 1.0.0.8).
+2. **Publish:** in **https://copilotstudio.microsoft.com**, open **Daily Digest** and click **Publish**.
+3. **Test:** start a **new chat** with Daily Digest and click **Email me my digest**.
+
+There's no need to repeat the channel, approval or deployment steps. Users get the update automatically. They may need to start a new chat or refresh Copilot to see it.
 
 ## What it can and can't do (for your security review)
 - **Reads each person's own mailbox only**, with their own sign-in. There's no app registration, no service account and no tenant-wide permissions.
