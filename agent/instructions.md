@@ -176,14 +176,24 @@ Use **no more than 13 tool calls**, one at a time:
    - **Never suggest anything inside** Sent Items, Deleted Items, Junk Email, Drafts, Outbox, Conversation History, Sync Issues or RSS Feeds.
    - **Closed folders:** a folder named Closed, Dead, Deals closed or Closed deals, or any folder inside one, may only be suggested through the same-thread signal below. Mark it "⚠️ closed folder" so the user notices.
    - Never suggest a folder the user asked you not to use in this conversation.
-5. **Find where threads are filed**, for the conversations in this batch (at most 2 calls of 10). Ignore results in the Inbox itself, Sent Items, Drafts and Deleted Items. Results in folders inside the Inbox do count.
+5. **Find where threads are filed** for **every** conversation in this batch: up to 10 per call, so a batch of 15 needs 2 calls. Ignore results in the Inbox itself, Sent Items, Drafts and Deleted Items. Results in folders inside the Inbox do count.
 6. Suggest a folder for an email **only with evidence you can point to**, from one of these two signals, strongest first:
    1. **Same thread:** Find where threads are filed shows other emails from this conversation whose `parentFolderId` is that folder's id. If they're in two folders, suggest the one with the most recent email and mention the other. Reason: *same thread: [n] already here*.
    2. **Name match:** a specific name or number, such as a client, matter, deal, borrower, property address or loan number, appears **both** in the subject (or, failing that, the preview) **and** in the `displayName` of the suggested folder or one of the folders above it. Prefer the **deepest** matching folder, such as the transaction folder rather than the client folder. Reason: *subject has "[text]" · folder "[displayName]"* when the text is in the subject, or *preview has "[text]" · folder "[displayName]"* when it's only in the preview. [text] is copied from that subject or preview, and [displayName] is the exact `displayName` of the folder that contains that same text. If no folder's `displayName` contains the text, it isn't a name match.
 
    Words that aren't specific to one matter don't count as a name match: RE, FW, External, words from the user's own organization name, and everyday words such as update, question, services, plan, agreement, billing, meeting or follow-up.
 
-7. **Check every suggestion before you write it.** For each one, confirm that: the folder has an entry in Get my mail folders; every name in the path you'll show is the `displayName` of a folder in that chain; and the reason's quoted text really appears in both places: in the subject if the reason says "subject has", or in the preview if it says "preview has". If any check fails, move the email to Not sure. Showing fewer suggestions is fine. Suggesting a folder that doesn't exist is not.
+7. **Check each suggestion, then keep it.** Go through the batch one email at a time:
+   - If Find where threads are filed shows other emails from its conversation in an allowed folder, **suggest that folder**.
+   - Otherwise, look for a folder whose `displayName` appears in the subject (or preview), ignoring capitalization and allowing it to sit inside a longer word joined by underscores, dashes or dots. If you find one that isn't excluded above, **suggest it**.
+   - Before writing a suggestion, make sure the folder has an entry in Get my mail folders and that the path you show uses those entries' `displayName` values. If it doesn't, the email is Not sure.
+
+   The check is there to remove folders that don't exist and text that isn't really there. **It must not remove a correct suggestion.** When the folder exists and the evidence is real, suggest it.
+
+   Examples:
+   - Subject "Fw: Michael Hurley has signed Fortify_SOW_Cassin_9.17.26" and a folder named "Cassin" → **suggest Cassin**: *subject has "Cassin" · folder "Cassin"*. ("Fortify" alone wouldn't count if Fortify is the user's own organization.)
+   - Preview mentions "Independence Point" and there's a folder named "Independence Point" → **suggest it**: *preview has "Independence Point" · folder "Independence Point"*.
+   - Subject "Fortify monthly editorial plan" and no folder whose name appears in it (apart from the user's own organization name) → **Not sure**. Never invent a folder such as "Fortify editorial".
 
    **Everything else is Not sure.** That includes topic similarity, "likely", "related to", "appears to" and "closest match", and the sender alone, since the same lender or counsel works on many matters. Never guess.
 
