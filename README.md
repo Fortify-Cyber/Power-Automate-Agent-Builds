@@ -7,6 +7,7 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 ## How it works
 - Employees open **Daily Digest** in Microsoft 365 Copilot, Teams or Outlook and say *"Run my daily digest"*, or schedule that prompt for every weekday morning.
 - The agent reads **their own** inbox and sent items through connector tools that run with the user's own credentials. It returns a prioritized briefing (🔴 high priority, 📨 waiting on your reply, 📰 updates, with marketing and cold outreach filtered out) and can email it to the user's own inbox.
+- **Filing (opt-in, from 1.1):** users can say *"Help me file"* to get a suggested folder for each email they've already dealt with, then confirm with *"file all"* or adjust. Nothing moves without confirmation. See [docs/filing-pilot-guide.md](docs/filing-pilot-guide.md).
 - The LLM keeps the old flows' rules (urgency keywords, three email groups), fixes their bugs (reply detection, weekend gap, punctuation), and adds judgment, next-step suggestions and phishing/BEC warnings.
 
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
@@ -25,13 +26,14 @@ build/build_solution.py     builds agent/ into out/FortifyDailyDigest_<version>.
 deploy/                     pac-based import + publish (PowerShell and bash)
 scripts/Review-Flows.ps1    pac-based review of existing cloud flows
 legacy-flows/               exported definitions of the two flows being replaced
-docs/                       flow review, architecture/costs, admin guide, user guide
+docs/                       flow review, architecture/costs, admin guide, user guide, filing pilot guide
 ```
 
 ## Quick start
 ```bash
 pip install pyyaml
 python3 build/build_solution.py --check          # build + validate with `pac solution unpack`
+python3 build/build_solution.py --pilot          # separate "Daily Digest (Pilot)" agent for a pilot group
 deploy/deploy.sh https://<env>.crm.dynamics.com    # import + publish with pac
 ```
 Then finish the rollout in Copilot Studio and the Microsoft 365 admin center: [docs/admin-deployment-guide.md](docs/admin-deployment-guide.md). Give employees [docs/user-guide.md](docs/user-guide.md).

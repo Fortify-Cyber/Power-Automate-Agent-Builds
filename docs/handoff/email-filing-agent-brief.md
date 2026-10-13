@@ -115,6 +115,7 @@ Cassin's **Conditional Access blocks device-code sign-in (error 53003)**, so For
 - Graph's move and copy endpoints with immutable IDs.
 
 ## 8. Key documents
+- `docs/filing-pilot-guide.md`: **the first build (v1.1.0.0)**: what's in it, how to install the pilot, technical checks and the test script.
 - `docs/scoping/Daily Digest - Email Filing Assistant - Scoping Document.docx`: the scoping document reviewed with the team.
 - `docs/architecture-and-costs.md`, `docs/admin-deployment-guide.md`, `docs/client-deployment-runbook.md`, `docs/user-guide.md`
 - `agent/`: Daily Digest source (instructions, tools, topics).

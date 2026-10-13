@@ -9,6 +9,11 @@ Copilot Studio produces on solution export, so the zip can be imported with
     python3 build/build_solution.py                # -> out/FortifyDailyDigest_1_0_0_0.zip
     python3 build/build_solution.py --check        # also round-trip through `pac solution unpack`
     python3 build/build_solution.py --version 1.0.1.0
+    python3 build/build_solution.py --pilot        # -> out/FortifyDailyDigestPilot_<version>.zip
+
+--pilot builds a separate copy named "Daily Digest (Pilot)", with its own solution,
+schema and connection reference names, so it can be installed next to the production
+agent and shared with a pilot group without changing anyone else's Daily Digest.
 """
 import argparse
 import base64
@@ -32,10 +37,22 @@ AUTH_MODE = {"None": 1, "Integrated": 2, "Custom": 3}
 AUTH_TRIGGER = {"AsNeeded": 0, "Always": 1}
 COMPONENT_TYPE = {"topic": 9, "action": 9, "gpt": 15}
 
+# Renames applied to every source file for a --pilot build.
+PILOT_RENAMES = [("fc_DailyDigest", "fc_DailyDigestPilot"),
+                 ("FortifyDailyDigest", "FortifyDailyDigestPilot"),
+                 ("Daily Digest", "Daily Digest (Pilot)")]
+renames = []
+
+
+def read_source(path):
+    text = pathlib.Path(path).read_text(encoding="utf-8")
+    for old, new in renames:
+        text = text.replace(old, new)
+    return text
+
 
 def load_yaml(path):
-    with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    return yaml.safe_load(read_source(path))
 
 
 def strip_metadata(text):
@@ -163,7 +180,8 @@ def configuration_json(cfg):
     }
 
 
-def build(version=None):
+def build(version=None, pilot=False):
+    renames[:] = PILOT_RENAMES if pilot else []
     sol = load_yaml(AGENT / "solution.yml")
     version = version or sol["version"]
     settings = load_yaml(AGENT / "settings.mcs.yml")
@@ -174,9 +192,9 @@ def build(version=None):
     files = {}  # zip path -> bytes/str
     components = []  # (schema, ctype, name, description, data)
 
-    agent_text = (AGENT / "agent.mcs.yml").read_text(encoding="utf-8")
+    agent_text = read_source(AGENT / "agent.mcs.yml")
     agent_meta = load_yaml(AGENT / "agent.mcs.yml")["mcs.metadata"]
-    instructions = (AGENT / "instructions.md").read_text(encoding="utf-8")
+    instructions = read_source(AGENT / "instructions.md")
     # Copilot Studio parses {...} in instructions as Power Fx and fails to publish.
     for n, line in enumerate(instructions.splitlines(), 1):
         if "{" in line or "}" in line:
@@ -188,7 +206,7 @@ def build(version=None):
     tool_links = []
     for kind, folder in (("topic", "topics"), ("action", "tools")):
         for path in sorted((AGENT / folder).glob("*.mcs.yml")):
-            text = path.read_text(encoding="utf-8")
+            text = read_source(path)
             doc = yaml.safe_load(text)
             meta = doc.get("mcs.metadata", {})
             schema = f"{bot}.{kind}.{path.name[:-len('.mcs.yml')]}"
@@ -265,7 +283,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", help="override solution version, e.g. 1.0.1.0")
     ap.add_argument("--check", action="store_true", help="validate with `pac solution unpack`")
+    ap.add_argument("--pilot", action="store_true",
+                    help='build the separate "Daily Digest (Pilot)" agent for a pilot group')
     args = ap.parse_args()
-    z = build(args.version)
+    z = build(args.version, args.pilot)
     if args.check:
         check(z)
