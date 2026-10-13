@@ -1,4 +1,4 @@
-# Filing Assistant: pilot guide (v1.0.2.2)
+# Filing Assistant: pilot guide (v1.0.2.3)
 
 For Fortify. **Filing Assistant** is a small, separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md).
 
@@ -9,7 +9,7 @@ The model (GPT-5.5 Chat) does the finding and matching with four tools, followin
 
 1. **Find emails to file.** These are Inbox emails the user replied to, replied all to, or forwarded (Outlook's `PidTagLastVerbExecuted` marker, `0x1081` = 102, 103 or 104), plus emails with a completed flag. Unread and still-flagged emails are left out. It shows 15 at a time, oldest first.
 2. **Suggest a folder,** using two signals only:
-   1. **Same thread:** another email from the conversation is already in one of the user's folders.
+   1. **Same thread:** another email from the conversation is already in one of the user's folders. This includes **Archive**: a thread the user archived is suggested to Archive, unless part of it is also in another folder, which then wins. Archive is never suggested from a subject.
    2. **Folder name in the subject:** a folder's name appears in the subject as whole words, treating `_`, `-` and `.` as spaces ("Fortify_SOW_Cassin_9.17.26" → Cassin; "Twin Bridges" doesn't match Bridge). Folders named only with a number (such as 2026), Closed and Dead are skipped for this signal. If several match, the deepest folder wins.
 
    Everything else is **Not sure**. There's no guessing from the topic or the sender.
@@ -37,7 +37,7 @@ Click-to-confirm card, filing to two folders, matching on the email body, rememb
 ## Install and test (Fortify dev environment)
 ```bash
 python3 build/build_solution.py --source filing-agent
-# -> out/FortifyFilingAssistant_1_0_2_2.zip
+# -> out/FortifyFilingAssistant_1_0_2_3.zip
 ```
 1. **Import:** make.powerapps.com → dev environment → **Solutions → Import solution** → the zip. Pick your Office 365 Outlook connection.
 2. **Clean up:** an unmanaged import never removes old components. When upgrading from 1.0.1.x, delete the **Find emails to file** topic and the **Read mail for filing** tool in Copilot Studio (and the **Test** topic and **Send an HTTP request** tool if they're still there). Delete the **Fortify Daily Digest (Pilot)** solution from dev if it's still there.
