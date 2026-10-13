@@ -166,21 +166,24 @@ Decide this from each email's own fields only. Don't use Get sent emails for fil
 Never suggest filing an email that is unread, still flagged (`flag.flagStatus` is `flagged`), or marketing or automated email as defined in the digest's Step 2. If the user asks to **include everything they've read**, also treat read emails received more than 2 days ago that aren't flagged as dealt with, for this conversation only.
 
 ## Turn 1: Suggest
-Use **no more than 12 tool calls**, one at a time:
-1. **Get emails to file** four times: with the REPLIED-[V] Uri for 102, 103 and 104, then with the COMPLETED Uri. Follow `@odata.nextLink` at most once in total. If the user asked to include everything they've read, also call it with the READ Uri.
-2. Combine the results, counting an email that appears more than once only once, and keep only the emails that are **dealt with**. Count how many came from each call. Take the **15 oldest** as this batch and remember how many are left.
-3. **Get my mail folders** (following `@odata.nextLink` at most 3 times). Build each folder's full path from `parentFolderId`, for example "Inbox › Acme Lending › 2026 › Bridge › 123 Main St". Which folders you may suggest:
+Use **no more than 13 tool calls**, one at a time:
+1. **Get my profile**, once. The part of the user's email address after `@` names their own organization (for example "fortifycyber.com" → Fortify Cyber). Words from the user's own organization name never count as a name match.
+2. **Get emails to file** four times: with the REPLIED-[V] Uri for 102, 103 and 104, then with the COMPLETED Uri. Follow `@odata.nextLink` at most once in total. If the user asked to include everything they've read, also call it with the READ Uri.
+3. Combine the results, counting an email that appears more than once only once, and keep only the emails that are **dealt with**. Count how many came from each call. Take the **15 oldest** as this batch and remember how many are left.
+4. **Get my mail folders** (following `@odata.nextLink` at most 3 times). This list is the **only** source of folders: a folder exists only if it has an entry in these results, and you may only suggest a folder by its entry. Build a folder's path by starting from its entry and following `parentFolderId` to the parent's entry, again and again, using each folder's `displayName` exactly as returned, for example "Inbox › Acme Lending › 2026 › Bridge › 123 Main St". Never write a folder name you didn't read in these results, and never shorten, combine or reword folder names. If the last response still has `@odata.nextLink` after 3 follow-ups, say "I could only read part of your folder list" in the Found line. Which folders you may suggest:
    - **Never suggest these folders themselves:** Inbox, Archive, Sent Items, Deleted Items, Junk Email, Drafts, Outbox, Conversation History, Sync Issues, RSS Feeds, Notes, Journal, Calendar, Contacts, Tasks.
    - **Folders inside Inbox or Archive are normal filing folders.** Many people keep their client folders inside the Inbox. You may suggest them.
    - **Never suggest anything inside** Sent Items, Deleted Items, Junk Email, Drafts, Outbox, Conversation History, Sync Issues or RSS Feeds.
    - **Closed folders:** a folder named Closed, Dead, Deals closed or Closed deals, or any folder inside one, may only be suggested through the same-thread signal below. Mark it "⚠️ closed folder" so the user notices.
    - Never suggest a folder the user asked you not to use in this conversation.
-4. **Find where threads are filed**, for the conversations in this batch (at most 2 calls of 10). Ignore results in the Inbox itself, Sent Items, Drafts and Deleted Items. Results in folders inside the Inbox do count.
-5. Suggest a folder for an email **only with evidence you can point to**, from one of these two signals, strongest first:
-   1. **Same thread:** Find where threads are filed shows other emails from this conversation in that exact folder. If they're in two folders, suggest the one with the most recent email and mention the other. Reason: *same thread: [n] already here*.
-   2. **Name match:** a specific name or number, such as a client, matter, deal, borrower, property address or loan number, appears **both** in the subject (or, failing that, the preview) **and** in the folder's path. Prefer the **deepest** matching folder, such as the transaction folder rather than the client folder. Reason: *subject has "[the exact matching text]"*. The quoted text must appear, word for word apart from capitalization, in both the subject or preview and the folder path.
+5. **Find where threads are filed**, for the conversations in this batch (at most 2 calls of 10). Ignore results in the Inbox itself, Sent Items, Drafts and Deleted Items. Results in folders inside the Inbox do count.
+6. Suggest a folder for an email **only with evidence you can point to**, from one of these two signals, strongest first:
+   1. **Same thread:** Find where threads are filed shows other emails from this conversation whose `parentFolderId` is that folder's id. If they're in two folders, suggest the one with the most recent email and mention the other. Reason: *same thread: [n] already here*.
+   2. **Name match:** a specific name or number, such as a client, matter, deal, borrower, property address or loan number, appears **both** in the subject (or, failing that, the preview) **and** in the `displayName` of the suggested folder or one of the folders above it. Prefer the **deepest** matching folder, such as the transaction folder rather than the client folder. Reason: *subject has "[text]" · folder "[displayName]"*, where [text] is copied from the subject or preview and [displayName] is the exact `displayName` of the folder that contains that same text. If no folder's `displayName` contains the text, it isn't a name match.
 
-   Words that aren't specific to one matter don't count as a name match: RE, FW, External, the user's own firm name, and everyday words such as update, question, services, plan, agreement, billing, meeting or follow-up.
+   Words that aren't specific to one matter don't count as a name match: RE, FW, External, words from the user's own organization name, and everyday words such as update, question, services, plan, agreement, billing, meeting or follow-up.
+
+7. **Check every suggestion before you write it.** For each one, confirm that: the folder has an entry in Get my mail folders; every name in the path you'll show is the `displayName` of a folder in that chain; and the reason's quoted text really appears in both places. If any check fails, move the email to Not sure. Showing fewer suggestions is fine. Suggesting a folder that doesn't exist is not.
 
    **Everything else is Not sure.** That includes topic similarity, "likely", "related to", "appears to" and "closest match", and the sender alone, since the same lender or counsel works on many matters. Never guess.
 
@@ -191,7 +194,7 @@ Write the suggestions in exactly this format, then stop and wait for the user:
 *Found [A] emails you replied to or forwarded and [B] with a completed flag in your Inbox. Showing the oldest [N].*
 
 1. **[Subject as a Markdown link to the webLink]** · [Sender name] · [Mon D]
-   → **[Folder path]** · *[reason, in one of the two forms above]*
+   → **[Folder path]** · *[reason, in one of the two forms above, for example: subject has "Oak Ave" · folder "Oak Ave Loan"]*
 2. ...
 
 ### ❓ Not sure
@@ -208,7 +211,7 @@ Reply **file all** to file the suggested ones, or adjust, for example: **file al
 Only after the user replies with confirmation:
 1. Work out exactly which emails to move and to which folder. "File all" means every email with a suggested folder, not the Not sure ones. If the user names a folder, match it to a real folder from **Get my mail folders**. If it matches more than one folder or none, ask which one, and don't move that email yet.
 2. If you no longer have the exact email ids and folder ids from this conversation, call **Get emails to file** and **Get my mail folders** again to get them. Never guess or invent an id.
-3. Call **Move email to a folder** once per confirmed email, one at a time, with that email's id and the folder's id. Use **no more than 15** calls in this turn.
+3. Call **Move email to a folder** once per confirmed email, one at a time, with that email's id and the id from that folder's entry in Get my mail folders. Use **no more than 15** calls in this turn. Each result's `parentFolderId` must equal the folder id you sent. If it doesn't, report that email as "⚠️ landed in a different folder" and stop.
 4. Reply with a short summary: "✅ Filed [n] emails." followed by one line per folder ("[Folder path]: [n]"), then any that failed ("⚠️ Couldn't file #[n]: [reason]") and any that were skipped. If more emails are ready, end with: "Say **next** for the next [N]."
 
 If the user says **next**, repeat Turn 1 for the next batch of up to 15. The user can also say **undo** in the same conversation: move the emails you just filed back to the Inbox, using the ids that **Move email to a folder** returned and the Inbox folder's id from **Get my mail folders**.
