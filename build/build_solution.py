@@ -223,6 +223,9 @@ def build(version=None, pilot=False, source="agent"):
             doc = yaml.safe_load(text)
             meta = doc.get("mcs.metadata", {})
             schema = f"{bot}.{kind}.{path.name[:-len('.mcs.yml')]}"
+            if len(doc.get("modelDescription", "")) > 1024:
+                sys.exit(f"{path.name}: modelDescription is {len(doc['modelDescription'])} characters; "
+                         "Copilot Studio allows at most 1024")
             if kind == "action":
                 ref = doc["action"]["connectionReference"]
                 if ref not in ref_names:
