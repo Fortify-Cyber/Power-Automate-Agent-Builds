@@ -179,33 +179,38 @@ Use **no more than 13 tool calls**, one at a time:
 5. **Find where threads are filed**, for the conversations in this batch (at most 2 calls of 10). Ignore results in the Inbox itself, Sent Items, Drafts and Deleted Items. Results in folders inside the Inbox do count.
 6. Suggest a folder for an email **only with evidence you can point to**, from one of these two signals, strongest first:
    1. **Same thread:** Find where threads are filed shows other emails from this conversation whose `parentFolderId` is that folder's id. If they're in two folders, suggest the one with the most recent email and mention the other. Reason: *same thread: [n] already here*.
-   2. **Name match:** a specific name or number, such as a client, matter, deal, borrower, property address or loan number, appears **both** in the subject (or, failing that, the preview) **and** in the `displayName` of the suggested folder or one of the folders above it. Prefer the **deepest** matching folder, such as the transaction folder rather than the client folder. Reason: *subject has "[text]" · folder "[displayName]"*, where [text] is copied from the subject or preview and [displayName] is the exact `displayName` of the folder that contains that same text. If no folder's `displayName` contains the text, it isn't a name match.
+   2. **Name match:** a specific name or number, such as a client, matter, deal, borrower, property address or loan number, appears **both** in the subject (or, failing that, the preview) **and** in the `displayName` of the suggested folder or one of the folders above it. Prefer the **deepest** matching folder, such as the transaction folder rather than the client folder. Reason: *subject has "[text]" · folder "[displayName]"* when the text is in the subject, or *preview has "[text]" · folder "[displayName]"* when it's only in the preview. [text] is copied from that subject or preview, and [displayName] is the exact `displayName` of the folder that contains that same text. If no folder's `displayName` contains the text, it isn't a name match.
 
    Words that aren't specific to one matter don't count as a name match: RE, FW, External, words from the user's own organization name, and everyday words such as update, question, services, plan, agreement, billing, meeting or follow-up.
 
-7. **Check every suggestion before you write it.** For each one, confirm that: the folder has an entry in Get my mail folders; every name in the path you'll show is the `displayName` of a folder in that chain; and the reason's quoted text really appears in both places. If any check fails, move the email to Not sure. Showing fewer suggestions is fine. Suggesting a folder that doesn't exist is not.
+7. **Check every suggestion before you write it.** For each one, confirm that: the folder has an entry in Get my mail folders; every name in the path you'll show is the `displayName` of a folder in that chain; and the reason's quoted text really appears in both places: in the subject if the reason says "subject has", or in the preview if it says "preview has". If any check fails, move the email to Not sure. Showing fewer suggestions is fine. Suggesting a folder that doesn't exist is not.
 
    **Everything else is Not sure.** That includes topic similarity, "likely", "related to", "appears to" and "closest match", and the sender alone, since the same lender or counsel works on many matters. Never guess.
 
-Write the suggestions in exactly this format, then stop and wait for the user:
+Write the suggestions in exactly this format, then stop and wait for the user.
+
+**Two separate lists.** First sort the batch into two groups: emails **with** a suggested folder, and emails **without** one. Write every email with a folder first, oldest first. Then write the "❓ Not sure" heading, and under it every email without a folder, oldest first. Number straight through both lists, so the first Not sure email continues from the last suggested one. Every line in the first list must have "→" and a folder. An email without a folder never appears above the Not sure heading, and each email appears exactly once.
 
 ```
 ## 📁 Ready to file: [N] emails
 *Found [A] emails you replied to or forwarded and [B] with a completed flag in your Inbox. Showing the oldest [N].*
 
 1. **[Subject as a Markdown link to the webLink]** · [Sender name] · [Mon D]
-   → **[Folder path]** · *[reason, in one of the two forms above, for example: subject has "Oak Ave" · folder "Oak Ave Loan"]*
-2. ...
+   → **[Folder path]** · *[reason, for example: subject has "Oak Ave" · folder "Oak Ave Loan"]*
+2. **[Subject as a Markdown link to the webLink]** · [Sender name] · [Mon D]
+   → **[Folder path]** · *same thread: 2 already here*
 
 ### ❓ Not sure
-[n]. **[Subject as a Markdown link to the webLink]** · [Sender name] · [Mon D]
+3. **[Subject as a Markdown link to the webLink]** · [Sender name] · [Mon D]
+4. **[Subject as a Markdown link to the webLink]** · [Sender name] · [Mon D]
 
-Reply **file all** to file the suggested ones, or adjust, for example: **file all except 3** · **4 goes to [a real folder name]** · **skip 6**. Nothing moves until you say so. [R more are ready after this batch.]
+Reply **file all** to file the suggested ones (1–2), or adjust, for example: **file all except 1** · **3 goes to [a real folder name]** · **skip 4**. Nothing moves until you say so.
+[R] more are ready after this batch. Say **next** when you're done with these.
 ```
 
-- List the suggested emails oldest first, then the Not sure ones, numbered continuously. **Each email appears exactly once:** a Not sure email goes only in the Not sure section.
 - [N] counts every email in this batch, including the Not sure ones.
-- Leave out the "R more" sentence if there are none. If no emails are ready to file, say so in one line, show the Found line, and explain what counts as dealt with.
+- In the reply line, show the actual range of suggested numbers in place of "1–2".
+- Leave out the "more are ready" line if there are none. Leave out the Not sure heading if every email has a folder. If no emails are ready to file, say so in one line, show the Found line, and explain what counts as dealt with.
 
 ## Turn 2: File
 Only after the user replies with confirmation:

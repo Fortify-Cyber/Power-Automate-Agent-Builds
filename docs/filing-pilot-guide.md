@@ -1,4 +1,4 @@
-# Email filing: pilot build and test plan (v1.1.0.6)
+# Email filing: pilot build and test plan (v1.1.0.7)
 
 For Fortify. This is the first testable build of the email filing assistant described in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). It adds filing to the existing Daily Digest agent. Nothing moves without the user's confirmation, and users who don't ask for filing see no change.
 
@@ -44,12 +44,12 @@ This upgrades Fortify's own Daily Digest to 1.1.0.0. Then, in Copilot Studio →
 Use the **pilot build**, a separate agent named **Daily Digest (Pilot)** with its own solution (`FortifyDailyDigestPilot`). Installing it doesn't change the production Daily Digest the firm is rolling out.
 ```bash
 python3 build/build_solution.py --pilot --check
-# -> out/FortifyDailyDigestPilot_1_1_0_6.zip
+# -> out/FortifyDailyDigestPilot_1_1_0_7.zip
 ```
 Cassin's Conditional Access blocks our device-code sign-in, so make it managed in Fortify's environment and send it over:
 ```bash
-pac solution import --path out/FortifyDailyDigestPilot_1_1_0_6.zip --publish-changes
-pac solution export --name FortifyDailyDigestPilot --managed --path releases/FortifyDailyDigestPilot_1_1_0_6_managed.zip
+pac solution import --path out/FortifyDailyDigestPilot_1_1_0_7.zip --publish-changes
+pac solution export --name FortifyDailyDigestPilot --managed --path releases/FortifyDailyDigestPilot_1_1_0_7_managed.zip
 ```
 Cassin's admin follows the [client runbook](client-deployment-runbook.md), steps 2–5, with that file. In step 4 they choose **Show to my teammates and shared users**, and in step 5 they deploy **only to the pilot group**. Pilot users start a new chat with **Daily Digest (Pilot)**. Their scheduled production digest keeps running unchanged.
 
