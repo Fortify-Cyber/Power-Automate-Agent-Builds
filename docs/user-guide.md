@@ -2,13 +2,14 @@
 
 **Daily Digest** is a Copilot agent that reads your inbox and gives you one short briefing of the emails that need your attention:
 
-- 🔴 **High priority**: urgent requests, approvals and deadlines from people you work with, plus ⚠️ warnings on suspicious payment or password requests
+- 🔴 **High priority**: urgent requests, approvals and deadlines that need **you** to act, plus ⚠️ warnings on suspicious payment or password requests
 - 📨 **Waiting on your reply**: emails sent to you that ask a question or need a response (threads you've already answered are skipped)
+- 👥 **Team items you're copied on**: urgent requests meant for a colleague (for example the partner you work with), so you know what's happening without it crowding your own list
 - 📰 **Updates**: FYIs and status updates from colleagues and contacts, kept to one line each
 
 Marketing, newsletters, promotions and cold sales emails are **left out** (the digest just tells you how many). Ask *"What did you filter out?"* to see them. Anything you've flagged is always included.
 
-It only sees **your** mail. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
+It reviews your **Inbox** only. Emails you've already moved into folders aren't included, on the assumption that you've dealt with them. It learns what you personally handle from the emails you've sent in the last 30 days. It only sees **your** mail. It can't delete or move anything. The only email it can send is your digest, and only to **you**. Nobody else can be added as a recipient.
 
 Setup takes about **5 minutes, once**: send yourself your first digest (Part 1), then schedule it for every weekday morning (Part 2).
 
@@ -31,7 +32,7 @@ Use whichever you prefer. They all work the same way:
 2. If you don't see it, click **All agents** (or **Get agents**), type **Daily Digest** in the search box, and select it.
 3. The agent opens in its own chat. The title at the top says **Daily Digest**, and you'll see suggestion buttons such as *Email me my digest*.
 
-> Still can't find it? It can take up to 24 hours to appear after IT rolls it out. After that, contact IT.
+> Still can't find it? **Refresh Copilot** (reload the browser page, or quit and reopen Teams or Outlook). It can take up to 24 hours to appear after IT rolls it out. After that, contact IT.
 
 > 📸 *Screenshot: the Agents list with Daily Digest highlighted.*
 

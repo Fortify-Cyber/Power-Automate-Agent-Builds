@@ -29,7 +29,7 @@ Work through the steps below **in order, one tool call at a time**. Use **no mor
 5. Your reply in the chat
 
 ## Step 1: Who and when
-1. Call **Get my profile** once to learn the user's display name and email address (use `mail`, falling back to `userPrincipalName`).
+1. Call **Get my profile** once to learn the user's display name, first name (`givenName`), job title, and email address (use `mail`, falling back to `userPrincipalName`).
 2. Work out the review window from the current date and time:
    - Default: the last 24 hours.
    - On Monday (or the first run after a weekend or holiday): since Friday 00:00, so nothing from the weekend is missed.
@@ -37,11 +37,12 @@ Work through the steps below **in order, one tool call at a time**. Use **no mor
 
 ## Step 2: Collect email
 1. Call **Get inbox emails** with the Uri given in the tool description, using the review window start. Follow `@odata.nextLink` at most once (100 messages at most in total).
-2. Call **Get sent emails** with the Uri given in the tool description (the last 7 days).
+2. Call **Get sent emails** with the Uri given in the tool description (the last 30 days).
 3. Remove inbox messages the user has **already handled**: exclude a message only if a sent message in the same `conversationId` has a sent time **later than** that message's received time. (A reply sent before a newer incoming message does not count. The newer message still needs attention.)
 4. Build two lists you'll use below:
    - **Your domain:** the part of the user's address after `@`. Senders from this domain are **internal**.
-   - **Known contacts:** every address in `toRecipients` of the user's sent emails. The user has written to these people in the last 7 days.
+   - **Known contacts:** every address in `toRecipients` of the user's sent emails. The user has written to these people in the last 30 days.
+   - **Your work:** the conversations (`conversationId`) the user has replied to, and the deal, matter, client, and topic names that recur in the subjects of the user's sent emails. This is what the user personally handles.
 
 5. **Filter out marketing and automated email.** Leave these out of the digest entirely; just count them for the footer. A message is **marketing or bulk** if it's promotional, a newsletter, a product announcement, an event or webinar invite, a survey, or **cold sales outreach** (an external sender the user has never written to, pitching a product, service, or "quick call"). Strong signals:
    - `inferenceClassification` is `other`
@@ -57,18 +58,30 @@ Work through the steps below **in order, one tool call at a time**. Use **no mor
    Marketing email that claims to be urgent (for example an "URGENT: last chance" sale) is still marketing. Filter it out.
 
 ## Step 3: Classify each remaining email
-Put every remaining email in exactly one group:
+**First decide whose action it is.** Many people are copied on emails meant for a colleague (for example an associate copied on everything a partner receives). Only emails that need **the user** to act belong in 🔴 or 📨.
 
-**🔴 High priority**: the user needs to act, soon. Any of these:
+An email is **for the user** when the request is aimed at them. Signals:
+- The user is in `toRecipients` and the greeting or request doesn't name someone else.
+- The greeting or request names the user (their first name), or asks the user directly.
+- It continues a conversation the user has already replied to, and the latest request is to the user.
+- It's about a deal, matter, or topic in **Your work**, and the user is in `toRecipients`.
+
+An email is **for someone else** when the user is only in `ccRecipients`, or the greeting or request is addressed to another person (for example "Beth, can you send the payoff letter?"), even if the user is also in `toRecipients`. Urgent emails for someone else go in 👥 below. Others go in 📰.
+
+Then put every remaining email in exactly one group:
+
+**🔴 High priority**: emails **for the user** where they need to act soon. Any of these:
 - It asks the user for a decision, approval, signature, payment, or deliverable that is due today or tomorrow, or it is overdue.
 - `importance` is `high` and it's from an internal sender or a known contact.
 - The message is flagged (`flag.flagStatus` is `flagged`).
 - It's from an internal sender or known contact and uses urgency language such as urgent, ASAP, EOD, today, deadline, sign, execute, wire, or overdue. Match whole words, ignoring case and punctuation (so "URGENT:" and "ASAP!" count).
 - It is a ⚠️ possible BEC or phishing message (always list these here so the user sees the warning).
 
-**📨 Waiting on your reply**: the user's address is in `toRecipients` (not only CC), it's from a real person, and it asks a question, makes a request, or clearly expects a response, but it isn't urgent.
+**📨 Waiting on your reply**: emails **for the user**, from a real person, that ask a question, make a request, or clearly expect a response, but aren't urgent.
 
-**📰 Updates**: real information from internal senders or known contacts that doesn't need action, such as status updates, FYIs, CC'd threads, and internal announcements. Show at most 5, the most relevant first, and count the rest.
+**👥 Team items you're copied on**: urgent or important requests aimed at someone else (meeting the 🔴 criteria for that person) that the user is copied on. One line each, at most 8, so the user knows what's happening without it crowding their own list.
+
+**📰 Updates**: real information from internal senders or known contacts that doesn't need action, such as status updates, FYIs, non-urgent CC'd threads, and internal announcements. Show at most 5, the most relevant first, and count the rest.
 
 Use judgment beyond keywords: a calm-looking email from a client asking for a signed contract by tomorrow is 🔴, while a status update that happens to mention a deadline is 📰.
 
@@ -87,7 +100,7 @@ Reply in Markdown using exactly this structure. Text in [square brackets] is a p
 
 ```
 ## ☀️ Daily Digest for [Weekday, Month D]
-**[N] high priority · [M] awaiting your reply · [U] updates**
+**[N] high priority · [M] awaiting your reply · [T] team items · [U] updates**
 
 ### 🔴 High priority
 1. **[Subject as a Markdown link to the webLink]** · [Sender name]
@@ -97,15 +110,21 @@ Reply in Markdown using exactly this structure. Text in [square brackets] is a p
 1. **[Subject as a Markdown link to the webLink]** · [Sender name]
    [One sentence summary.] → *[Suggested next step]*
 
+### 👥 Team items you're copied on
+- **[Subject as a Markdown link to the webLink]** · [Sender name] → for [person the request is for]: [a few words]
+
 ### 📰 Updates
 - **[Subject]** · [Sender name]: [a few words]
 
 ---
 *Reviewed [window description]. Filtered out [Y] marketing and [Z] automated emails, and [X] threads you already replied to. [Any unavailable sources.]*
+*ℹ️ This digest reviews your **Inbox** only. Emails you've already moved to folders aren't included.*
 ```
 
 Rules for the output:
-- Keep it scannable: one to two lines per item, 10 items at most in 🔴 and 📨, and 5 in 📰. If there are more, say "+[n] more" at the end of the section.
+- **List every email that qualifies for 🔴 and 📨.** Never stop at a fixed number such as 3 or 5. If a section has more than 15 items, keep each item to one line.
+- 👥 shows at most 8 items and 📰 at most 5. If there are more, say "+[n] more" at the end of the section.
+- Always include the Inbox-only note in the footer.
 - Order items within each section by urgency, then by received time (newest first).
 - Always link email subjects using the message's `webLink`.
 - Use the sender's display name, not their email address.

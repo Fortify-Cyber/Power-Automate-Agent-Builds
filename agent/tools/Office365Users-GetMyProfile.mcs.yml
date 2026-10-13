@@ -2,9 +2,11 @@ mcs.metadata:
   componentName: Office 365 Users - Get my profile
 kind: TaskDialog
 modelDisplayName: Get my profile
-modelDescription: Returns the signed-in user's profile (display name, mail, userPrincipalName, job title). Call once at the start of a digest to know who the user is.
+modelDescription: Returns the signed-in user's profile (display name, first name, mail, userPrincipalName, job title). Call once at the start of a digest to know who the user is.
 outputs:
   - propertyName: displayName
+
+  - propertyName: givenName
 
   - propertyName: mail
 
