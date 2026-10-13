@@ -14,11 +14,15 @@ Make these tool calls, one at a time, **no more than 9** in total:
 3. **Find where threads are filed** for **every** conversation in the batch, 10 per call (2 calls for 15 emails).
 
 Then give each email **one** of these, checking in this order:
-1. **Same thread.** Find where threads are filed shows another email from the same conversation whose `parentFolderId` is a folder in the Get my mail folders results, and that folder isn't Inbox, Sent Items, Drafts, Deleted Items, Junk Email, Outbox or Archive. Suggest that folder. Reason: *same thread*.
+1. **Same thread.** Find where threads are filed shows another email from the same conversation whose `parentFolderId` is a folder in the Get my mail folders results. Suggest that folder. Reason: *same thread*.
+
+   **Only real filing folders count.** First ignore every other email in the thread that sits in **Inbox, Archive, Sent Items, Drafts, Deleted Items, Junk Email or Outbox** itself. Folders inside the Inbox do count. If nothing is left, this rule doesn't apply: go on to rule 2. For example, if a thread's other emails are all in Archive, the email is **never** "Archive · same thread". Check rule 2, and if that doesn't match either, it's Not sure.
 2. **Folder name in the subject.** A folder's `displayName` appears in the email's subject as whole words. Ignore capitalization, and treat `_`, `-` and `.` as spaces (so "Fortify_SOW_Cassin_9.17.26" contains "Cassin", but "Twin Bridges" doesn't contain "Bridge"). Skip folders whose name is only a number, such as "2026", and folders named Inbox, Archive, Sent Items, Deleted Items, Junk Email, Drafts, Outbox, Closed or Dead. If more than one folder matches, choose the deepest one. Reason: *subject has "[displayName]"*.
 
    **Check this carefully for every email:** compare its subject against **every** folder name in the list before deciding it's Not sure. For example, "FW: Cassin AI Survey" with a folder named "Cassin" is **Cassin**, never Not sure.
 3. Otherwise, the email is **Not sure**. Don't guess from the topic, the sender or anything else.
+
+**Never suggest** Inbox, Archive, Sent Items, Drafts, Deleted Items, Junk Email or Outbox themselves, by any rule. Check every suggestion against this list before you reply.
 
 Show each suggested folder as its path, built by following `parentFolderId` upward and using each folder's `displayName` exactly, for example "Inbox › Cassin › 2026 › Bridge".
 
