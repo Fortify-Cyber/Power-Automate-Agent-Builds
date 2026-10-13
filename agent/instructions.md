@@ -156,23 +156,26 @@ Use this section when the user asks for help filing (for example "Help me file",
 
 ## What counts as dealt with
 An email in the Inbox is **dealt with** when either:
-- the user **replied to or forwarded** it: a message in **Get sent emails** has the same `conversationId` and a sent time **later than** the email's received time; or
+- the user **replied to or forwarded** it: its `singleValueExtendedProperties` has an entry with id `Integer 0x1081` and value `102`, `103` or `104`; or
 - it has a **completed flag** (`flag.flagStatus` is `complete`).
+
+Decide this from each email's own fields only. Don't use Get sent emails for filing.
+
+**Only emails returned by Get emails to file can be suggested or filed.** Those are emails in the user's Inbox. Never list, suggest or move an email from Sent Items or any other folder, including emails that appear in the results of Find where threads are filed.
 
 Never suggest filing an email that is unread, still flagged (`flag.flagStatus` is `flagged`), or marketing or automated email as defined in the digest's Step 2. If the user asks to **include everything they've read**, also treat read emails received more than 2 days ago that aren't flagged as dealt with, for this conversation only.
 
 ## Turn 1: Suggest
-Use **no more than 9 tool calls**, one at a time:
+Use **no more than 8 tool calls**, one at a time:
 1. **Get emails to file** (plus at most one more page).
-2. **Get sent emails** (the last 30 days).
-3. Keep only the emails that are **dealt with**. Take the **15 oldest** as this batch and remember how many are left.
-4. **Get my mail folders** (following `@odata.nextLink` at most 3 times). Build each folder's full path from `parentFolderId`, for example "Acme Lending › 2026 › Bridge › 123 Main St". **Never suggest** these folders, or anything inside them:
+2. Keep only the emails that are **dealt with**. Take the **15 oldest** as this batch and remember how many are left.
+3. **Get my mail folders** (following `@odata.nextLink` at most 3 times). Build each folder's full path from `parentFolderId`, for example "Acme Lending › 2026 › Bridge › 123 Main St". **Never suggest** these folders, or anything inside them:
    - Inbox, Sent Items, Deleted Items, Junk Email, Drafts, Outbox, Archive, Conversation History, Sync Issues, RSS Feeds, Notes, Journal, Calendar, Contacts, Tasks;
    - folders named Closed, Dead, Deals closed or Closed deals, unless an earlier email in the same thread is filed there (then suggest it with "⚠️ closed folder" so the user notices);
    - any folder the user asked you not to use in this conversation.
-5. **Find where threads are filed**, for the conversations in this batch (at most 2 calls of 10).
-6. Suggest a folder for each email using these signals, **strongest first**:
-   1. **Same thread:** earlier emails in the same conversation are filed in a folder that's allowed. If they're in two folders, suggest the one with the most recent email and mention the other.
+4. **Find where threads are filed**, for the conversations in this batch (at most 2 calls of 10). Ignore results in the Inbox, Sent Items, Drafts and Deleted Items; only the other folders tell you where a thread is filed.
+5. Suggest a folder for each email using these signals, **strongest first**:
+   1. **Same thread:** other emails in the same conversation are filed in a folder that's allowed. If they're in two folders, suggest the one with the most recent email and mention the other.
    2. **Matter or deal name:** the subject (or, failing that, the preview) contains a transaction, matter, borrower, property address, or loan number that matches a folder name. Prefer the **deepest** matching folder, such as the transaction folder rather than the client folder.
    3. **Close match:** a strong partial match between the subject and a folder path.
 
