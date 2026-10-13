@@ -1,4 +1,4 @@
-# Email filing: pilot build and test plan (v1.1.0.3)
+# Email filing: pilot build and test plan (v1.1.0.4)
 
 For Fortify. This is the first testable build of the email filing assistant described in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). It adds filing to the existing Daily Digest agent. Nothing moves without the user's confirmation, and users who don't ask for filing see no change.
 
@@ -44,12 +44,12 @@ This upgrades Fortify's own Daily Digest to 1.1.0.0. Then, in Copilot Studio →
 Use the **pilot build**, a separate agent named **Daily Digest (Pilot)** with its own solution (`FortifyDailyDigestPilot`). Installing it doesn't change the production Daily Digest the firm is rolling out.
 ```bash
 python3 build/build_solution.py --pilot --check
-# -> out/FortifyDailyDigestPilot_1_1_0_3.zip
+# -> out/FortifyDailyDigestPilot_1_1_0_4.zip
 ```
 Cassin's Conditional Access blocks our device-code sign-in, so make it managed in Fortify's environment and send it over:
 ```bash
-pac solution import --path out/FortifyDailyDigestPilot_1_1_0_3.zip --publish-changes
-pac solution export --name FortifyDailyDigestPilot --managed --path releases/FortifyDailyDigestPilot_1_1_0_3_managed.zip
+pac solution import --path out/FortifyDailyDigestPilot_1_1_0_4.zip --publish-changes
+pac solution export --name FortifyDailyDigestPilot --managed --path releases/FortifyDailyDigestPilot_1_1_0_4_managed.zip
 ```
 Cassin's admin follows the [client runbook](client-deployment-runbook.md), steps 2–5, with that file. In step 4 they choose **Show to my teammates and shared users**, and in step 5 they deploy **only to the pilot group**. Pilot users start a new chat with **Daily Digest (Pilot)**. Their scheduled production digest keeps running unchanged.
 
@@ -67,6 +67,8 @@ Run these in Fortify's environment before the client sees the build. If one fail
 | 5 | **Ids survive to the next turn** | **file all** after a suggestion list; **undo** afterwards | Instructions already re-fetch. Check that this happens and that it isn't too slow. |
 | 6 | **Permission prompt** for the new move tool | First Help me file as a new user | Add the extra "Allow" to the user guide |
 | 7 | **Still $0** | Power Platform admin center → Licensing → Copilot Studio after a day of tests | Stop and review before the client pilot |
+
+> **A connector error ends the turn.** When a tool call fails (for example a Graph 400), Copilot Studio stops the reply. The agent never gets a chance to try a fallback. So a filing query that fails during **"Run my daily digest, include what's ready to file…"** would stop that digest too. Have each pilot user run **Help me file** once without errors before they schedule the filing version of the digest.
 
 ## Test script (each pilot user, about 20 minutes)
 | # | Do this | Expect |
