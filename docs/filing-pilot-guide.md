@@ -1,4 +1,4 @@
-# Filing Assistant: pilot guide (v1.0.2.3)
+# Filing Assistant: pilot guide (v1.0.2.4)
 
 For Fortify. **Filing Assistant** is a small, separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md).
 
@@ -37,7 +37,7 @@ Click-to-confirm card, filing to two folders, matching on the email body, rememb
 ## Install and test (Fortify dev environment)
 ```bash
 python3 build/build_solution.py --source filing-agent
-# -> out/FortifyFilingAssistant_1_0_2_3.zip
+# -> out/FortifyFilingAssistant_1_0_2_4.zip
 ```
 1. **Import:** make.powerapps.com → dev environment → **Solutions → Import solution** → the zip. Pick your Office 365 Outlook connection.
 2. **Clean up:** an unmanaged import never removes old components. When upgrading from 1.0.1.x, delete the **Find emails to file** topic and the **Read mail for filing** tool in Copilot Studio (and the **Test** topic and **Send an HTTP request** tool if they're still there). Delete the **Fortify Daily Digest (Pilot)** solution from dev if it's still there.
