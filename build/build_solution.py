@@ -16,7 +16,7 @@ Copilot Studio produces on solution export, so the zip can be imported with
 schema and connection reference names, so it can be installed next to the production
 agent and shared with a pilot group without changing anyone else's Daily Digest.
 
-"@@VERSION@@" anywhere in instructions.md is replaced with the solution version, so the
+"@@VERSION@@" anywhere in the agent source (instructions, topics, tools) is replaced with the solution version, so the
 agent can show which build answered.
 """
 import argparse
@@ -46,12 +46,15 @@ PILOT_RENAMES = [("fc_DailyDigest", "fc_DailyDigestPilot"),
                  ("FortifyDailyDigest", "FortifyDailyDigestPilot"),
                  ("Daily Digest", "Daily Digest (Pilot)")]
 renames = []
+build_version = [""]
 
 
 def read_source(path):
     text = pathlib.Path(path).read_text(encoding="utf-8")
     for old, new in renames:
         text = text.replace(old, new)
+    if build_version[0]:
+        text = text.replace("@@VERSION@@", build_version[0])
     return text
 
 
@@ -190,6 +193,7 @@ def build(version=None, pilot=False, source="agent"):
     if not (AGENT / "solution.yml").exists():
         sys.exit(f"{source}/solution.yml not found")
     renames[:] = PILOT_RENAMES if pilot else []
+    build_version[0] = version or load_yaml(AGENT / "solution.yml")["version"]
     sol = load_yaml(AGENT / "solution.yml")
     version = version or sol["version"]
     settings = load_yaml(AGENT / "settings.mcs.yml")

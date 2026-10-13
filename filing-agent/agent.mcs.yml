@@ -14,4 +14,4 @@ gptCapabilities:
 
 aISettings:
   model:
-    modelNameHint: GPT5Chat
+    modelNameHint: GPT55Chat

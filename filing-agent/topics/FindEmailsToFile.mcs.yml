@@ -1,0 +1,516 @@
+mcs.metadata:
+  componentName: Find emails to file
+  description: Finds Inbox emails the user has dealt with, suggests a folder for each with fixed rules, and shows the list.
+kind: AdaptiveDialog
+modelDescription: "Finds the emails the user has already dealt with (replied to, forwarded, or flag marked complete), suggests a folder for each, and shows the numbered list to the user. Use it whenever the user asks for help filing, asks what's ready to file, or says next to see the next batch. It returns Batch: one line per email in the form 'number | message id | folder id | folder path', with folder id and path empty for Not sure emails."
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    # A new request starts over; "next" continues past the emails already shown.
+    - kind: ConditionGroup
+      id: cond_new_request
+      conditions:
+        - id: cond_new_request_yes
+          condition: =Not("next" in Lower(System.Activity.Text))
+          actions:
+            - kind: SetVariable
+              id: set_seen_reset
+              variable: Global.FilingSeen
+              value: ="|"
+
+    # 1. Emails the user replied to (102), replied all to (103) or forwarded (104), and completed flags.
+    - kind: BeginDialog
+      id: get_replied
+      input:
+        binding:
+          Uri: "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 102)&$top=100&$select=subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
+
+      dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+      output:
+        binding:
+          Response: Topic.R102
+
+    - kind: BeginDialog
+      id: get_replied_all
+      input:
+        binding:
+          Uri: "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 103)&$top=100&$select=subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
+
+      dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+      output:
+        binding:
+          Response: Topic.R103
+
+    - kind: BeginDialog
+      id: get_forwarded
+      input:
+        binding:
+          Uri: "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 104)&$top=100&$select=subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
+
+      dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+      output:
+        binding:
+          Response: Topic.R104
+
+    - kind: BeginDialog
+      id: get_completed
+      input:
+        binding:
+          Uri: "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=flag/flagStatus eq 'complete'&$top=100&$select=subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
+
+      dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+      output:
+        binding:
+          Response: Topic.RC
+
+    # 2. One typed list of every email returned, in call order.
+    - kind: SetVariable
+      id: set_emails
+      variable: Topic.Emails
+      value: |-
+        =With(
+          {
+            t1: Table(Topic.R102.value),
+            t2: Table(Topic.R103.value),
+            t3: Table(Topic.R104.value),
+            t4: Table(Topic.RC.value)
+          },
+          With(
+            {n1: CountRows(t1), n2: CountRows(t2), n3: CountRows(t3), n4: CountRows(t4)},
+            ForAll(
+              Sequence(n1 + n2 + n3 + n4) As i,
+              With(
+                {
+                  m: If(
+                    i.Value <= n1, Index(t1, i.Value).Value,
+                    i.Value <= n1 + n2, Index(t2, i.Value - n1).Value,
+                    i.Value <= n1 + n2 + n3, Index(t3, i.Value - n1 - n2).Value,
+                    Index(t4, i.Value - n1 - n2 - n3).Value
+                  )
+                },
+                {
+                  Id: Text(m.id),
+                  Subject: Substitute(Substitute(Text(m.subject), "[", "("), "]", ")"),
+                  Sender: Text(m.from.emailAddress.name),
+                  Received: DateTimeValue(Text(m.receivedDateTime)),
+                  Conv: Text(m.conversationId),
+                  Link: Text(m.webLink),
+                  Flag: Text(m.flag.flagStatus),
+                  IsRead: Boolean(m.isRead)
+                }
+              )
+            )
+          )
+        )
+
+    - kind: SetVariable
+      id: set_count_replied
+      variable: Topic.CountReplied
+      value: =CountRows(Table(Topic.R102.value)) + CountRows(Table(Topic.R103.value)) + CountRows(Table(Topic.R104.value))
+
+    - kind: SetVariable
+      id: set_count_completed
+      variable: Topic.CountCompleted
+      value: =CountRows(Table(Topic.RC.value))
+
+    # 3. Each email once; read, not still flagged, and not already shown in this conversation.
+    - kind: SetVariable
+      id: set_candidates
+      variable: Topic.Candidates
+      value: |-
+        =Filter(
+          ForAll(Distinct(Topic.Emails, Id) As d, LookUp(Topic.Emails, Id = d.Value)),
+          IsRead && Flag <> "flagged" && Not(("|" & Id & "|") in Coalesce(Global.FilingSeen, "|"))
+        )
+
+    - kind: SetVariable
+      id: set_picked
+      variable: Topic.Picked
+      value: =FirstN(Sort(Topic.Candidates, Received, SortOrder.Ascending), 15)
+
+    - kind: SetVariable
+      id: set_remaining
+      variable: Topic.Remaining
+      value: =CountRows(Topic.Candidates) - CountRows(Topic.Picked)
+
+    - kind: ConditionGroup
+      id: cond_any_emails
+      conditions:
+        - id: cond_no_emails
+          condition: =CountRows(Topic.Picked) = 0
+          actions:
+            - kind: SetVariable
+              id: set_batch_empty
+              variable: Topic.Batch
+              value: =""
+
+            - kind: SendActivity
+              id: send_none
+              activity:
+                text:
+                  - "📁 Nothing is ready to file right now. I look for Inbox emails you've replied to, forwarded, or flagged and marked complete.\n\n*Found {Topic.CountReplied} emails you replied to or forwarded and {Topic.CountCompleted} with a completed flag; none are left to show.*\n\n*Filing Assistant v@@VERSION@@*"
+
+            - kind: EndDialog
+              id: end_none
+
+    # 4. The whole folder tree (flat list), up to three pages.
+    - kind: BeginDialog
+      id: get_folders_1
+      input:
+        binding:
+          Uri: https://graph.microsoft.com/v1.0/me/mailFolders/delta?$select=displayName,parentFolderId
+          CustomHeader1: "Prefer: odata.maxpagesize=500"
+
+      dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+      output:
+        binding:
+          Response: Topic.F1
+
+    - kind: SetVariable
+      id: set_folders_1
+      variable: Topic.FolderRaw
+      value: |-
+        =ForAll(
+          Table(Topic.F1.value) As r,
+          {Id: Text(r.Value.id), Name: Text(r.Value.displayName), Parent: Text(r.Value.parentFolderId)}
+        )
+
+    - kind: SetVariable
+      id: set_next_1
+      variable: Topic.NextLink
+      value: =Text(Topic.F1.'@odata.nextLink')
+
+    - kind: ConditionGroup
+      id: cond_folders_2
+      conditions:
+        - id: cond_folders_2_yes
+          condition: =Not(IsBlank(Topic.NextLink))
+          actions:
+            - kind: BeginDialog
+              id: get_folders_2
+              input:
+                binding:
+                  Uri: =Topic.NextLink
+                  CustomHeader1: "Prefer: odata.maxpagesize=500"
+
+              dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+              output:
+                binding:
+                  Response: Topic.F2
+
+            - kind: SetVariable
+              id: set_folders_2
+              variable: Topic.FolderRaw
+              value: |-
+                =With(
+                  {
+                    a: Topic.FolderRaw,
+                    b: ForAll(
+                      Table(Topic.F2.value) As r,
+                      {Id: Text(r.Value.id), Name: Text(r.Value.displayName), Parent: Text(r.Value.parentFolderId)}
+                    )
+                  },
+                  ForAll(
+                    Sequence(CountRows(a) + CountRows(b)) As i,
+                    If(i.Value <= CountRows(a), Index(a, i.Value), Index(b, i.Value - CountRows(a)))
+                  )
+                )
+
+            - kind: SetVariable
+              id: set_next_2
+              variable: Topic.NextLink
+              value: =Text(Topic.F2.'@odata.nextLink')
+
+    - kind: ConditionGroup
+      id: cond_folders_3
+      conditions:
+        - id: cond_folders_3_yes
+          condition: =Not(IsBlank(Topic.NextLink))
+          actions:
+            - kind: BeginDialog
+              id: get_folders_3
+              input:
+                binding:
+                  Uri: =Topic.NextLink
+                  CustomHeader1: "Prefer: odata.maxpagesize=500"
+
+              dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+              output:
+                binding:
+                  Response: Topic.F3
+
+            - kind: SetVariable
+              id: set_folders_3
+              variable: Topic.FolderRaw
+              value: |-
+                =With(
+                  {
+                    a: Topic.FolderRaw,
+                    b: ForAll(
+                      Table(Topic.F3.value) As r,
+                      {Id: Text(r.Value.id), Name: Text(r.Value.displayName), Parent: Text(r.Value.parentFolderId)}
+                    )
+                  },
+                  ForAll(
+                    Sequence(CountRows(a) + CountRows(b)) As i,
+                    If(i.Value <= CountRows(a), Index(a, i.Value), Index(b, i.Value - CountRows(a)))
+                  )
+                )
+
+            - kind: SetVariable
+              id: set_next_3
+              variable: Topic.NextLink
+              value: =Text(Topic.F3.'@odata.nextLink')
+
+    - kind: SetVariable
+      id: set_partial
+      variable: Topic.FoldersPartial
+      value: =Not(IsBlank(Topic.NextLink))
+
+    # 5. Each folder's full path, top-level ancestor, and whether it may be suggested.
+    - kind: SetVariable
+      id: set_folder_paths
+      variable: Topic.Folders
+      value: |-
+        =ForAll(
+          Topic.FolderRaw As f,
+          With({p1: LookUp(Topic.FolderRaw, Id = f.Parent)},
+          With({p2: LookUp(Topic.FolderRaw, Id = p1.Parent)},
+          With({p3: LookUp(Topic.FolderRaw, Id = p2.Parent)},
+          With({p4: LookUp(Topic.FolderRaw, Id = p3.Parent)},
+          With({p5: LookUp(Topic.FolderRaw, Id = p4.Parent)},
+          With({p6: LookUp(Topic.FolderRaw, Id = p5.Parent)},
+          With(
+            {
+              chain: Filter(
+                Table({n: p6.Name}, {n: p5.Name}, {n: p4.Name}, {n: p3.Name}, {n: p2.Name}, {n: p1.Name}),
+                Not(IsBlank(n))
+              ),
+              closedNames: ["closed", "dead", "deals closed", "closed deals"]
+            },
+            With(
+              {
+                depth: CountRows(chain) + 1,
+                root: If(CountRows(chain) = 0, f.Name, First(chain).n)
+              },
+              {
+                Id: f.Id,
+                Name: f.Name,
+                Path: Concat(chain, n & " › ") & f.Name,
+                Depth: depth,
+                Allowed: Not(depth = 1 && f.Name in ["Inbox", "Archive", "Sent Items", "Deleted Items", "Junk Email", "Drafts", "Outbox", "Conversation History", "Sync Issues", "RSS Feeds", "RSS Subscriptions", "Notes", "Journal", "Calendar", "Contacts", "Tasks", "Clutter", "Scheduled"])
+                  && Not(root in ["Sent Items", "Deleted Items", "Junk Email", "Drafts", "Outbox", "Conversation History", "Sync Issues", "RSS Feeds", "RSS Subscriptions", "Notes", "Journal", "Calendar", "Contacts", "Tasks"]),
+                Closed: Lower(f.Name) in closedNames || CountRows(Filter(chain, Lower(n) in closedNames)) > 0,
+                Numeric: IsMatch(f.Name, "[0-9 ]+"),
+                NormName: Trim(Substitute(Substitute(Substitute(Substitute(Substitute(Substitute(Substitute(Lower(f.Name), "_", " "), "-", " "), ".", " "), ",", " "), ":", " "), "/", " "), "&", " "))
+              }
+            )
+          )))))))
+        )
+
+    # 6. Where the other emails in each conversation are filed (10 conversations per call).
+    - kind: BeginDialog
+      id: get_threads_1
+      input:
+        binding:
+          Uri: ="https://graph.microsoft.com/v1.0/me/messages?$filter=" & Concat(FirstN(Topic.Picked, 10), "conversationId eq '" & Substitute(Conv, "+", "%2B") & "'", " or ") & "&$select=conversationId,parentFolderId,receivedDateTime&$top=250"
+
+      dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+      output:
+        binding:
+          Response: Topic.T1
+
+    - kind: SetVariable
+      id: set_threads_1
+      variable: Topic.Threads
+      value: |-
+        =ForAll(
+          Table(Topic.T1.value) As r,
+          {Conv: Text(r.Value.conversationId), Folder: Text(r.Value.parentFolderId), Received: DateTimeValue(Text(r.Value.receivedDateTime))}
+        )
+
+    - kind: ConditionGroup
+      id: cond_threads_2
+      conditions:
+        - id: cond_threads_2_yes
+          condition: =CountRows(Topic.Picked) > 10
+          actions:
+            - kind: BeginDialog
+              id: get_threads_2
+              input:
+                binding:
+                  Uri: ="https://graph.microsoft.com/v1.0/me/messages?$filter=" & Concat(LastN(Topic.Picked, CountRows(Topic.Picked) - 10), "conversationId eq '" & Substitute(Conv, "+", "%2B") & "'", " or ") & "&$select=conversationId,parentFolderId,receivedDateTime&$top=250"
+
+              dialog: fc_FilingAssistant.action.Office365Outlook-ReadMailForFiling
+              output:
+                binding:
+                  Response: Topic.T2
+
+            - kind: SetVariable
+              id: set_threads_2
+              variable: Topic.Threads
+              value: |-
+                =With(
+                  {
+                    a: Topic.Threads,
+                    b: ForAll(
+                      Table(Topic.T2.value) As r,
+                      {Conv: Text(r.Value.conversationId), Folder: Text(r.Value.parentFolderId), Received: DateTimeValue(Text(r.Value.receivedDateTime))}
+                    )
+                  },
+                  ForAll(
+                    Sequence(CountRows(a) + CountRows(b)) As i,
+                    If(i.Value <= CountRows(a), Index(a, i.Value), Index(b, i.Value - CountRows(a)))
+                  )
+                )
+
+    # 7. The two rules. Same thread wins; otherwise the folder whose name's words appear in the subject.
+    - kind: SetVariable
+      id: set_results
+      variable: Topic.Results
+      value: |-
+        =ForAll(
+          Topic.Picked As e,
+          With(
+            {
+              subj: " " & Trim(Substitute(Substitute(Substitute(Substitute(Substitute(Substitute(Substitute(Lower(e.Subject), "_", " "), "-", " "), ".", " "), ",", " "), ":", " "), "/", " "), "&", " ")) & " ",
+              stop: ["the", "and", "for", "llc", "inc", "ltd", "corp", "misc", "other", "general"],
+              thread: First(
+                Sort(
+                  Filter(Topic.Threads As t, t.Conv = e.Conv && LookUp(Topic.Folders, Id = t.Folder).Allowed),
+                  Received,
+                  SortOrder.Descending
+                )
+              )
+            },
+            With(
+              {
+                threadFolder: LookUp(Topic.Folders, Id = thread.Folder),
+                ranked: Sort(
+                  Filter(
+                    ForAll(
+                      Filter(Topic.Folders, Allowed && Not(Closed) && Not(Numeric)) As f,
+                      With(
+                        {tok: Filter(Split(f.NormName, " "), Len(Value) >= 3 && Not(Value in stop))},
+                        {
+                          Id: f.Id,
+                          Name: f.Name,
+                          Path: f.Path,
+                          Depth: f.Depth,
+                          Hits: CountRows(Filter(tok, (" " & Value & " ") in subj)),
+                          Words: CountRows(tok)
+                        }
+                      )
+                    ),
+                    Words > 0 && (Hits >= 2 || Hits = Words)
+                  ),
+                  Hits * 100 + Depth,
+                  SortOrder.Descending
+                )
+              },
+              With(
+                {
+                  best: First(ranked),
+                  second: If(CountRows(ranked) >= 2, Last(FirstN(ranked, 2)))
+                },
+                With(
+                  {
+                    nameOk: Not(IsBlank(best.Id)) && Not(Not(IsBlank(second.Id)) && second.Hits = best.Hits && second.Depth = best.Depth)
+                  },
+                  {
+                    Id: e.Id,
+                    Subject: e.Subject,
+                    Sender: e.Sender,
+                    Received: e.Received,
+                    Link: e.Link,
+                    FolderId: If(Not(IsBlank(threadFolder.Id)), threadFolder.Id, nameOk, best.Id, ""),
+                    FolderPath: If(Not(IsBlank(threadFolder.Id)), threadFolder.Path, nameOk, best.Path, ""),
+                    Reason: If(Not(IsBlank(threadFolder.Id)), "same thread", nameOk, "subject matches folder """ & best.Name & """", "")
+                  }
+                )
+              )
+            )
+          )
+        )
+
+    # 8. Number them: suggested first, then Not sure, each group oldest first.
+    - kind: SetVariable
+      id: set_final
+      variable: Topic.Final
+      value: |-
+        =With(
+          {
+            s: Sort(Filter(Topic.Results, Not(IsBlank(FolderId))), Received, SortOrder.Ascending),
+            u: Sort(Filter(Topic.Results, IsBlank(FolderId)), Received, SortOrder.Ascending)
+          },
+          ForAll(
+            Sequence(CountRows(s) + CountRows(u)) As i,
+            With(
+              {r: If(i.Value <= CountRows(s), Index(s, i.Value), Index(u, i.Value - CountRows(s)))},
+              {
+                N: i.Value,
+                Id: r.Id,
+                Subject: r.Subject,
+                Sender: r.Sender,
+                Received: r.Received,
+                Link: r.Link,
+                FolderId: r.FolderId,
+                FolderPath: r.FolderPath,
+                Reason: r.Reason
+              }
+            )
+          )
+        )
+
+    - kind: SetVariable
+      id: set_message
+      variable: Topic.Message
+      value: |-
+        =With(
+          {
+            s: Filter(Topic.Final, Not(IsBlank(FolderId))),
+            u: Filter(Topic.Final, IsBlank(FolderId)),
+            nl: Char(10)
+          },
+          "## 📁 Ready to file: " & CountRows(Topic.Final) & " emails" & nl & nl &
+          "*Found " & Topic.CountReplied & " emails you replied to or forwarded and " & Topic.CountCompleted & " with a completed flag in your Inbox. Showing the oldest " & CountRows(Topic.Final) & ".*" &
+          If(CountRows(s) > 0,
+            nl & nl & Concat(s, "**" & N & ".** [" & Subject & "](" & Link & ") · " & Sender & " · " & Text(Received, "mmm d") & nl & "→ **" & FolderPath & "** · *" & Reason & "*", nl & nl),
+            "") &
+          If(CountRows(u) > 0,
+            nl & nl & "### ❓ Not sure" & nl & nl & Concat(u, "**" & N & ".** [" & Subject & "](" & Link & ") · " & Sender & " · " & Text(Received, "mmm d"), nl & nl),
+            "") &
+          nl & nl &
+          If(CountRows(s) > 0,
+            "Reply **file all** to file " & If(CountRows(s) = 1, "1", "1–" & CountRows(s)) & ", or adjust, for example: **file all except 1** · **" & CountRows(Topic.Final) & " goes to [folder name]** · **skip 1**. Nothing moves until you say so.",
+            "Tell me where any of these go, for example **1 goes to [folder name]**. Nothing moves until you say so.") &
+          If(Topic.Remaining > 0, nl & nl & Topic.Remaining & " more are ready after this batch. Say **next** when you're done with these.", "") &
+          If(Topic.FoldersPartial, nl & nl & "⚠️ I could only read part of your folder list.", "") &
+          nl & nl & "*Filing Assistant v@@VERSION@@*"
+        )
+
+    - kind: SendActivity
+      id: send_list
+      activity:
+        text:
+          - "{Topic.Message}"
+
+    # 9. Hand the ids to the agent for filing, and remember what was shown for "next".
+    - kind: SetVariable
+      id: set_batch
+      variable: Topic.Batch
+      value: =Concat(Topic.Final, N & " | " & Id & " | " & FolderId & " | " & FolderPath, Char(10))
+
+    - kind: SetVariable
+      id: set_seen
+      variable: Global.FilingSeen
+      value: =Coalesce(Global.FilingSeen, "|") & Concat(Topic.Final, Id & "|")
+
+inputType: {}
+outputType:
+  properties:
+    Batch:
+      displayName: Batch
+      type: String

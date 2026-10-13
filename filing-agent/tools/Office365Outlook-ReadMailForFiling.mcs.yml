@@ -1,0 +1,23 @@
+mcs.metadata:
+  componentName: Office 365 Outlook - Read mail for filing
+kind: TaskDialog
+inputs:
+  # Read-only: the method is fixed. The Find emails to file topic supplies the Uri.
+  - kind: ManualTaskInput
+    propertyName: Method
+    value: GET
+
+modelDisplayName: Read mail for filing
+modelDescription: "Read-only Microsoft Graph GET used internally by the Find emails to file topic. Don't call this tool yourself; to find emails to file, use the Find emails to file topic."
+outputs:
+  - propertyName: Response
+
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: fc_FilingAssistant.shared_office365.shared-office365-0c11ea16-31cf-4d6b-8706-aa7889bf58e2
+  connectionProperties:
+    mode: Invoker
+
+  operationId: HttpRequest
+
+outputMode: All
