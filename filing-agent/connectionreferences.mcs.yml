@@ -1,0 +1,7 @@
+# Connection references used by the tools in tools/. Every tool runs in
+# Invoker mode (end-user credentials), so each person only ever reads and
+# files their own mail.
+connectionReferences:
+  - connectionReferenceLogicalName: fc_FilingAssistant.shared_office365.shared-office365-0c11ea16-31cf-4d6b-8706-aa7889bf58e2
+    displayName: Filing Assistant - Office 365 Outlook
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365

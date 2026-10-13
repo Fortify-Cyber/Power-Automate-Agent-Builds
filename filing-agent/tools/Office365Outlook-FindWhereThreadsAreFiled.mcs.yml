@@ -10,7 +10,7 @@ modelDisplayName: Find where threads are filed
 modelDescription: "Read-only Microsoft Graph GET across the signed-in user's own mailbox that returns every email in the given conversations, in any folder, with the folder each one is in (parentFolderId). Used only to see which folder the user filed earlier emails from the same thread into. The results are never emails to suggest or file, and results in the Inbox, Sent Items, Drafts or Deleted Items say nothing about where the thread is filed. Uri must be exactly: https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq '[ID1]' or conversationId eq '[ID2]'&$select=conversationId,parentFolderId,receivedDateTime&$top=250 with one conversationId eq '[ID]' clause per conversation, joined with or, at most 10 conversations per call. Copy each conversationId exactly, but write any + in it as %2B. Use at most 2 calls."
 action:
   kind: InvokeConnectorTaskAction
-  connectionReference: fc_DailyDigest.shared_office365.shared-office365-5d1c8a3e-7b42-4f0e-9c61-2a8f3e4b7d10
+  connectionReference: fc_FilingAssistant.shared_office365.shared-office365-0c11ea16-31cf-4d6b-8706-aa7889bf58e2
   connectionProperties:
     mode: Invoker
 

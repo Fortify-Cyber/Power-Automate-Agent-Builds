@@ -7,14 +7,15 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 ## How it works
 - Employees open **Daily Digest** in Microsoft 365 Copilot, Teams or Outlook and say *"Run my daily digest"*, or schedule that prompt for every weekday morning.
 - The agent reads **their own** inbox and sent items through connector tools that run with the user's own credentials. It returns a prioritized briefing (🔴 high priority, 📨 waiting on your reply, 📰 updates, with marketing and cold outreach filtered out) and can email it to the user's own inbox.
-- **Filing (opt-in, from 1.1):** users can say *"Help me file"* to get a suggested folder for each email they've already dealt with, then confirm with *"file all"* or adjust. Nothing moves without confirmation. See [docs/filing-pilot-guide.md](docs/filing-pilot-guide.md).
 - The LLM keeps the old flows' rules (urgency keywords, three email groups), fixes their bugs (reply detection, weekend gap, punctuation), and adds judgment, next-step suggestions and phishing/BEC warnings.
+
+**Filing Assistant** (pilot) is a second, separate agent in `filing-agent/`. It suggests an Outlook folder for each email a user has dealt with and files them only after the user confirms. See [docs/filing-pilot-guide.md](docs/filing-pilot-guide.md).
 
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
 
 ## Repository layout
 ```
-agent/                      Copilot Studio agent source (edit these)
+agent/                      Daily Digest agent source (edit these)
   instructions.md             the agent's system instructions: digest rules and output format
   agent.mcs.yml               agent definition (model, conversation starters, capabilities)
   settings.mcs.yml            bot settings (auth, orchestration)
@@ -22,7 +23,8 @@ agent/                      Copilot Studio agent source (edit these)
   topics/*.mcs.yml            system topics (greeting, sign-in, errors, ...)
   connectionreferences.mcs.yml connection references packaged with the solution
   solution.yml                solution name, version, publisher
-build/build_solution.py     builds agent/ into out/FortifyDailyDigest_<version>.zip
+filing-agent/               Filing Assistant agent source (same layout as agent/)
+build/build_solution.py     builds agent/ (or --source filing-agent) into out/<solution>_<version>.zip
 deploy/                     pac-based import + publish (PowerShell and bash)
 scripts/Review-Flows.ps1    pac-based review of existing cloud flows
 legacy-flows/               exported definitions of the two flows being replaced
@@ -34,6 +36,7 @@ docs/                       flow review, architecture/costs, admin guide, user g
 pip install pyyaml
 python3 build/build_solution.py --check          # build + validate with `pac solution unpack`
 python3 build/build_solution.py --pilot          # separate "Daily Digest (Pilot)" agent for a pilot group
+python3 build/build_solution.py --source filing-agent   # Filing Assistant
 deploy/deploy.sh https://<env>.crm.dynamics.com    # import + publish with pac
 ```
 Then finish the rollout in Copilot Studio and the Microsoft 365 admin center: [docs/admin-deployment-guide.md](docs/admin-deployment-guide.md). Give employees [docs/user-guide.md](docs/user-guide.md).

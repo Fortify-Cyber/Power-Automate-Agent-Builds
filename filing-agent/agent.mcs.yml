@@ -1,0 +1,17 @@
+mcs.metadata:
+  componentName: Filing Assistant
+  description: Suggests an Outlook folder for each email the signed-in user has dealt with, and files them only after the user confirms.
+kind: GptComponentMetadata
+displayName: Filing Assistant
+# Instructions are maintained in filing-agent/instructions.md and injected at build time.
+instructions: ""
+conversationStarters:
+  - title: Help me file
+    text: Help me file
+
+gptCapabilities:
+  webBrowsing: false
+
+aISettings:
+  model:
+    modelNameHint: GPT5Chat

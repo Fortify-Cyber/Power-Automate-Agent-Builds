@@ -1,8 +1,8 @@
 # Solution packaging metadata used by build/build_solution.py
 uniqueName: FortifyDailyDigest
 displayName: Fortify Daily Digest
-description: Copilot agent that produces a prioritized daily digest of each employee's email and suggests folders for emails they've dealt with.
-version: 1.1.0.8
+description: Copilot agent that produces a prioritized daily digest of each employee's email and tasks.
+version: 1.0.0.8
 publisher:
   uniqueName: FortifyCyber
   displayName: Fortify Cyber

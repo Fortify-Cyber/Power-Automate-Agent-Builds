@@ -1,0 +1,24 @@
+displayName: Filing Assistant
+schemaName: fc_FilingAssistant
+accessControlPolicy: GroupMembership
+authenticationMode: Integrated
+authenticationTrigger: Always
+configuration:
+  settings:
+    GenerativeActionsEnabled: true
+
+  isAgentConnectable: false
+  gPTSettings:
+    defaultSchemaName: fc_FilingAssistant.gpt.default
+
+  aISettings:
+    useModelKnowledge: true
+    isFileAnalysisEnabled: false
+    isSemanticSearchEnabled: false
+    optInUseLatestModels: false
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+template: default-2.1.0
+language: 1033

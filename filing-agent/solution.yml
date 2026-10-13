@@ -1,0 +1,10 @@
+# Solution packaging metadata used by build/build_solution.py --source filing-agent
+uniqueName: FortifyFilingAssistant
+displayName: Fortify Filing Assistant
+description: Copilot agent that suggests Outlook folders for emails the user has dealt with, and files them only after the user confirms.
+version: 1.0.0.0
+publisher:
+  uniqueName: FortifyCyber
+  displayName: Fortify Cyber
+  prefix: fc
+  optionValuePrefix: 83972

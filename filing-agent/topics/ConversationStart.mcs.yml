@@ -1,0 +1,15 @@
+mcs.metadata:
+  componentName: Conversation Start
+  description: This system topic triggers when the agent receives an Activity indicating the beginning of a new conversation. If you do not want the agent to initiate the conversation, disable this topic.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnConversationStart
+  id: main
+  actions:
+    - kind: SendActivity
+      id: sendMessage_M0LuhV
+      activity:
+        text:
+          - "Hi, I'm {System.Bot.Name}. I suggest folders for emails you've already dealt with, and nothing moves until you confirm. Say **Help me file** to start."
+        speak:
+          - Hi, I'm {System.Bot.Name}. Say help me file to get started.

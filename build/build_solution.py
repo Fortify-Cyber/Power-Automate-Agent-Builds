@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build the Daily Digest Copilot Studio agent into a Dataverse solution zip.
+"""Build a Copilot Studio agent into a Dataverse solution zip.
 
-The agent/ folder holds the human-editable source (Copilot Studio YAML plus a
+Each agent folder (agent/ for Daily Digest, filing-agent/ for Filing Assistant) holds the human-editable source (Copilot Studio YAML plus a
 Markdown instructions file). This script assembles it into the same layout
 Copilot Studio produces on solution export, so the zip can be imported with
 `pac solution import` or the Power Apps maker portal.
@@ -10,10 +10,14 @@ Copilot Studio produces on solution export, so the zip can be imported with
     python3 build/build_solution.py --check        # also round-trip through `pac solution unpack`
     python3 build/build_solution.py --version 1.0.1.0
     python3 build/build_solution.py --pilot        # -> out/FortifyDailyDigestPilot_<version>.zip
+    python3 build/build_solution.py --source filing-agent   # -> out/FortifyFilingAssistant_<version>.zip
 
 --pilot builds a separate copy named "Daily Digest (Pilot)", with its own solution,
 schema and connection reference names, so it can be installed next to the production
 agent and shared with a pilot group without changing anyone else's Daily Digest.
+
+"@@VERSION@@" anywhere in instructions.md is replaced with the solution version, so the
+agent can show which build answered.
 """
 import argparse
 import base64
@@ -180,7 +184,11 @@ def configuration_json(cfg):
     }
 
 
-def build(version=None, pilot=False):
+def build(version=None, pilot=False, source="agent"):
+    global AGENT
+    AGENT = ROOT / source
+    if not (AGENT / "solution.yml").exists():
+        sys.exit(f"{source}/solution.yml not found")
     renames[:] = PILOT_RENAMES if pilot else []
     sol = load_yaml(AGENT / "solution.yml")
     version = version or sol["version"]
@@ -198,8 +206,9 @@ def build(version=None, pilot=False):
     # Copilot Studio parses {...} in instructions as Power Fx and fails to publish.
     for n, line in enumerate(instructions.splitlines(), 1):
         if "{" in line or "}" in line:
-            sys.exit(f"agent/instructions.md:{n}: curly braces are parsed as Power Fx by Copilot Studio; "
+            sys.exit(f"{source}/instructions.md:{n}: curly braces are parsed as Power Fx by Copilot Studio; "
                      "use [square brackets] for placeholders")
+    instructions = instructions.replace("@@VERSION@@", version)
     components.append((f"{bot}.gpt.default", COMPONENT_TYPE["gpt"], agent_meta["componentName"],
                        agent_meta.get("description"), gpt_component_data(agent_text, instructions)))
 
@@ -283,9 +292,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", help="override solution version, e.g. 1.0.1.0")
     ap.add_argument("--check", action="store_true", help="validate with `pac solution unpack`")
+    ap.add_argument("--source", default="agent",
+                    help="agent folder to build: agent (Daily Digest, default) or filing-agent")
     ap.add_argument("--pilot", action="store_true",
                     help='build the separate "Daily Digest (Pilot)" agent for a pilot group')
     args = ap.parse_args()
-    z = build(args.version, args.pilot)
+    z = build(args.version, args.pilot, args.source)
     if args.check:
         check(z)
