@@ -2,7 +2,7 @@
 uniqueName: FridayCopilotTips
 displayName: Friday Copilot Tips
 description: Weekly Microsoft Copilot tip email. Previews each tip to a reviewer for approval, then sends it to the organization on Friday morning.
-version: 1.0.0.0
+version: 1.0.1.0
 publisher:
   uniqueName: FortifyCyber
   displayName: Fortify Cyber
@@ -51,8 +51,13 @@ environmentVariables:
     default: Friday Copilot Tips
   - schemaName: fc_FCT_Recipients
     displayName: Friday Tips - Recipients
-    description: Who gets the weekly tip. Usually the all-staff distribution list. Use your own address while testing. Separate several with semicolons.
+    description: Extra recipients on top of the recipients list, separated by semicolons (e.g. a distribution list in your own organization). Use none if the list covers everyone.
     type: String
+  - schemaName: fc_FCT_RecipientsList
+    displayName: Friday Tips - Recipients list name
+    description: SharePoint list (same site as the tips) with one row per recipient. Columns Title (name), Email and Unsubscribed (Yes/No). Everyone not marked Unsubscribed = Yes gets the tip.
+    type: String
+    default: Friday Copilot Tips Recipients
   - schemaName: fc_FCT_ApproverEmail
     displayName: Friday Tips - Reviewer email
     description: Gets the Thursday preview and the Approve/Reject request. Separate several with semicolons (first to respond decides).

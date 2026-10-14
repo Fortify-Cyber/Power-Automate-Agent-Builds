@@ -40,6 +40,7 @@ TIP_COLUMNS = ["Title", "Subject", "WhyItMatters", "TipSteps", "TryPrompt", "Lea
                "VideoUrl", "VideoLabel", "WorksWith", "Notes"]
 WORKS_WITH = ["Copilot Chat (everyone)", "Microsoft 365 Copilot license"]
 ENV_TYPES = {"String": (100000000, "String"), "Boolean": (100000002, "Bool")}
+BCC_BATCH = 400  # Exchange Online allows 500 recipients per message
 STEP_LI = '<li style="margin:0 0 6px 0;">'
 
 
@@ -253,6 +254,7 @@ def build_flow(cfg, parts):
     low_queue = (f"@{{if(less({remaining}, 3), concat('Heads-up: only ', string({remaining}), "
                  f"' tip(s) left in the queue after this one. Add more to the list soon.'), '')}}")
 
+    who = "@{length(body('Valid_recipients'))} people"
     banner_html = (
         '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" '
         'style="width:100%;max-width:600px;margin:0 0 12px 0;background-color:#fff4ce;border:1px solid #e0c35c;">'
@@ -260,14 +262,14 @@ def build_flow(cfg, parts):
         "@{if(" + P("fc_FCT_AutoSend") + ", "
         "'<strong>Heads-up:</strong> this tip goes out automatically', "
         "'<strong>Preview only &mdash; nothing has been sent.</strong> Approve or reject it in the Approvals request (Teams or Outlook). If approved, it goes out')}"
-        f" <strong>{when}</strong> to @{{{P('fc_FCT_Recipients')}}}. "
+        f" <strong>{when}</strong> to <strong>{who}</strong> (on Bcc). "
         f"To change or skip it, {tip_link} (set Status to Skipped to skip)."
         "@{if(empty(outputs('Low_queue_warning')), '', concat('<br><strong>', outputs('Low_queue_warning'), '</strong>'))}"
         "</td></tr></table>")
 
     approval_details = (
         "**@{outputs('Current_tip')?['Subject']}**\n\n"
-        f"If you approve, it goes to **@{{{P('fc_FCT_Recipients')}}}** **{when}**.\n\n"
+        f"If you approve, it goes to **{who}** **{when}**.\n\n"
         "The full preview is in your inbox (subject starts with **[Preview]**).\n\n"
         "- **Approve**: it sends automatically at that time.\n"
         "- **Reject**: nothing is sent and the tip stays in the queue. Fix it in SharePoint, then open the "
@@ -317,24 +319,49 @@ def build_flow(cfg, parts):
     )
 
     shared = P("fc_FCT_SharedMailbox")
-    send_step = {
+    # Everyone goes on Bcc so nobody sees the list and reply-all can't reach it. The message is
+    # addressed to the shared mailbox (or the reviewer), in batches below Exchange's per-message limit.
+    batch = {
         "type": "If",
         "expression": {"and": [{"contains": [f"@{shared}", "@"]}]},
-        # Shared mailbox: address it to the mailbox itself and Bcc the recipients,
-        # so a reply-all can't reach the whole organization.
         "actions": {"Send_from_shared_mailbox": api_action("outlook", "SharedMailboxSendEmailV2", {
             "emailMessage/MailboxAddress": f"@{shared}",
             "emailMessage/To": f"@{shared}",
-            "emailMessage/Bcc": f"@{P('fc_FCT_Recipients')}",
+            "emailMessage/Bcc": "@{join(item(), ';')}",
             "emailMessage/Subject": "@{outputs('Current_tip')?['Subject']}",
             "emailMessage/Body": "@{outputs('Email_HTML')}",
             "emailMessage/Importance": "Normal"})},
         "else": {"actions": {"Send_from_flow_owner": api_action("outlook", "SendEmailV2", {
-            "emailMessage/To": f"@{P('fc_FCT_Recipients')}",
+            "emailMessage/To": REVIEWER,
+            "emailMessage/Bcc": "@{join(item(), ';')}",
             "emailMessage/Subject": "@{outputs('Current_tip')?['Subject']}",
             "emailMessage/Body": "@{outputs('Email_HTML')}",
             "emailMessage/Importance": "Normal"})}},
     }
+    send_step = {
+        "type": "Foreach",
+        "foreach": f"@chunk(body('Valid_recipients'), {BCC_BATCH})",
+        "actions": {"Send_batch": batch},
+        "runtimeConfiguration": {"concurrency": {"repetitions": 1}},
+    }
+
+    # Recipients = rows of the recipients list not marked Unsubscribed + the Recipients setting, cleaned and de-duplicated.
+    recipients = [
+        ("Get_recipient_list", api_action("sharepoint", "GetItems", {
+            "dataset": SITE, "table": f"@{P('fc_FCT_RecipientsList')}", "$top": 5000})),
+        ("Active_recipients", {"type": "Query", "inputs": {
+            "from": "@body('Get_recipient_list')?['value']",
+            "where": "@not(equals(item()?['Unsubscribed'], true))"}}),
+        ("List_addresses", {"type": "Select", "inputs": {
+            "from": "@body('Active_recipients')",
+            "select": "@toLower(trim(coalesce(item()?['Email'], '')))"}}),
+        ("Setting_addresses", {"type": "Select", "inputs": {
+            "from": f"@split(coalesce({P('fc_FCT_Recipients')}, ''), ';')",
+            "select": "@toLower(trim(item()))"}}),
+        ("Valid_recipients", {"type": "Query", "inputs": {
+            "from": "@union(body('List_addresses'), body('Setting_addresses'))",
+            "where": "@and(contains(item(), '@'), not(contains(item(), ' ')))"}}),
+    ]
 
     main = chain(
         # Next Friday (today if it's Friday) at the configured send time, Eastern.
@@ -363,6 +390,7 @@ def build_flow(cfg, parts):
                 ("Stop_empty_queue", terminate())),
             "else": {"actions": {}},
         }),
+        *recipients,
         ("Current_tip", {"type": "Compose", "inputs": "@first(body('Get_queued_tips')?['value'])"}),
         ("Low_queue_warning", {"type": "Compose", "inputs": low_queue}),
         ("Tip", {"type": "Compose", "inputs": tip_fields}),
@@ -388,6 +416,7 @@ def build_flow(cfg, parts):
             "type": "If",
             "expression": {"and": [
                 {"equals": ["@body('Get_tip_again')?['Status']?['Value']", "Queued"]},
+                {"greater": ["@length(body('Valid_recipients'))", 0]},
                 {"or": [{"equals": [f"@{P('fc_FCT_SendNow')}", True]},
                         {"less": ["@ticks(utcNow())", "@ticks(addHours(outputs('Send_at_utc'), 8))"]}]}]},
             "actions": {},
@@ -395,9 +424,11 @@ def build_flow(cfg, parts):
                 ("Tell_reviewer_it_was_held", email(
                     REVIEWER, "Not sent: @{outputs('Current_tip')?['Subject']}",
                     note("This week's Copilot tip was not sent because "
-                         "@{if(equals(body('Get_tip_again')?['Status']?['Value'], 'Queued'), "
-                         "'it was approved more than 8 hours after the planned send time.', "
-                         "concat('its Status was changed to ', body('Get_tip_again')?['Status']?['Value'], '.'))}")
+                         "@{if(not(equals(body('Get_tip_again')?['Status']?['Value'], 'Queued')), "
+                         "concat('its Status was changed to ', body('Get_tip_again')?['Status']?['Value'], '.'), "
+                         "if(equals(length(body('Valid_recipients')), 0), "
+                         "'there is nobody to send it to: the recipients list has no active email addresses.', "
+                         "'it was approved more than 8 hours after the planned send time.'))}")
                     + note("To send it now, set its Status back to Queued, open the <em>Friday Copilot Tip</em> "
                            "flow and select <strong>Run</strong>."))),
                 ("Stop_held", terminate()))},
@@ -410,7 +441,7 @@ def build_flow(cfg, parts):
             "item/SentOn": "@utcNow()"})),
         ("Confirm_to_reviewer", email(
             REVIEWER, "Sent: @{outputs('Current_tip')?['Subject']}",
-            note(f"This week's Copilot tip went to @{{{P('fc_FCT_Recipients')}}} and is marked <strong>Sent</strong> in the list.")
+            note(f"This week's Copilot tip went to {who} (on Bcc) and is marked <strong>Sent</strong> in the list.")
             + "@{if(empty(outputs('Low_queue_warning')), '', concat('<p style=\"font-family:Segoe UI,Arial,sans-serif;"
               "font-size:14px;\"><strong>', outputs('Low_queue_warning'), '</strong></p>'))}")),
     )
@@ -460,7 +491,7 @@ def build_flow(cfg, parts):
 
 
 KNOWN_FUNCTIONS = {
-    "actions", "add", "addDays", "addHours", "and", "body", "coalesce", "concat", "contains", "convertFromUtc",
+    "actions", "add", "addDays", "chunk", "greater", "item", "join", "not", "split", "toLower", "union", "addHours", "and", "body", "coalesce", "concat", "contains", "convertFromUtc",
     "convertToUtc", "dayOfWeek", "decodeUriComponent", "empty", "equals", "first", "formatDateTime", "if",
     "length", "less", "mod", "outputs", "parameters", "replace", "string", "sub", "ticks", "trim",
     "utcNow", "workflow"}

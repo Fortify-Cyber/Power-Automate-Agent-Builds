@@ -22,6 +22,7 @@
 param(
     [Parameter(Mandatory)] [string]$SiteUrl,
     [string]$ListName = "Friday Copilot Tips",
+    [string]$RecipientsListName = "Friday Copilot Tips Recipients",
     [datetime]$FirstFriday,
     [string]$TipsCsv = (Join-Path $PSScriptRoot "../tips/tips.csv"),
     [string]$TenantId,
@@ -96,6 +97,24 @@ if ($existing) {
     Write-Host "Created list: $($list.webUrl)"
 }
 
+# --- Recipients list (create if missing): one row per person, Title = name
+$recipientsList = (Invoke-Graph GET "/sites/$($site.id)/lists?`$select=id,displayName,webUrl").value |
+    Where-Object { $_.displayName -eq $RecipientsListName } | Select-Object -First 1
+if ($recipientsList) {
+    Write-Host "Using existing recipients list: $($recipientsList.webUrl)"
+} else {
+    $recipientsList = Invoke-Graph POST "/sites/$($site.id)/lists" @{
+        displayName = $RecipientsListName
+        description = "Who gets the Friday Copilot Tip. Paste names and emails in grid view; set Unsubscribed to Yes to stop sending to someone."
+        columns     = @(
+            @{ name = "Email";  displayName = "Email";  text = @{} }
+            @{ name = "Unsubscribed"; displayName = "Unsubscribed"; description = "Yes = stop sending to this person."; boolean = @{} }
+        )
+        list        = @{ template = "genericList" }
+    }
+    Write-Host "Created recipients list: $($recipientsList.webUrl)"
+}
+
 # --- Tips
 if (-not $SkipImport) {
     if (-not $PSBoundParameters.ContainsKey("FirstFriday")) {
@@ -149,5 +168,6 @@ Write-Host ""
 Write-Host "Use these values for the flow's environment variables:"
 Write-Host "  Friday Tips - SharePoint site URL : $($site.webUrl)"
 Write-Host "  Friday Tips - List name           : $ListName"
+Write-Host "  Friday Tips - Recipients list name: $RecipientsListName"
 Write-Host ""
 Write-Host "Tip: in the list, All Items > Edit current view > tick Planned Friday, Subject, Status and Works with."

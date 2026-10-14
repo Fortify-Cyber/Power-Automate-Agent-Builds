@@ -28,6 +28,7 @@ param(
     [switch]$UseDeviceCode,
     [switch]$SkipList,         # the list already exists and is stocked
     [switch]$LeaveOff,         # import without turning the flow on
+    [switch]$UpgradeOnly,      # update the flow only; keep the live settings and connections as they are
     [string]$Zip,              # use this zip instead of building
     [string]$SharePointConnectionId,
     [string]$OutlookConnectionId,
@@ -61,7 +62,7 @@ if (-not $Zip) {
 Write-Host "[1/5] Solution: $Zip"
 
 # --- 2. SharePoint list + tips
-if ($SkipList) {
+if ($SkipList -or $UpgradeOnly) {
     Write-Host "[2/5] SharePoint list: skipped"
 } else {
     Write-Host "[2/5] SharePoint list and tips..."
@@ -86,6 +87,19 @@ if (((pac auth list) -join "`n") -match [regex]::Escape($envHost)) {
     pac @authArgs
     if ($LASTEXITCODE) { throw "pac auth create failed" }
     pac auth select --name $authName | Out-Null
+}
+
+if ($UpgradeOnly) {
+    # No settings file: environment variable values and connection references already in the
+    # environment are kept. New variables start at their default values.
+    Write-Host "[4/5] Upgrade only: keeping current settings and connections"
+    Write-Host "[5/5] Importing the new version$(if (-not $LeaveOff) { ' and turning the flow on' })..."
+    $importArgs = @("solution", "import", "--path", $Zip, "--publish-changes", "--async", "--max-async-wait-time", "30")
+    if (-not $LeaveOff) { $importArgs += "--activate-plugins" }
+    pac @importArgs
+    if ($LASTEXITCODE) { throw "pac solution import failed" }
+    Write-Host "Done. The flow is updated in $envUrl; settings and connections are unchanged." -ForegroundColor Green
+    exit 0
 }
 
 # --- 4. Connections

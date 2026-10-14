@@ -42,6 +42,13 @@ If you don't answer by Friday afternoon, nothing is sent and the tip waits until
 | Status | **Queued** = waiting. **Sent** = done (set by the flow). **Skipped** = never send. |
 | Notes | For you only. Never emailed. |
 
+## Who gets it
+The tip goes to everyone in the **Friday Copilot Tips Recipients** list (same SharePoint site as the tips), plus any addresses in the *Friday Tips - Recipients* setting. Duplicates are merged and everyone is on **Bcc**, so nobody sees the list and reply-all only reaches you.
+
+- **Add people:** in the list, select **Edit in grid view**, then paste two columns from Excel: name (Title) and **Email**. You can paste hundreds of rows at once.
+- **Stop sending to someone:** set **Unsubscribed** to **Yes**, or delete the row.
+- The preview and the approval tell you how many people it will go to, so you can sanity-check the number before approving.
+
 ## Adding tips
 The list starts with 20 tips, about five months' worth. When the preview says **"only N tips left"**, add more:
 1. In the list, select **New** and fill in the columns. Status = Queued, and pick a Planned Friday after the last one.
