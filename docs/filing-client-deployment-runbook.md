@@ -87,7 +87,7 @@ They open Filing Assistant in Copilot and say **Help me file**. The first time, 
 ## Licensing and cost
 - **Agent use is included** for Microsoft 365 Copilot-licensed users running it as themselves.
 - **The flow is a Power Automate cloud flow, not a Copilot Studio agent flow.** Microsoft's billing page says cloud flows "use Power Automate licensing, not Copilot Credits" and aren't subject to Copilot Studio billing or enforcement. The flow uses only the standard Office 365 Outlook connector, which Microsoft 365 E5 covers.
-- **Copilot Studio may show a warning in Agent status:** "This agent uses premium features. You'll need an upgraded license to publish it." In Fortify's tenant this was a warning only, and the agent still published and ran. If publishing is **blocked** in your tenant, link a pay-as-you-go billing plan (an Azure subscription) to the environment: **Power Platform admin center → Licensing → Pay-as-you-go plans**. Usage by Copilot-licensed users stays at no charge; the plan only unlocks publishing. Tell Fortify before buying anything.
+- **Copilot Studio may show a warning in Agent status:** "This agent uses premium features. You'll need an upgraded license to publish it." Daily Digest shows the same warning, and both agents publish and run normally, so it can be ignored. Don't click **Go premium**. If publishing is ever actually blocked, contact Fortify before buying anything.
 - After the first few days, check **https://admin.powerplatform.microsoft.com → Licensing → Copilot Studio** for Copilot Credit use. Zero is expected.
 
 ## Troubleshooting
