@@ -2,7 +2,7 @@
 uniqueName: FortifyFilingAssistant
 displayName: Fortify Filing Assistant
 description: Copilot agent that suggests Outlook folders for emails the user has dealt with, and files them only after the user confirms.
-version: 1.1.0.0
+version: 1.1.0.1
 publisher:
   uniqueName: FortifyCyber
   displayName: Fortify Cyber

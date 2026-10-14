@@ -55,7 +55,9 @@
                 }
               },
               "required": [
-                "text"
+                "text",
+                "text_1",
+                "text_2"
               ]
             }
           }

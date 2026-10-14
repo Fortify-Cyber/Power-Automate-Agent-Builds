@@ -459,7 +459,8 @@ def definition():
                        "x-ms-content-hint": "TEXT",
                        "description": "For file: comma-separated numbers from the list, all for every suggested one, "
                                       "and number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."}},
-        "required": ["text"]}}}}
+        # All required: Copilot Studio only lists a flow's optional inputs if someone adds them by hand.
+        "required": ["text", "text_1", "text_2"]}}}}
 
     return {"$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
             "contentVersion": "1.0.0.0",
