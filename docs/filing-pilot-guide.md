@@ -76,5 +76,5 @@ python3 build/build_solution.py --source filing-agent       # -> out/FortifyFili
 ## Before the Cassin pilot
 - Confirm cost (step 7) and that test 6 passed with a second account.
 - Confirm Cassin's environment doesn't use customer-managed encryption keys (flows can't use each user's own connection there yet).
-- Export a managed package (`pac solution export --name FortifyFilingAssistant --managed`) for Cassin's admin. It installs alongside Daily Digest.
+- Export a managed package and send it with [filing-client-deployment-runbook.md](filing-client-deployment-runbook.md), which covers both the export and the client admin's install. It installs alongside Daily Digest.
 - Add a short user guide and the security note: it moves email only within the user's own mailbox, only after confirmation, and can't delete anything.
