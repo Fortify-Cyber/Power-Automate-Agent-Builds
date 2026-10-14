@@ -1,0 +1,8 @@
+# Power Automate cloud flows packaged with this agent by build/build_solution.py.
+# The id is fixed so each import updates the same flow. Regenerate the JSON with
+# generate_find_and_file.py after editing the generator.
+workflows:
+  - file: FindAndFileEmails.json
+    id: 4b35102e-f265-4e9f-a7f8-9463ddae20f3
+    name: Filing Assistant - Find and file emails
+    description: Finds Inbox emails the user has dealt with, suggests a folder for each, and moves the ones the user confirms. Runs with each user's own Outlook connection.

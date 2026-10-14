@@ -1,64 +1,64 @@
-# Filing Assistant: pilot guide (v1.0.2.5)
+# Filing Assistant: pilot guide (v1.1.0.0)
 
-For Fortify. **Filing Assistant** is a small, separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md).
+For Fortify. **Filing Assistant** is a separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). Daily Digest is unchanged (1.0.0.8).
 
-It's separate from Daily Digest on purpose. A first attempt added filing to the Daily Digest agent (1.1.0.0–1.1.0.8). With both sets of rules in one prompt, the model swung between inventing folders and suggesting nothing, and every filing change put the live digest at risk. Daily Digest is back to exactly 1.0.0.8, and filing now lives in `filing-agent/`.
+## How it works (since 1.1.0.0)
+All the mechanical work runs as **code in a Power Automate cloud flow**, *Filing Assistant - Find and file emails*. The same mailbox gives the same list every time. The agent (GPT-5.5 Chat) only turns the user's words into the flow's inputs and shows the flow's reply.
 
-## How it works
-The model (GPT-5.5 Chat) does the finding and matching with four tools, following short, strict instructions. It can still occasionally miss an obvious match. Nothing moves without confirmation, so a miss costs the user one correction, not a misfiled email.
+1. **Find emails to file:** Inbox emails the user replied to, replied all to, or forwarded (Outlook's `PidTagLastVerbExecuted` marker, `0x1081` = 102/103/104, one Graph query per value), plus emails with a completed flag. Unread and still-flagged emails are left out. 15 at a time, oldest first.
+2. **Suggest a folder**, in this order:
+   1. **Same thread:** another email in the conversation is already in one of the user's folders. A specific folder beats Archive; Archive counts if that's where the thread is. Inbox, Sent Items, Drafts, Deleted Items, Junk Email and Outbox never count.
+   2. **Folder name in the subject:** whole words, treating `_ - . , : / &` as spaces ("Fortify_SOW_Cassin_9.17.26" → Cassin; "Twin Bridges" isn't "Bridge"). The deepest matching folder wins; an exact tie is Not sure. Never suggests Archive, system folders, folders named only with a number (2026), or Closed/Dead folders and anything inside them.
+   3. Otherwise **Not sure**.
+3. **Confirm:** "file all", "file all except 2", "5 goes to Cassin", "skip 3", in any combination. The agent passes them to the flow as `all`, `1,3,4`, `5=Cassin`, and so on.
+4. **File:** the flow moves each confirmed email (Outlook *Move email (V2)* with `Id::<folder id>`, falling back to Graph `POST /me/messages/{id}/move`) and reports what moved and what didn't.
 
-1. **Find emails to file.** These are Inbox emails the user replied to, replied all to, or forwarded (Outlook's `PidTagLastVerbExecuted` marker, `0x1081` = 102, 103 or 104), plus emails with a completed flag. Unread and still-flagged emails are left out. It shows 15 at a time, oldest first.
-2. **Suggest a folder,** using two signals only:
-   1. **Same thread:** another email from the conversation is already in one of the user's folders. This includes **Archive**: a thread the user archived is suggested to Archive, unless part of it is also in another folder, which then wins. Archive is never suggested from a subject.
-   2. **Folder name in the subject:** a folder's name appears in the subject as whole words, treating `_`, `-` and `.` as spaces ("Fortify_SOW_Cassin_9.17.26" → Cassin; "Twin Bridges" doesn't match Bridge). Folders named only with a number (such as 2026), Closed and Dead are skipped for this signal. If several match, the deepest folder wins.
+**The agent never handles message or folder ids.** The flow returns a short **batchkey** (`After|NextAfter|SuggestedCount|Order|Filed`) that the agent passes back. In file mode the flow rebuilds the same batch from those times, checks it still matches (emails shown minus emails filed), and moves nothing if the list has changed. Filing part of a list and then the rest works, because the key records which numbers were filed.
 
-   Everything else is **Not sure**. There's no guessing from the topic or the sender.
-3. **Confirm by typing:** **file all**, **file all except 2**, **5 goes to Cassin**, **skip 3**, then **next** or **undo**.
-4. **File** with Outlook's *Move email (V2)*, one email at a time, as the user. After each move the agent checks the email landed in the folder it asked for.
+**Each user's own mailbox:** the flow's Outlook connection is set to *Provided by run-only user* (`runtimeSource: invoker`). The flow runs with the signed-in user's own connection; nobody's flow can read anyone else's mail.
 
-Every reply ends with *Filing Assistant v[version]*, so you can see which build answered.
-
-### Tools (all Office 365 Outlook, end-user credentials, one connection)
-| Tool | What it does |
+### Components
+| Component | What it does |
 |---|---|
-| Get emails to file | Graph GET: one call per replied value (102, 103, 104) plus completed flags. Exchange only accepts one exact value per call for this marker, compared with `cast(ep/value, Edm.Int32)`. |
-| Get my mail folders | Graph GET `/me/mailFolders/delta`: the whole folder tree as a flat list |
-| Find where threads are filed | Graph GET: emails in the same conversations, in any folder |
-| Move email to a folder | *Move email (V2)*. Move only, fixed to the user's own mailbox. The folder must be passed as `Id::<folder id>`: a bare id is read as a folder name and fails with 404 "Specified folder ... does not exist". |
-
-The model is pinned to GPT-5.5 Chat (`GPT55Chat`).
-
-### Why not code-based matching?
-Versions 1.0.1.0–1.0.1.1 tried to do the matching as Power Fx in a topic. Topics can call the agent's tools, but Copilot Studio doesn't pass the Outlook HTTP action's response back to a topic: the action's output has no schema, so the tool step has no Outputs to map. The supported alternative is a Power Automate flow that returns text to the topic. Look into that after the pilot only if missed matches matter in practice, and first confirm the flow can run with each user's own Outlook connection (not the flow owner's) and what it costs.
+| Flow *Filing Assistant - Find and file emails* | Everything above. Inputs: Mode (`suggest`/`file`), BatchKey, Selections (`none` when not used). Outputs: `message` (Markdown shown as-is), `batchkey`. Source: `filing-agent/workflows/generate_find_and_file.py` → `FindAndFileEmails.json`. |
+| Agent *Filing Assistant* | Instructions only (`filing-agent/instructions.md`), model GPT-5.5 Chat. One tool: the flow, added in Copilot Studio (step 4 below). |
 
 ### Not in this version
-Click-to-confirm card, filing to two folders, matching on the email body, remembered settings, a "ready to file" line in the Daily Digest, and an Outlook button. Add them one at a time once the basics are reliable.
+Undo (users drag emails back in Outlook), filing to two folders, matching on the email body, partial folder-name matches ("Oak Ave payoff" → "Oak Ave Loan"), a "ready to file" line in the Daily Digest, and an Outlook button.
 
 ## Install and test (Fortify dev environment)
 ```bash
-python3 build/build_solution.py --source filing-agent
-# -> out/FortifyFilingAssistant_1_0_2_5.zip
+python3 filing-agent/workflows/generate_find_and_file.py   # only after editing the generator
+python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_0.zip
 ```
-1. **Import:** make.powerapps.com → dev environment → **Solutions → Import solution** → the zip. Pick your Office 365 Outlook connection.
-2. **Clean up:** an unmanaged import never removes old components. When upgrading from 1.0.1.x, delete the **Find emails to file** topic and the **Read mail for filing** tool in Copilot Studio (and the **Test** topic and **Send an HTTP request** tool if they're still there). Delete the **Fortify Daily Digest (Pilot)** solution from dev if it's still there.
-3. **Set up in Copilot Studio:** refresh the browser tab, open **Filing Assistant**, check there are exactly **4 tools** (Get emails to file, Get my mail folders, Find where threads are filed, Move email to a folder), each set to **End user credentials**, and click **Publish**. The model is already GPT-5.5 Chat.
-4. **Test:** click **Start over** in the test pane, then say **Help me file**. Check that the reply ends with the version you just imported. If it doesn't, the test pane is still running an older build: refresh the tab and start over.
+1. **Remove the old tools.** In Copilot Studio → Filing Assistant → **Tools**, delete *Get emails to file*, *Get my mail folders*, *Find where threads are filed* and *Move email to a folder*. An import never removes old components.
+2. **Import** the zip in make.powerapps.com → dev environment → **Solutions → Import solution**. When asked for connections, pick your Office 365 Outlook connection.
+3. **Check the flow.** In make.powerautomate.com → **Solutions → Fortify Filing Assistant**, open *Filing Assistant - Find and file emails*:
+   - It should be **On**. If it's off, turn it on.
+   - Under **Run only users**, the Office 365 Outlook connection should say **Provided by run-only user**. If it doesn't, set it.
+4. **Add the flow as the agent's tool.** Copilot Studio → Filing Assistant → **Tools → Add a tool → Flow** → *Filing Assistant - Find and file emails*. If the tool's input settings offer **Prompt the user** (or similar) for BatchKey or Selections, turn that off; the agent always fills them. Then **Publish**.
+5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.0**.
 
 ### What to check
 | # | Do this | Expect |
 |---|---|---|
-| 1 | Help me file | A Found line, up to 15 emails, suggested ones first and Not sure underneath, numbered straight through (no restart at 1), and the version stamp |
-| 2 | Look at each suggestion | Every folder exists, and every reason is either *same thread* or *subject has "[a real folder name]"* |
-| 3 | Look at Not sure | Emails with no thread history and no folder name in the subject |
-| 4 | file all except [a wrong one] | Only confirmed emails move. Check them in Outlook. |
-| 5 | undo | That batch is back in the Inbox |
-| 6 | next | The next 15, without the ones already shown (including skipped and Not sure) |
+| 1 | Help me file | A numbered list, suggested first and Not sure underneath, identical if you ask again |
+| 2 | file 1 (one email you're sure about) | "✅ Filed 1 email", and the email is in that folder in Outlook |
+| 3 | 2 goes to [a folder name] | Moves it, or says clearly that the name matched no folder or more than one |
+| 4 | file all | The rest of the suggested ones move; already-filed ones say "was already filed" |
+| 5 | next | The next 15 |
+| 6 | Run 1–2 with a **second account** in Microsoft 365 Copilot | It asks that person to connect Outlook once, and shows *their* emails and folders |
+| 7 | Next day: Power Platform admin center → **Licensing → Copilot Studio** | Note any Copilot Credit use. Zero means the flow costs nothing. |
 
 **Pass mark (from the brief):** at least 85% of suggestions right without correction, no email filed before it was dealt with, and no folders that don't exist.
 
-## If something looks wrong
-Open the run in the test pane's activity view. Check which tools were called, with which Uri, and what they returned. If a suggestion is wrong but the tool results are right, note the email and folder: those cases tell us whether the rules or the model need changing.
+## If something fails
+- **Import error:** send Fortify the error text. The flow is generated by `generate_find_and_file.py`, so fixes go there.
+- **The agent shows an error from the flow:** open make.powerautomate.com → the flow → **Run history** → the failed run. The red step names what failed. Send its name and error.
+- **Copilot Studio asks you for BatchKey or Selections:** turn off prompting for those inputs in the tool's settings (install step 4).
 
 ## Before the Cassin pilot
-- Export a managed package (`pac solution export --name FortifyFilingAssistant --managed`) for Cassin's admin. It installs alongside Daily Digest and doesn't change it.
-- Add a short user guide and the security note: it can move email in the user's own mailbox, only after confirmation, and can't delete anything.
+- Confirm cost (step 7) and that test 6 passed with a second account.
+- Confirm Cassin's environment doesn't use customer-managed encryption keys (flows can't use each user's own connection there yet).
+- Export a managed package (`pac solution export --name FortifyFilingAssistant --managed`) for Cassin's admin. It installs alongside Daily Digest.
+- Add a short user guide and the security note: it moves email only within the user's own mailbox, only after confirmation, and can't delete anything.

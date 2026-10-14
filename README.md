@@ -23,7 +23,7 @@ agent/                      Daily Digest agent source (edit these)
   topics/*.mcs.yml            system topics (greeting, sign-in, errors, ...)
   connectionreferences.mcs.yml connection references packaged with the solution
   solution.yml                solution name, version, publisher
-filing-agent/               Filing Assistant agent source (same layout as agent/)
+filing-agent/               Filing Assistant agent source; workflows/ holds its Power Automate flow
 build/build_solution.py     builds agent/ (or --source filing-agent) into out/<solution>_<version>.zip
 deploy/                     pac-based import + publish (PowerShell and bash)
 scripts/Review-Flows.ps1    pac-based review of existing cloud flows

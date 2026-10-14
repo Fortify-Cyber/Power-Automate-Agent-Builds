@@ -99,8 +99,32 @@ def botcomponent_xml(schema, ctype, name, description, bot_schema):
             f'</botcomponent>')
 
 
-def solution_xml(sol, version):
+def workflow_xml(wf, json_path, version):
+    """customizations.xml entry for a modern (Power Automate cloud) flow."""
+    desc = f" Description={quoteattr(wf['description'])}" if wf.get("description") else ""
+    lines = [
+        f"<Workflow WorkflowId=\"{{{wf['id']}}}\" Name={quoteattr(wf['name'])}{desc}>",
+        f"  <JsonFileName>/{json_path}</JsonFileName>",
+        "  <Type>1</Type>", "  <Subprocess>0</Subprocess>", "  <Category>5</Category>", "  <Mode>0</Mode>",
+        "  <Scope>4</Scope>", "  <OnDemand>0</OnDemand>", "  <TriggerOnCreate>0</TriggerOnCreate>",
+        "  <TriggerOnDelete>0</TriggerOnDelete>", "  <AsyncAutodelete>0</AsyncAutodelete>",
+        "  <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>", "  <StateCode>1</StateCode>",
+        "  <StatusCode>2</StatusCode>", "  <RunAs>1</RunAs>", "  <IsTransacted>1</IsTransacted>",
+        f"  <IntroducedVersion>{version}</IntroducedVersion>", "  <IsCustomizable>1</IsCustomizable>",
+        "  <BusinessProcessType>0</BusinessProcessType>",
+        "  <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>",
+        "  <ModernFlowType>0</ModernFlowType>", "  <PrimaryEntity>none</PrimaryEntity>",
+        "  <LocalizedNames>",
+        f"    <LocalizedName languagecode=\"1033\" description={quoteattr(wf['name'])} />",
+        "  </LocalizedNames>",
+        "</Workflow>"]
+    return "".join("\n    " + l for l in lines)
+
+
+def solution_xml(sol, version, workflow_ids=()):
     pub = sol["publisher"]
+    roots = "".join(f'\n      <RootComponent type="29" id="{{{w}}}" behavior="0" />' for w in workflow_ids)
+    roots = f"<RootComponents>{roots}\n    </RootComponents>" if roots else "<RootComponents />"
     nil = lambda tag: f"<{tag} xsi:nil=\"true\"></{tag}>"
     addr_fields = ["City", "County", "Country", "Fax", "FreightTermsCode", "ImportSequenceNumber",
                    "Latitude", "Line1", "Line2", "Line3", "Longitude", "Name", "PostalCode",
@@ -139,13 +163,13 @@ def solution_xml(sol, version):
       <Addresses>{address(1)}{address(2)}
       </Addresses>
     </Publisher>
-    <RootComponents />
+    {roots}
     <MissingDependencies />
   </SolutionManifest>
 </ImportExportXml>"""
 
 
-def customizations_xml(conn_refs):
+def customizations_xml(conn_refs, workflows_xml=""):
     refs = "".join(f"""
     <connectionreference connectionreferencelogicalname={quoteattr(r['connectionReferenceLogicalName'])}>
       <connectionreferencedisplayname>{escape(r.get('displayName', r['connectionReferenceLogicalName']))}</connectionreferencedisplayname>
@@ -158,7 +182,7 @@ def customizations_xml(conn_refs):
     return f"""<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Entities></Entities>
   <Roles></Roles>
-  <Workflows></Workflows>
+  <Workflows>{workflows_xml}</Workflows>
   <FieldSecurityProfiles></FieldSecurityProfiles>
   <Templates />
   <EntityMaps />
@@ -260,8 +284,26 @@ def build(version=None, pilot=False, source="agent"):
         f'    <iscustomizable>1</iscustomizable>\n  </botcomponent_connectionreference>'
         for s, r in tool_links) + "\n</botcomponent_connectionreferenceset>"
 
-    files["solution.xml"] = solution_xml(sol, version)
-    files["customizations.xml"] = customizations_xml(conn_refs)
+    # Power Automate cloud flows packaged with the agent (<agent folder>/workflows/workflows.yml).
+    workflow_ids, workflows_xml = [], ""
+    manifest = AGENT / "workflows" / "workflows.yml"
+    if manifest.exists():
+        for wf in load_yaml(manifest)["workflows"]:
+            text = read_source(AGENT / "workflows" / wf["file"])
+            flow = json.loads(text)
+            for ref in flow["properties"].get("connectionReferences", {}).values():
+                name = ref["connection"]["connectionReferenceLogicalName"]
+                if name not in ref_names:
+                    sys.exit(f"{wf['file']}: connection reference {name} is not declared in connectionreferences.mcs.yml")
+            json_path = f"Workflows/{re.sub(r'[^A-Za-z0-9]', '', wf['name'])}-{wf['id'].upper()}.json"
+            files[json_path] = text
+            workflow_ids.append(wf["id"])
+            workflows_xml += workflow_xml(wf, json_path, version)
+        if workflows_xml:
+            workflows_xml += "\n  "
+
+    files["solution.xml"] = solution_xml(sol, version, workflow_ids)
+    files["customizations.xml"] = customizations_xml(conn_refs, workflows_xml)
     overrides = "".join(f'<Override PartName="/{p}" ContentType="application/octet-stream" />'
                         for p in files if p.endswith("/data"))
     files["[Content_Types].xml"] = (
@@ -278,7 +320,7 @@ def build(version=None, pilot=False, source="agent"):
             data = files[p]
             z.writestr(p, data.encode("utf-8") if isinstance(data, str) else data)
     print(f"Built {zip_path.relative_to(ROOT)}: {len(components)} components "
-          f"({len(tool_links)} tools, {len(conn_refs)} connection references)")
+          f"({len(tool_links)} tools, {len(conn_refs)} connection references, {len(workflow_ids)} flows)")
     return zip_path
 
 
