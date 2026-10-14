@@ -1,16 +1,20 @@
-# Filing Assistant: pilot guide (v1.1.0.2)
+# Filing Assistant: pilot guide (v1.1.0.3)
 
 For Fortify. **Filing Assistant** is a separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). Daily Digest is unchanged (1.0.0.8).
 
 ## How it works (since 1.1.0.0)
 All the mechanical work runs as **code in a Power Automate cloud flow**, *Filing Assistant - Find and file emails*. The same mailbox gives the same list every time. The agent (GPT-5.5 Chat) only turns the user's words into the flow's inputs and shows the flow's reply.
 
-1. **Find emails to file:** Inbox emails the user replied to, replied all to, or forwarded (Outlook's `PidTagLastVerbExecuted` marker, `0x1081` = 102/103/104, one Graph query per value), plus emails with a completed flag. Unread and still-flagged emails are left out. 25 at a time, oldest first (up to 1,000 of each kind per run).
+1. **Find emails to file:** every **read** Inbox email that isn't **still flagged** (flags mean "still working on it"). 25 at a time, oldest first. Each list has up to three sections:
+   - **✅ Replied, forwarded or completed:** the user replied, replied all or forwarded (Outlook's `PidTagLastVerbExecuted` marker, `0x1081` = 102/103/104, one Graph query per value), marked the flag complete, or **sent something later in the same thread** (a message in Sent Items or from their own address, after this email arrived).
+   - **📖 Read, no reply:** read, with none of the above. Any age. Kept separate so the user can file just the replied ones.
+   - **❓ Not sure:** no suggested folder (from either group; read-only ones are tagged *read, no reply*).
+   Up to 1,000 read emails are considered per run, counting from the start of the current list.
 2. **Suggest a folder**, in this order:
    1. **Same thread:** another email in the conversation is already in one of the user's folders. A specific folder beats Archive; Archive counts if that's where the thread is. Inbox, Sent Items, Drafts, Deleted Items, Junk Email and Outbox never count.
    2. **Folder name in the subject:** whole words, treating `_ - . , : / &` as spaces ("Fortify_SOW_Cassin_9.17.26" → Cassin; "Twin Bridges" isn't "Bridge"). The deepest matching folder wins; an exact tie is Not sure. Never suggests Archive, system folders, folders named only with a number (2026), or Closed/Dead folders and anything inside them.
    3. Otherwise **Not sure**.
-3. **Confirm:** "file all", "file all except 2", "5 goes to Cassin", "skip 3", in any combination. The agent passes them to the flow as `all`, `1,3,4`, `5=Cassin`, and so on.
+3. **Confirm:** "file all" (both sections), "file replied only", "file all except 2", "5 goes to Cassin", "skip 3", in any combination. The agent passes them to the flow as `all`, `replied`, `read`, `1,3,4`, `5=Cassin`, and so on.
 4. **File:** the flow moves each confirmed email (Outlook *Move email (V2)* with `Id::<folder id>`, falling back to Graph `POST /me/messages/{id}/move`), reports what moved and what didn't, and **shows the next 25 in the same reply**. So 100 emails take about four replies ("file all" each time). Emails the user didn't file stay in the Inbox; **Help me file** later starts again from the oldest, so they come back.
 
 **Speed:** emails are matched 10 at a time and moved 5 at a time. Copilot Studio waits at most 100 seconds for the flow, so check run durations in the flow's Run history; if a file-and-next-list run takes more than about 60 seconds, lower `BATCH` in the generator.
@@ -31,7 +35,7 @@ Undo (users drag emails back in Outlook), filing to two folders, matching on the
 ## Install and test (Fortify dev environment)
 ```bash
 python3 filing-agent/workflows/generate_find_and_file.py   # only after editing the generator
-python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_2.zip
+python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_3.zip
 ```
 1. **Remove the old tools.** In Copilot Studio → Filing Assistant → **Tools**, delete *Get emails to file*, *Get my mail folders*, *Find where threads are filed* and *Move email to a folder*. An import never removes old components.
 2. **Import** the zip in make.powerapps.com → dev environment → **Solutions → Import solution**. When asked for connections, pick your Office 365 Outlook connection.
@@ -39,7 +43,7 @@ python3 build/build_solution.py --source filing-agent       # -> out/FortifyFili
    - It should be **On**. If it's off, turn it on.
    - Under **Run only users**, the Office 365 Outlook connection should say **Provided by run-only user**. If it doesn't, set it.
 4. **Add the flow as the agent's tool.** Copilot Studio → Filing Assistant → **Tools → Add a tool → Flow** → *Filing Assistant - Find and file emails*. Check the tool lists all three inputs (**Mode**, **BatchKey**, **Selections**), each **Dynamically fill with AI**. If BatchKey or Selections is missing, use **+ Add input** to add it; without them the agent can't file and just shows the list again. Under **Completion → Advanced**, make both outputs (**message**, **batchkey**) available to the agent. Then **Publish**.
-5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.2**.
+5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.3**.
 6. **Use it in Microsoft 365 Copilot** (needed for test 6). Once per agent, in Copilot Studio: **Channels → Teams and Microsoft 365 Copilot**, tick **Make agent available in Microsoft 365 Copilot**, **Add channel**, then **Publish**. Then **Availability options**:
    - **See agent in Microsoft 365**: opens Copilot with an **Add** button, just for you. No admin approval needed.
    - **Show to my teammates and shared users**: share the agent with the second account first (**Share** at the top of the agent), then send them the link from **Copy link**.
@@ -50,7 +54,9 @@ python3 build/build_solution.py --source filing-agent       # -> out/FortifyFili
 ### What to check
 | # | Do this | Expect |
 |---|---|---|
-| 1 | Help me file | A numbered list, suggested first and Not sure underneath, identical if you ask again |
+| 1 | Help me file | A numbered list: Replied, then Read no reply, then Not sure. Identical if you ask again. No still-flagged emails. |
+| 1a | Reply to the **latest** email of a thread that has older emails in your Inbox, then Help me file | The older emails in that thread are under **Replied**, not Read |
+| 1b | file replied only | Only the Replied section moves |
 | 2 | file 1 (one email you're sure about) | "✅ Filed 1 email", and the email is in that folder in Outlook |
 | 3 | 2 goes to [a folder name] | Moves it, or says clearly that the name matched no folder or more than one |
 | 4 | file all | The suggested ones move, and the next 25 appear underneath in the same reply |

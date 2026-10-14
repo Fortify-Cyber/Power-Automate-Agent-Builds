@@ -73,6 +73,7 @@ Eric's "button on the email" point is the main decision for the new thread.
 
 ## 6. Open questions for the team or client
 1. Is the definition of "dealt with" (replied, or flag completed) right? Should "read and older than X days" also count?
+   - *Decided Oct 14 (Fortify, v1.1.0.3):* any read email counts, at any age, but read-only emails get their own "Read, no reply" section. Replying later in a thread counts for the earlier emails in it. Still-flagged emails stay out.
 2. For emails that belong in two places: **copy** to both folders, or file once plus a **category**?
 3. Which folders should never be suggested? For example Closed/Dead, personal or Misc.
 4. Should suggestions come with the morning digest, on demand, or both?

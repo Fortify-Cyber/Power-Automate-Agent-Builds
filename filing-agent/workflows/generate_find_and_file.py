@@ -22,6 +22,11 @@ After filing, the same reply lists the next batch (emails received after NextAft
 through a big backlog is one reply per batch. If nothing is left, the key for the list just filed
 is returned instead, so the user can still say where its remaining emails go.
 
+Which emails: every read Inbox email that isn't still flagged. The list puts emails the user
+replied to, replied all to or forwarded (Outlook's PidTagLastVerbExecuted marker), completed the
+flag on, or answered later in the same thread first, under "Replied, forwarded or completed";
+emails only read go under "Read, no reply". Selections can say all, replied or read.
+
 Matching and moving run in parallel loops (Copilot Studio waits at most 100 seconds for a flow).
 """
 import json
@@ -94,8 +99,16 @@ def match_steps(p, email, first_after):
     a = {}
     a[f"{p}Thread_lookup"] = http_get(
         f"@concat('https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq ''', "
-        f"coalesce({email}?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime&$top=100')",
+        f"coalesce({email}?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime,from,isDraft&$top=100')",
         first_after)
+    # Something the user sent in this thread after this email arrived means they dealt with it.
+    a[f"{p}Thread_mine"] = {"type": "Query", "runAfter": ok(f"{p}Thread_lookup"), "inputs": {
+        "from": f"@coalesce(body('{p}Thread_lookup')?['value'], json('[]'))",
+        "where": "@and(not(equals(item()?['isDraft'], true)), "
+                 "greater(ticks(coalesce(item()?['receivedDateTime'], '1900-01-01T00:00:00Z')), "
+                 f"ticks(coalesce({email}?['receivedDateTime'], '2999-01-01T00:00:00Z'))), "
+                 "or(equals(item()?['parentFolderId'], outputs('Sent_id')), "
+                 "contains(body('My_addresses'), toLower(coalesce(item()?['from']?['emailAddress']?['address'], '')))))"}}
     # Rank each thread email: 2 = real folder, 1 = Archive, 0 = anything else (Inbox, Sent Items, ...).
     a[f"{p}Thread_ranked"] = {"type": "Select", "runAfter": ok(f"{p}Thread_lookup"), "inputs": {
         "from": f"@coalesce(body('{p}Thread_lookup')?['value'], json('[]'))",
@@ -123,8 +136,11 @@ def match_steps(p, email, first_after):
         "path": f"@if(empty({tf}), if(empty({nf}), '', coalesce(outputs('{p}Name_best')?['path'], '')), "
                 f"coalesce(outputs('Paths')?[coalesce({tf}, '-')], ''))",
         "reason": f"@if(empty({tf}), if(empty({nf}), '', concat('subject has \"', "
-                  f"coalesce(outputs('{p}Name_best')?['name'], ''), '\"')), 'same thread')"},
-        ok(f"{p}Name_folder"))
+                  f"coalesce(outputs('{p}Name_best')?['name'], ''), '\"')), 'same thread')",
+        "kind": f"@if(or(contains(body('Replied_ids'), coalesce({email}?['id'], '-')), "
+                f"equals({email}?['flag']?['flagStatus'], 'complete'), "
+                f"greater(length(body('{p}Thread_mine')), 0)), 'replied', 'read')"},
+        ok(f"{p}Name_folder", f"{p}Thread_mine"))
     return a
 
 
@@ -153,8 +169,27 @@ def definition():
             "Get_forwarded": REPLIED.format(v=104), "Get_completed": "flag/flagStatus eq 'complete'"}
     for name, flt in gets.items():
         A[name] = http_get(f"{INBOX}?$filter={flt}&$top={TOP}&$select={SELECT}", ok("After", inits))
+    # Every read Inbox email, oldest first from After (Graph needs the $orderby field first in $filter).
+    A["Get_read"] = http_get(
+        f"@concat('{INBOX}?$filter=receivedDateTime gt ', outputs('After'), "
+        f"' and isRead eq true&$orderby=receivedDateTime asc&$top={TOP}&$select={SELECT}')", ok("After", inits))
+    A["Read_capped"] = compose("@not(empty(coalesce(body('Get_read')?['@odata.nextLink'], '')))", ok("Get_read"))
     A["All_emails"] = compose(
-        "@union(" + ", ".join(f"coalesce(body('{n}')?['value'], json('[]'))" for n in gets) + ")", ok(*gets))
+        "@union(" + ", ".join(f"coalesce(body('{n}')?['value'], json('[]'))" for n in list(gets) + ["Get_read"]) + ")",
+        ok(*gets, "Get_read"))
+    A["Replied_ids"] = {"type": "Select", "runAfter": ok(*gets), "inputs": {
+        "from": "@union(" + ", ".join(f"coalesce(body('{n}')?['value'], json('[]'))"
+                                      for n in ["Get_replied", "Get_replied_all", "Get_forwarded"]) + ")",
+        "select": "@item()?['id']"}}
+    # The user's own address and Sent Items id, to spot their replies in a thread.
+    A["Get_sent_sample"] = http_get(
+        "https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=5&$select=from,parentFolderId", ok(inits))
+    A["Sent_id"] = compose(
+        "@coalesce(first(coalesce(body('Get_sent_sample')?['value'], json('[]')))?['parentFolderId'], '-')",
+        ok("Get_sent_sample"))
+    A["My_addresses"] = {"type": "Select", "runAfter": ok("Get_sent_sample"), "inputs": {
+        "from": "@coalesce(body('Get_sent_sample')?['value'], json('[]'))",
+        "select": "@toLower(coalesce(item()?['from']?['emailAddress']?['address'], '-'))"}}
     A["Candidates"] = {"type": "Query", "runAfter": ok("All_emails"), "inputs": {
         "from": "@outputs('All_emails')",
         "where": "@and(equals(item()?['isRead'], true), not(equals(item()?['flag']?['flagStatus'], 'flagged')), "
@@ -275,15 +310,21 @@ def definition():
             "link": "@coalesce(outputs('S_email')?['webLink'], '')",
             "folderId": "@outputs('S_Suggestion')?['folderId']",
             "path": "@outputs('S_Suggestion')?['path']",
-            "reason": "@outputs('S_Suggestion')?['reason']"}}}
+            "reason": "@outputs('S_Suggestion')?['reason']",
+            "kind": "@outputs('S_Suggestion')?['kind']"}}}
     S["Suggest_each"]["actions"] = loop
     # The loop runs in parallel, so results arrive in any order; idx is the email's place in Batch (oldest first).
-    S["Suggested"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
-        "from": "@variables('Results')", "where": "@not(empty(item()?['folderId']))"}}
+    S["Sug_replied"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
+        "from": "@variables('Results')",
+        "where": "@and(not(empty(item()?['folderId'])), equals(item()?['kind'], 'replied'))"}}
+    S["Sug_read"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
+        "from": "@variables('Results')",
+        "where": "@and(not(empty(item()?['folderId'])), not(equals(item()?['kind'], 'replied')))"}}
     S["Not_sure"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
         "from": "@variables('Results')", "where": "@empty(item()?['folderId'])"}}
-    S["Ordered"] = compose("@union(sort(body('Suggested'), 'idx'), sort(body('Not_sure'), 'idx'))",
-                           ok("Suggested", "Not_sure"))
+    S["Ordered"] = compose(
+        "@union(sort(body('Sug_replied'), 'idx'), sort(body('Sug_read'), 'idx'), sort(body('Not_sure'), 'idx'))",
+        ok("Sug_replied", "Sug_read", "Not_sure"))
     S["Numbered"] = {"type": "Select", "runAfter": ok("Ordered"), "inputs": {
         "from": "@range(0, length(outputs('Ordered')))",
         "select": "@addProperty(outputs('Ordered')[item()], 'n', add(item(), 1))"}}
@@ -291,26 +332,33 @@ def definition():
         "from": "@body('Numbered')",
         "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', "
                   "item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), "
+                  "if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), "
                   f"if(empty(item()?['folderId']), '', concat('  ', {NL}, '→ **', item()?['path'], '** · *', "
                   "item()?['reason'], '*')))"}}
     S["Order_list"] = {"type": "Select", "runAfter": ok("Numbered"), "inputs": {
         "from": "@body('Numbered')", "select": "@string(item()?['idx'])"}}
-    s_count, total = "length(body('Suggested'))", "length(body('Numbered'))"
+    a_count, b_count = "length(body('Sug_replied'))", "length(body('Sug_read'))"
+    s_count, total = f"add({a_count}, {b_count})", "length(body('Numbered'))"
     hint = (f"if(greater({s_count}, 0), concat('Reply **file all** to file ', "
             f"if(equals({s_count}, 1), '1', concat('1–', string({s_count}))), "
-            f"', or adjust: **file all except 1** · **', string({total}), ' goes to [folder name]** · **skip 2**. "
+            f"if(and(greater({a_count}, 0), greater({b_count}, 0)), concat(', or **file replied only** for ', "
+            f"if(equals({a_count}, 1), '1', concat('1–', string({a_count})))), ''), "
+            f"'. Or adjust: **file all except 1** · **', string({total}), ' goes to [folder name]** · **skip 2**. "
             f"Nothing moves until you say so.'), 'None of these has a suggested folder. Tell me where any of them go, "
             f"for example **1 goes to [folder name]**. Nothing moves until you say so.')")
     is_file = "equals(outputs('Mode'), 'file')"
     S["Suggest_message"] = compose(
         f"@concat(if({is_file}, concat({NL}, {NL}, '---', {NL}, {NL}), ''), "
         f"'## 📁 Ready to file: ', string({total}), ' emails', {NL}, {NL}, "
-        f"'*', string(length(body('Pool'))), if({is_file}, ' more emails are', ' emails in your Inbox are'), "
-        f"' ready to file (you replied, forwarded, or completed the flag). Showing the oldest ', string({total}), '.*', "
-        f"{NL}, {NL}, "
-        f"join(take(body('Lines'), {s_count}), concat({NL}, {NL})), "
-        f"if(greater(length(body('Not_sure')), 0), concat({NL}, {NL}, '### ❓ Not sure', {NL}, {NL}, "
-        f"join(skip(body('Lines'), {s_count}), concat({NL}, {NL}))), ''), {NL}, {NL}, {hint}, "
+        f"'*', string(length(body('Pool'))), if(outputs('Read_capped'), '+', ''), "
+        f"if({is_file}, ' more read emails are', ' read emails in your Inbox are'), "
+        f"' ready to file (flagged ones are left out). Showing the oldest ', string({total}), '.*', {NL}, {NL}, "
+        f"if(greater({a_count}, 0), concat('### ✅ Replied, forwarded or completed', {NL}, {NL}, "
+        f"join(take(body('Lines'), {a_count}), concat({NL}, {NL})), {NL}, {NL}), ''), "
+        f"if(greater({b_count}, 0), concat('### 📖 Read, no reply', {NL}, {NL}, "
+        f"join(take(skip(body('Lines'), {a_count}), {b_count}), concat({NL}, {NL})), {NL}, {NL}), ''), "
+        f"if(greater(length(body('Not_sure')), 0), concat('### ❓ Not sure', {NL}, {NL}, "
+        f"join(skip(body('Lines'), {s_count}), concat({NL}, {NL})), {NL}, {NL}), ''), {hint}, "
         f"if(greater(outputs('Remaining'), 0), concat({NL}, {NL}, string(outputs('Remaining')), "
         f"' more are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
         ok("Lines", "Order_list"))
@@ -318,10 +366,11 @@ def definition():
                      "inputs": {"name": "Reply", "value": "@outputs('Suggest_message')"}}
     S["Set_key_list"] = {"type": "SetVariable", "runAfter": ok("Add_list"), "inputs": {
         "name": "KeyOut",
-        "value": f"@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', string({s_count}), '|', "
+        "value": f"@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', "
+                 f"string({a_count}), ',', string({b_count}), '|', "
                  "join(body('Order_list'), ','), '|')"}}
-    nothing = ("@concat('📁 Nothing is ready to file right now. I suggest Inbox emails you''ve replied to, "
-               "forwarded, or flagged and marked complete.')")
+    nothing = ("@concat('📁 Nothing is ready to file right now. I list Inbox emails you''ve read, "
+               "except ones that are still flagged.')")
     # In file mode with nothing after this batch, KeyOut stays the key of the batch just filed,
     # so the user can still say where its remaining emails go.
     list_section = {"Has_batch": {"type": "If", "runAfter": {},
@@ -343,8 +392,12 @@ def definition():
     part = lambda i: f"coalesce(first(skip(outputs('Key_parts'), {i})), '')"
     P = {}
     P["Order"] = compose(f"@split({part(3)}, ',')", {})
-    P["Suggested_count"] = compose(f"@int(if(isInt({part(2)}), {part(2)}, '0'))", ok("Order"))
-    P["Filed_before"] = {"type": "Query", "runAfter": ok("Suggested_count"), "inputs": {
+    # Field 3 is "replied count,read count": numbers 1..a are replied, a+1..a+b read, the rest Not sure.
+    P["Counts"] = compose(f"@split({part(2)}, ',')", ok("Order"))
+    first_c, second_c = "coalesce(first(outputs('Counts')), '')", "coalesce(first(skip(outputs('Counts'), 1)), '')"
+    P["Replied_count"] = compose(f"@int(if(isInt({first_c}), {first_c}, '0'))", ok("Counts"))
+    P["Read_count"] = compose(f"@int(if(isInt({second_c}), {second_c}, '0'))", ok("Replied_count"))
+    P["Filed_before"] = {"type": "Query", "runAfter": ok("Read_count"), "inputs": {
         "from": f"@split({part(4)}, ',')", "where": "@not(empty(item()))"}}
     P["Window_items"] = {"type": "Query", "runAfter": ok("Filed_before"), "inputs": {
         "from": "@body('Candidates')",
@@ -360,10 +413,19 @@ def definition():
     F["Override_numbers"] = {"type": "Select", "runAfter": ok("Override_tokens"), "inputs": {
         "from": "@body('Override_tokens')", "select": "@trim(first(split(item(), '=')))"}}
     F["All_numbers"] = {"type": "Select", "runAfter": {}, "inputs": {
-        "from": "@range(1, outputs('Suggested_count'))", "select": "@string(item())"}}
-    F["Plain_tokens"] = {"type": "Query", "runAfter": ok("Tokens_lower", "Override_numbers", "All_numbers"), "inputs": {
-        "from": "@union(body('Tokens'), if(contains(body('Tokens_lower'), 'all'), body('All_numbers'), json('[]')))",
-        "where": "@and(not(empty(item())), not(equals(toLower(item()), 'all')), not(contains(item(), '=')), "
+        "from": "@range(1, add(outputs('Replied_count'), outputs('Read_count')))", "select": "@string(item())"}}
+    F["Replied_numbers"] = {"type": "Select", "runAfter": {}, "inputs": {
+        "from": "@range(1, outputs('Replied_count'))", "select": "@string(item())"}}
+    F["Read_numbers"] = {"type": "Select", "runAfter": {}, "inputs": {
+        "from": "@range(add(outputs('Replied_count'), 1), outputs('Read_count'))", "select": "@string(item())"}}
+    words = "createArray('all', 'replied', 'read')"
+    F["Plain_tokens"] = {"type": "Query",
+        "runAfter": ok("Tokens_lower", "Override_numbers", "All_numbers", "Replied_numbers", "Read_numbers"), "inputs": {
+        "from": "@union(body('Tokens'), "
+                "if(contains(body('Tokens_lower'), 'all'), body('All_numbers'), json('[]')), "
+                "if(contains(body('Tokens_lower'), 'replied'), body('Replied_numbers'), json('[]')), "
+                "if(contains(body('Tokens_lower'), 'read'), body('Read_numbers'), json('[]')))",
+        "where": f"@and(not(empty(item())), not(contains({words}, toLower(item()))), not(contains(item(), '=')), "
                  "not(contains(body('Override_numbers'), item())))"}}
     F["Selections"] = compose("@union(body('Override_tokens'), body('Plain_tokens'))", ok("Plain_tokens"))
     fl = {}
@@ -480,7 +542,8 @@ def definition():
     file_branch = P
 
     A["Is_file"] = {"type": "If",
-        "runAfter": ok("Remaining", "Next_after", "Name_candidates", "Ranks", "Paths"),
+        "runAfter": ok("Remaining", "Next_after", "Name_candidates", "Ranks", "Paths", "Read_capped",
+                       "Replied_ids", "Sent_id", "My_addresses"),
         "expression": {"and": [{"equals": ["@outputs('Mode')", "file"]}]},
         "actions": file_branch, "else": {"actions": {}}}
     A["Show_list"] = {"type": "If", "runAfter": ok("Is_file"),
@@ -506,8 +569,9 @@ def definition():
                        "description": "The batchkey from the previous result, copied exactly. none for a new Help me file."},
             "text_2": {"title": "Selections", "type": "string", "x-ms-dynamically-added": True,
                        "x-ms-content-hint": "TEXT",
-                       "description": "For file: comma-separated numbers from the list, all for every suggested one, "
-                                      "and number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."}},
+                       "description": "For file: comma-separated numbers from the list; all for every suggested one; "
+                                      "replied or read for just that section; number=Folder name to send one "
+                                      "elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."}},
         # All required: Copilot Studio only lists a flow's optional inputs if someone adds them by hand.
         "required": ["text", "text_1", "text_2"]}}}}
 

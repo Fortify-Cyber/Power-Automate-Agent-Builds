@@ -51,7 +51,7 @@
                   "type": "string",
                   "x-ms-dynamically-added": true,
                   "x-ms-content-hint": "TEXT",
-                  "description": "For file: comma-separated numbers from the list, all for every suggested one, and number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."
+                  "description": "For file: comma-separated numbers from the list; all for every suggested one; replied or read for just that section; number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."
                 }
               },
               "required": [
@@ -293,9 +293,61 @@
             "authentication": "@parameters('$authentication')"
           }
         },
+        "Get_read": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "After": [
+              "Succeeded"
+            ],
+            "Init_showlist": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "HttpRequest",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime gt ', outputs('After'), ' and isRead eq true&$orderby=receivedDateTime asc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead')",
+              "Method": "GET"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Read_capped": {
+          "type": "Compose",
+          "inputs": "@not(empty(coalesce(body('Get_read')?['@odata.nextLink'], '')))",
+          "runAfter": {
+            "Get_read": [
+              "Succeeded"
+            ]
+          }
+        },
         "All_emails": {
           "type": "Compose",
-          "inputs": "@union(coalesce(body('Get_replied')?['value'], json('[]')), coalesce(body('Get_replied_all')?['value'], json('[]')), coalesce(body('Get_forwarded')?['value'], json('[]')), coalesce(body('Get_completed')?['value'], json('[]')))",
+          "inputs": "@union(coalesce(body('Get_replied')?['value'], json('[]')), coalesce(body('Get_replied_all')?['value'], json('[]')), coalesce(body('Get_forwarded')?['value'], json('[]')), coalesce(body('Get_completed')?['value'], json('[]')), coalesce(body('Get_read')?['value'], json('[]')))",
+          "runAfter": {
+            "Get_replied": [
+              "Succeeded"
+            ],
+            "Get_replied_all": [
+              "Succeeded"
+            ],
+            "Get_forwarded": [
+              "Succeeded"
+            ],
+            "Get_completed": [
+              "Succeeded"
+            ],
+            "Get_read": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Replied_ids": {
+          "type": "Select",
           "runAfter": {
             "Get_replied": [
               "Succeeded"
@@ -309,6 +361,51 @@
             "Get_completed": [
               "Succeeded"
             ]
+          },
+          "inputs": {
+            "from": "@union(coalesce(body('Get_replied')?['value'], json('[]')), coalesce(body('Get_replied_all')?['value'], json('[]')), coalesce(body('Get_forwarded')?['value'], json('[]')))",
+            "select": "@item()?['id']"
+          }
+        },
+        "Get_sent_sample": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Init_showlist": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "HttpRequest",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=5&$select=from,parentFolderId",
+              "Method": "GET"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Sent_id": {
+          "type": "Compose",
+          "inputs": "@coalesce(first(coalesce(body('Get_sent_sample')?['value'], json('[]')))?['parentFolderId'], '-')",
+          "runAfter": {
+            "Get_sent_sample": [
+              "Succeeded"
+            ]
+          }
+        },
+        "My_addresses": {
+          "type": "Select",
+          "runAfter": {
+            "Get_sent_sample": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@coalesce(body('Get_sent_sample')?['value'], json('[]'))",
+            "select": "@toLower(coalesce(item()?['from']?['emailAddress']?['address'], '-'))"
           }
         },
         "Candidates": {
@@ -777,6 +874,18 @@
             ],
             "Paths": [
               "Succeeded"
+            ],
+            "Read_capped": [
+              "Succeeded"
+            ],
+            "Replied_ids": [
+              "Succeeded"
+            ],
+            "Sent_id": [
+              "Succeeded"
+            ],
+            "My_addresses": [
+              "Succeeded"
             ]
           },
           "expression": {
@@ -795,11 +904,29 @@
               "inputs": "@split(coalesce(first(skip(outputs('Key_parts'), 3)), ''), ',')",
               "runAfter": {}
             },
-            "Suggested_count": {
+            "Counts": {
               "type": "Compose",
-              "inputs": "@int(if(isInt(coalesce(first(skip(outputs('Key_parts'), 2)), '')), coalesce(first(skip(outputs('Key_parts'), 2)), ''), '0'))",
+              "inputs": "@split(coalesce(first(skip(outputs('Key_parts'), 2)), ''), ',')",
               "runAfter": {
                 "Order": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Replied_count": {
+              "type": "Compose",
+              "inputs": "@int(if(isInt(coalesce(first(outputs('Counts')), '')), coalesce(first(outputs('Counts')), ''), '0'))",
+              "runAfter": {
+                "Counts": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Read_count": {
+              "type": "Compose",
+              "inputs": "@int(if(isInt(coalesce(first(skip(outputs('Counts'), 1)), '')), coalesce(first(skip(outputs('Counts'), 1)), ''), '0'))",
+              "runAfter": {
+                "Replied_count": [
                   "Succeeded"
                 ]
               }
@@ -807,7 +934,7 @@
             "Filed_before": {
               "type": "Query",
               "runAfter": {
-                "Suggested_count": [
+                "Read_count": [
                   "Succeeded"
                 ]
               },
@@ -915,7 +1042,23 @@
                   "type": "Select",
                   "runAfter": {},
                   "inputs": {
-                    "from": "@range(1, outputs('Suggested_count'))",
+                    "from": "@range(1, add(outputs('Replied_count'), outputs('Read_count')))",
+                    "select": "@string(item())"
+                  }
+                },
+                "Replied_numbers": {
+                  "type": "Select",
+                  "runAfter": {},
+                  "inputs": {
+                    "from": "@range(1, outputs('Replied_count'))",
+                    "select": "@string(item())"
+                  }
+                },
+                "Read_numbers": {
+                  "type": "Select",
+                  "runAfter": {},
+                  "inputs": {
+                    "from": "@range(add(outputs('Replied_count'), 1), outputs('Read_count'))",
                     "select": "@string(item())"
                   }
                 },
@@ -930,11 +1073,17 @@
                     ],
                     "All_numbers": [
                       "Succeeded"
+                    ],
+                    "Replied_numbers": [
+                      "Succeeded"
+                    ],
+                    "Read_numbers": [
+                      "Succeeded"
                     ]
                   },
                   "inputs": {
-                    "from": "@union(body('Tokens'), if(contains(body('Tokens_lower'), 'all'), body('All_numbers'), json('[]')))",
-                    "where": "@and(not(empty(item())), not(equals(toLower(item()), 'all')), not(contains(item(), '=')), not(contains(body('Override_numbers'), item())))"
+                    "from": "@union(body('Tokens'), if(contains(body('Tokens_lower'), 'all'), body('All_numbers'), json('[]')), if(contains(body('Tokens_lower'), 'replied'), body('Replied_numbers'), json('[]')), if(contains(body('Tokens_lower'), 'read'), body('Read_numbers'), json('[]')))",
+                    "where": "@and(not(empty(item())), not(contains(createArray('all', 'replied', 'read'), toLower(item()))), not(contains(item(), '=')), not(contains(body('Override_numbers'), item())))"
                   }
                 },
                 "Selections": {
@@ -1036,10 +1185,22 @@
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
                         },
                         "parameters": {
-                          "Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq ''', coalesce(outputs('F_email')?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime&$top=100')",
+                          "Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq ''', coalesce(outputs('F_email')?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime,from,isDraft&$top=100')",
                           "Method": "GET"
                         },
                         "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "F_Thread_mine": {
+                      "type": "Query",
+                      "runAfter": {
+                        "F_Thread_lookup": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@coalesce(body('F_Thread_lookup')?['value'], json('[]'))",
+                        "where": "@and(not(equals(item()?['isDraft'], true)), greater(ticks(coalesce(item()?['receivedDateTime'], '1900-01-01T00:00:00Z')), ticks(coalesce(outputs('F_email')?['receivedDateTime'], '2999-01-01T00:00:00Z'))), or(equals(item()?['parentFolderId'], outputs('Sent_id')), contains(body('My_addresses'), toLower(coalesce(item()?['from']?['emailAddress']?['address'], '')))))"
                       }
                     },
                     "F_Thread_ranked": {
@@ -1122,10 +1283,14 @@
                       "inputs": {
                         "folderId": "@if(empty(outputs('F_Thread_folder')), outputs('F_Name_folder'), outputs('F_Thread_folder'))",
                         "path": "@if(empty(outputs('F_Thread_folder')), if(empty(outputs('F_Name_folder')), '', coalesce(outputs('F_Name_best')?['path'], '')), coalesce(outputs('Paths')?[coalesce(outputs('F_Thread_folder'), '-')], ''))",
-                        "reason": "@if(empty(outputs('F_Thread_folder')), if(empty(outputs('F_Name_folder')), '', concat('subject has \"', coalesce(outputs('F_Name_best')?['name'], ''), '\"')), 'same thread')"
+                        "reason": "@if(empty(outputs('F_Thread_folder')), if(empty(outputs('F_Name_folder')), '', concat('subject has \"', coalesce(outputs('F_Name_best')?['name'], ''), '\"')), 'same thread')",
+                        "kind": "@if(or(contains(body('Replied_ids'), coalesce(outputs('F_email')?['id'], '-')), equals(outputs('F_email')?['flag']?['flagStatus'], 'complete'), greater(length(body('F_Thread_mine')), 0)), 'replied', 'read')"
                       },
                       "runAfter": {
                         "F_Name_folder": [
+                          "Succeeded"
+                        ],
+                        "F_Thread_mine": [
                           "Succeeded"
                         ]
                       }
@@ -1453,10 +1618,22 @@
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
                         },
                         "parameters": {
-                          "Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq ''', coalesce(outputs('S_email')?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime&$top=100')",
+                          "Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq ''', coalesce(outputs('S_email')?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime,from,isDraft&$top=100')",
                           "Method": "GET"
                         },
                         "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "S_Thread_mine": {
+                      "type": "Query",
+                      "runAfter": {
+                        "S_Thread_lookup": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@coalesce(body('S_Thread_lookup')?['value'], json('[]'))",
+                        "where": "@and(not(equals(item()?['isDraft'], true)), greater(ticks(coalesce(item()?['receivedDateTime'], '1900-01-01T00:00:00Z')), ticks(coalesce(outputs('S_email')?['receivedDateTime'], '2999-01-01T00:00:00Z'))), or(equals(item()?['parentFolderId'], outputs('Sent_id')), contains(body('My_addresses'), toLower(coalesce(item()?['from']?['emailAddress']?['address'], '')))))"
                       }
                     },
                     "S_Thread_ranked": {
@@ -1539,10 +1716,14 @@
                       "inputs": {
                         "folderId": "@if(empty(outputs('S_Thread_folder')), outputs('S_Name_folder'), outputs('S_Thread_folder'))",
                         "path": "@if(empty(outputs('S_Thread_folder')), if(empty(outputs('S_Name_folder')), '', coalesce(outputs('S_Name_best')?['path'], '')), coalesce(outputs('Paths')?[coalesce(outputs('S_Thread_folder'), '-')], ''))",
-                        "reason": "@if(empty(outputs('S_Thread_folder')), if(empty(outputs('S_Name_folder')), '', concat('subject has \"', coalesce(outputs('S_Name_best')?['name'], ''), '\"')), 'same thread')"
+                        "reason": "@if(empty(outputs('S_Thread_folder')), if(empty(outputs('S_Name_folder')), '', concat('subject has \"', coalesce(outputs('S_Name_best')?['name'], ''), '\"')), 'same thread')",
+                        "kind": "@if(or(contains(body('Replied_ids'), coalesce(outputs('S_email')?['id'], '-')), equals(outputs('S_email')?['flag']?['flagStatus'], 'complete'), greater(length(body('S_Thread_mine')), 0)), 'replied', 'read')"
                       },
                       "runAfter": {
                         "S_Name_folder": [
+                          "Succeeded"
+                        ],
+                        "S_Thread_mine": [
                           "Succeeded"
                         ]
                       }
@@ -1564,13 +1745,14 @@
                           "link": "@coalesce(outputs('S_email')?['webLink'], '')",
                           "folderId": "@outputs('S_Suggestion')?['folderId']",
                           "path": "@outputs('S_Suggestion')?['path']",
-                          "reason": "@outputs('S_Suggestion')?['reason']"
+                          "reason": "@outputs('S_Suggestion')?['reason']",
+                          "kind": "@outputs('S_Suggestion')?['kind']"
                         }
                       }
                     }
                   }
                 },
-                "Suggested": {
+                "Sug_replied": {
                   "type": "Query",
                   "runAfter": {
                     "Suggest_each": [
@@ -1579,7 +1761,19 @@
                   },
                   "inputs": {
                     "from": "@variables('Results')",
-                    "where": "@not(empty(item()?['folderId']))"
+                    "where": "@and(not(empty(item()?['folderId'])), equals(item()?['kind'], 'replied'))"
+                  }
+                },
+                "Sug_read": {
+                  "type": "Query",
+                  "runAfter": {
+                    "Suggest_each": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "from": "@variables('Results')",
+                    "where": "@and(not(empty(item()?['folderId'])), not(equals(item()?['kind'], 'replied')))"
                   }
                 },
                 "Not_sure": {
@@ -1596,9 +1790,12 @@
                 },
                 "Ordered": {
                   "type": "Compose",
-                  "inputs": "@union(sort(body('Suggested'), 'idx'), sort(body('Not_sure'), 'idx'))",
+                  "inputs": "@union(sort(body('Sug_replied'), 'idx'), sort(body('Sug_read'), 'idx'), sort(body('Not_sure'), 'idx'))",
                   "runAfter": {
-                    "Suggested": [
+                    "Sug_replied": [
+                      "Succeeded"
+                    ],
+                    "Sug_read": [
                       "Succeeded"
                     ],
                     "Not_sure": [
@@ -1627,7 +1824,7 @@
                   },
                   "inputs": {
                     "from": "@body('Numbered')",
-                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
+                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
                   }
                 },
                 "Order_list": {
@@ -1644,7 +1841,7 @@
                 },
                 "Suggest_message": {
                   "type": "Compose",
-                  "inputs": "@concat(if(equals(outputs('Mode'), 'file'), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '---', decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), '## 📁 Ready to file: ', string(length(body('Numbered'))), ' emails', decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(length(body('Pool'))), if(equals(outputs('Mode'), 'file'), ' more emails are', ' emails in your Inbox are'), ' ready to file (you replied, forwarded, or completed the flag). Showing the oldest ', string(length(body('Numbered'))), '.*', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(body('Lines'), length(body('Suggested'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), if(greater(length(body('Not_sure')), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '### ❓ Not sure', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(skip(body('Lines'), length(body('Suggested'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A')))), ''), decodeUriComponent('%0A'), decodeUriComponent('%0A'), if(greater(length(body('Suggested')), 0), concat('Reply **file all** to file ', if(equals(length(body('Suggested')), 1), '1', concat('1–', string(length(body('Suggested'))))), ', or adjust: **file all except 1** · **', string(length(body('Numbered'))), ' goes to [folder name]** · **skip 2**. Nothing moves until you say so.'), 'None of these has a suggested folder. Tell me where any of them go, for example **1 goes to [folder name]**. Nothing moves until you say so.'), if(greater(outputs('Remaining'), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), string(outputs('Remaining')), ' more are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
+                  "inputs": "@concat(if(equals(outputs('Mode'), 'file'), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '---', decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), '## 📁 Ready to file: ', string(length(body('Numbered'))), ' emails', decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(length(body('Pool'))), if(outputs('Read_capped'), '+', ''), if(equals(outputs('Mode'), 'file'), ' more read emails are', ' read emails in your Inbox are'), ' ready to file (flagged ones are left out). Showing the oldest ', string(length(body('Numbered'))), '.*', decodeUriComponent('%0A'), decodeUriComponent('%0A'), if(greater(length(body('Sug_replied')), 0), concat('### ✅ Replied, forwarded or completed', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(body('Lines'), length(body('Sug_replied'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(length(body('Sug_read')), 0), concat('### 📖 Read, no reply', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(skip(body('Lines'), length(body('Sug_replied'))), length(body('Sug_read'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(length(body('Not_sure')), 0), concat('### ❓ Not sure', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(skip(body('Lines'), add(length(body('Sug_replied')), length(body('Sug_read')))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(add(length(body('Sug_replied')), length(body('Sug_read'))), 0), concat('Reply **file all** to file ', if(equals(add(length(body('Sug_replied')), length(body('Sug_read'))), 1), '1', concat('1–', string(add(length(body('Sug_replied')), length(body('Sug_read')))))), if(and(greater(length(body('Sug_replied')), 0), greater(length(body('Sug_read')), 0)), concat(', or **file replied only** for ', if(equals(length(body('Sug_replied')), 1), '1', concat('1–', string(length(body('Sug_replied')))))), ''), '. Or adjust: **file all except 1** · **', string(length(body('Numbered'))), ' goes to [folder name]** · **skip 2**. Nothing moves until you say so.'), 'None of these has a suggested folder. Tell me where any of them go, for example **1 goes to [folder name]**. Nothing moves until you say so.'), if(greater(outputs('Remaining'), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), string(outputs('Remaining')), ' more are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
                   "runAfter": {
                     "Lines": [
                       "Succeeded"
@@ -1675,7 +1872,7 @@
                   },
                   "inputs": {
                     "name": "KeyOut",
-                    "value": "@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', string(length(body('Suggested'))), '|', join(body('Order_list'), ','), '|')"
+                    "value": "@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', string(length(body('Sug_replied'))), ',', string(length(body('Sug_read'))), '|', join(body('Order_list'), ','), '|')"
                   }
                 }
               },
@@ -1711,7 +1908,7 @@
                           "runAfter": {},
                           "inputs": {
                             "name": "Reply",
-                            "value": "@concat('📁 Nothing is ready to file right now. I suggest Inbox emails you''ve replied to, forwarded, or flagged and marked complete.')"
+                            "value": "@concat('📁 Nothing is ready to file right now. I list Inbox emails you''ve read, except ones that are still flagged.')"
                           }
                         },
                         "Set_key_none": {

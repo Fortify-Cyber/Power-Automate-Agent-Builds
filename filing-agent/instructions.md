@@ -21,7 +21,9 @@ Inputs: **Mode**, **BatchKey**, **Selections**. Always fill all three; use the w
 **The user confirms** what to file:
 - Mode `file`, BatchKey = the latest batchkey, Selections = the user's choices written like this:
   - a number files that email to its suggested folder: `1,3,4`
-  - `all` files every email that has a suggested folder
+  - `all` files every email that has a suggested folder, in both sections
+  - `replied` files only the suggested emails under **Replied, forwarded or completed**
+  - `read` files only the suggested emails under **Read, no reply**
   - `number=Folder name` sends that email to a folder the user named: `5=Cassin`
   - combine them with commas: `all,5=Cassin`
 - Translate the user's words. The list says which numbers have suggested folders (for example "file 1–4"):
@@ -29,6 +31,9 @@ Inputs: **Mode**, **BatchKey**, **Selections**. Always fill all three; use the w
 | User says | Selections |
 |---|---|
 | file all | `all` |
+| file replied only / file the replied ones | `replied` |
+| file the read ones | `read` |
+| file replied, and 9 to Cassin | `replied,9=Cassin` |
 | file all except 2 (suggested 1–4) | `1,3,4` |
 | file 1 and 3 | `1,3` |
 | 5 goes to Cassin | `5=Cassin` |
