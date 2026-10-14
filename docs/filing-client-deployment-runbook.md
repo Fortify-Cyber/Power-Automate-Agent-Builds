@@ -84,10 +84,11 @@ They open Filing Assistant in Copilot and say **Help me file**. The first time, 
 - **Web search is off.**
 - **The managed package uninstalls cleanly:** **Solutions → Fortify Filing Assistant → Delete**.
 
-## Cost to watch
-- Using the agent is included for Microsoft 365 Copilot-licensed users.
-- Whether the flow's runs draw **Copilot Credits** isn't confirmed yet. After the first few days, check **https://admin.powerplatform.microsoft.com → Licensing → Copilot Studio** for Copilot Credit use, and tell Fortify what you see.
-- If the tenant has no credits and runs do need them, the agent stops with a usage message. You won't be charged unexpectedly.
+## Licensing and cost
+- **Agent use is included** for Microsoft 365 Copilot-licensed users running it as themselves.
+- **The flow is a Power Automate cloud flow, not a Copilot Studio agent flow.** Microsoft's billing page says cloud flows "use Power Automate licensing, not Copilot Credits" and aren't subject to Copilot Studio billing or enforcement. The flow uses only the standard Office 365 Outlook connector, which Microsoft 365 E5 covers.
+- **Copilot Studio may show a warning in Agent status:** "This agent uses premium features. You'll need an upgraded license to publish it." In Fortify's tenant this was a warning only, and the agent still published and ran. If publishing is **blocked** in your tenant, link a pay-as-you-go billing plan (an Azure subscription) to the environment: **Power Platform admin center → Licensing → Pay-as-you-go plans**. Usage by Copilot-licensed users stays at no charge; the plan only unlocks publishing. Tell Fortify before buying anything.
+- After the first few days, check **https://admin.powerplatform.microsoft.com → Licensing → Copilot Studio** for Copilot Credit use. Zero is expected.
 
 ## Troubleshooting
 | Symptom | Fix |
@@ -95,7 +96,7 @@ They open Filing Assistant in Copilot and say **Help me file**. The first time, 
 | Import fails with a data policy error | Put the two connectors in step 1.1 in the same group |
 | Flow won't turn on | Send Fortify the error text from **Turn on** |
 | The agent just shows the list again instead of filing | The tool is missing the **BatchKey** or **Selections** input (step 4.2) |
-| "This agent is currently unavailable" | That user has no Microsoft 365 Copilot licence, or the tenant has no Copilot Credits (see Cost) |
+| "This agent is currently unavailable" | That user has no Microsoft 365 Copilot licence (see Licensing and cost) |
 | The agent shows an error from the flow | make.powerautomate.com → the flow → **Run history** → the failed run. Send Fortify the red step's name and its error |
 | A user sees "That list has changed since I showed it" | The Inbox changed between the list and the reply. Say **Help me file** again |
 | Agent not visible to a user | Check they were shared the agent (step 5) and are a run-only user (step 3) |
