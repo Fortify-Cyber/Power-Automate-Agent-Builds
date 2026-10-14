@@ -13,10 +13,16 @@ Inputs (from the agent):  Mode ("suggest" or "file"), BatchKey, Selections
 Outputs (to the agent):   message (Markdown to show as-is), batchkey (pass back on the next call)
 
 BatchKey is "After|NextAfter|SuggestedCount|Order|Filed": the batch is the dealt-with emails
-received after After up to NextAfter (the 15 shown); Order maps each displayed number to its
+received after After up to NextAfter (the ones shown); Order maps each displayed number to its
 position in that batch, and Filed lists the positions already moved. "file" rebuilds the batch
 from those times, checks it still matches (emails shown minus emails filed), and refuses to move
 anything if it doesn't, so the agent never handles message or folder ids.
+
+After filing, the same reply lists the next batch (emails received after NextAfter), so working
+through a big backlog is one reply per batch. If nothing is left, the key for the list just filed
+is returned instead, so the user can still say where its remaining emails go.
+
+Matching and moving run in parallel loops (Copilot Studio waits at most 100 seconds for a flow).
 """
 import json
 import pathlib
@@ -24,7 +30,10 @@ import pathlib
 HERE = pathlib.Path(__file__).resolve().parent
 CONN = "shared_office365"
 CONN_REF = "fc_FilingAssistant.shared_office365.shared-office365-0c11ea16-31cf-4d6b-8706-aa7889bf58e2"
-BATCH = 15
+BATCH = 25
+SUGGEST_PARALLEL = 10   # emails matched at once when listing
+FILE_PARALLEL = 5       # emails matched and moved at once when filing
+TOP = 1000              # Graph's maximum page size for messages, per query
 NL = "decodeUriComponent('%0A')"
 SELECT = "id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
 INBOX = "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
@@ -131,7 +140,7 @@ def definition():
         "if(equals(outputs('Mode'), 'file'), first(outputs('Key_parts')), first(skip(outputs('Key_parts'), 1))))",
         ok("Mode", "Key_parts"))
     variables = [("Results", "array", []), ("Moved", "array", []), ("Problems", "array", []), ("MovedIdx", "array", []),
-                 ("Reply", "string", ""), ("KeyOut", "string", "")]
+                 ("Reply", "string", ""), ("KeyOut", "string", ""), ("ShowList", "boolean", True)]
     prev = None
     for name, typ, val in variables:
         A[f"Init_{name.lower()}"] = {"type": "InitializeVariable", "runAfter": ok(prev) if prev else {},
@@ -143,17 +152,24 @@ def definition():
     gets = {"Get_replied": REPLIED.format(v=102), "Get_replied_all": REPLIED.format(v=103),
             "Get_forwarded": REPLIED.format(v=104), "Get_completed": "flag/flagStatus eq 'complete'"}
     for name, flt in gets.items():
-        A[name] = http_get(f"{INBOX}?$filter={flt}&$top=250&$select={SELECT}", ok("After", inits))
+        A[name] = http_get(f"{INBOX}?$filter={flt}&$top={TOP}&$select={SELECT}", ok("After", inits))
     A["All_emails"] = compose(
         "@union(" + ", ".join(f"coalesce(body('{n}')?['value'], json('[]'))" for n in gets) + ")", ok(*gets))
     A["Candidates"] = {"type": "Query", "runAfter": ok("All_emails"), "inputs": {
         "from": "@outputs('All_emails')",
         "where": "@and(equals(item()?['isRead'], true), not(equals(item()?['flag']?['flagStatus'], 'flagged')), "
                  "greater(ticks(item()?['receivedDateTime']), ticks(outputs('After'))))"}}
-    A["Batch"] = compose(f"@take(sort(body('Candidates'), 'receivedDateTime'), {BATCH})", ok("Candidates"))
-    A["Remaining"] = compose("@sub(length(body('Candidates')), length(outputs('Batch')))", ok("Batch"))
+    # The list to show: in file mode it's the batch after the one being filed.
+    A["Batch_from"] = compose(
+        "@if(and(equals(outputs('Mode'), 'file'), greaterOrEquals(length(outputs('Key_parts')), 4)), "
+        "first(skip(outputs('Key_parts'), 1)), outputs('After'))", ok("After"))
+    A["Pool"] = {"type": "Query", "runAfter": ok("Candidates", "Batch_from"), "inputs": {
+        "from": "@body('Candidates')",
+        "where": "@greater(ticks(item()?['receivedDateTime']), ticks(outputs('Batch_from')))"}}
+    A["Batch"] = compose(f"@take(sort(body('Pool'), 'receivedDateTime'), {BATCH})", ok("Pool"))
+    A["Remaining"] = compose("@sub(length(body('Pool')), length(outputs('Batch')))", ok("Batch"))
     A["Next_after"] = compose(
-        "@coalesce(first(reverse(outputs('Batch')))?['receivedDateTime'], outputs('After'))", ok("Batch"))
+        "@coalesce(first(reverse(outputs('Batch')))?['receivedDateTime'], outputs('Batch_from'))", ok("Batch"))
 
     # ---- The user's folder tree -----------------------------------------------------------
     A["Get_folders"] = http_get(
@@ -245,7 +261,7 @@ def definition():
     S = {}
     S["Suggest_each"] = {"type": "Foreach", "runAfter": {},
         "foreach": "@range(0, length(outputs('Batch')))",
-        "runtimeConfiguration": {"concurrency": {"repetitions": 1}},
+        "runtimeConfiguration": {"concurrency": {"repetitions": SUGGEST_PARALLEL}},
         "actions": {}}
     loop = {"S_email": compose("@outputs('Batch')[items('Suggest_each')]", {})}
     loop.update(match_steps("S_", "outputs('S_email')", ok("S_email")))
@@ -261,11 +277,12 @@ def definition():
             "path": "@outputs('S_Suggestion')?['path']",
             "reason": "@outputs('S_Suggestion')?['reason']"}}}
     S["Suggest_each"]["actions"] = loop
+    # The loop runs in parallel, so results arrive in any order; idx is the email's place in Batch (oldest first).
     S["Suggested"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
         "from": "@variables('Results')", "where": "@not(empty(item()?['folderId']))"}}
     S["Not_sure"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
         "from": "@variables('Results')", "where": "@empty(item()?['folderId'])"}}
-    S["Ordered"] = compose("@union(sort(body('Suggested'), 'received'), sort(body('Not_sure'), 'received'))",
+    S["Ordered"] = compose("@union(sort(body('Suggested'), 'idx'), sort(body('Not_sure'), 'idx'))",
                            ok("Suggested", "Not_sure"))
     S["Numbered"] = {"type": "Select", "runAfter": ok("Ordered"), "inputs": {
         "from": "@range(0, length(outputs('Ordered')))",
@@ -284,31 +301,43 @@ def definition():
             f"', or adjust: **file all except 1** · **', string({total}), ' goes to [folder name]** · **skip 2**. "
             f"Nothing moves until you say so.'), 'None of these has a suggested folder. Tell me where any of them go, "
             f"for example **1 goes to [folder name]**. Nothing moves until you say so.')")
+    is_file = "equals(outputs('Mode'), 'file')"
     S["Suggest_message"] = compose(
-        f"@concat('## 📁 Ready to file: ', string({total}), ' emails', {NL}, {NL}, "
-        f"'*', string(length(body('Candidates'))), ' emails in your Inbox are ready to file (you replied, forwarded, "
-        f"or completed the flag). Showing the oldest ', string({total}), '.*', {NL}, {NL}, "
+        f"@concat(if({is_file}, concat({NL}, {NL}, '---', {NL}, {NL}), ''), "
+        f"'## 📁 Ready to file: ', string({total}), ' emails', {NL}, {NL}, "
+        f"'*', string(length(body('Pool'))), if({is_file}, ' more emails are', ' emails in your Inbox are'), "
+        f"' ready to file (you replied, forwarded, or completed the flag). Showing the oldest ', string({total}), '.*', "
+        f"{NL}, {NL}, "
         f"join(take(body('Lines'), {s_count}), concat({NL}, {NL})), "
         f"if(greater(length(body('Not_sure')), 0), concat({NL}, {NL}, '### ❓ Not sure', {NL}, {NL}, "
         f"join(skip(body('Lines'), {s_count}), concat({NL}, {NL}))), ''), {NL}, {NL}, {hint}, "
         f"if(greater(outputs('Remaining'), 0), concat({NL}, {NL}, string(outputs('Remaining')), "
-        f"' more are ready after this batch. Say **next** when you''re done with these.'), ''), {NL}, {NL}, {footer})",
+        f"' more are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
         ok("Lines", "Order_list"))
-    S["Set_reply_list"] = {"type": "SetVariable", "runAfter": ok("Suggest_message"),
-                           "inputs": {"name": "Reply", "value": "@outputs('Suggest_message')"}}
-    S["Set_key_list"] = {"type": "SetVariable", "runAfter": ok("Set_reply_list"), "inputs": {
+    S["Add_list"] = {"type": "AppendToStringVariable", "runAfter": ok("Suggest_message"),
+                     "inputs": {"name": "Reply", "value": "@outputs('Suggest_message')"}}
+    S["Set_key_list"] = {"type": "SetVariable", "runAfter": ok("Add_list"), "inputs": {
         "name": "KeyOut",
-        "value": f"@concat(outputs('After'), '|', outputs('Next_after'), '|', string({s_count}), '|', "
+        "value": f"@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', string({s_count}), '|', "
                  "join(body('Order_list'), ','), '|')"}}
-    nothing = (f"@concat('📁 Nothing is ready to file right now. I suggest Inbox emails you''ve replied to, "
-               f"forwarded, or flagged and marked complete.', {NL}, {NL}, {footer})")
-    suggest_branch = {"Has_batch": {"type": "If", "runAfter": {},
+    nothing = ("@concat('📁 Nothing is ready to file right now. I suggest Inbox emails you''ve replied to, "
+               "forwarded, or flagged and marked complete.')")
+    # In file mode with nothing after this batch, KeyOut stays the key of the batch just filed,
+    # so the user can still say where its remaining emails go.
+    list_section = {"Has_batch": {"type": "If", "runAfter": {},
         "expression": {"and": [{"greater": ["@length(outputs('Batch'))", 0]}]},
         "actions": S,
-        "else": {"actions": {
-            "Set_reply_none": {"type": "SetVariable", "runAfter": {}, "inputs": {"name": "Reply", "value": nothing}},
-            "Set_key_none": {"type": "SetVariable", "runAfter": ok("Set_reply_none"), "inputs": {
-                "name": "KeyOut", "value": "@concat(outputs('After'), '|', outputs('After'), '|0||')"}}}}}}
+        "else": {"actions": {"Nothing_left": {"type": "If", "runAfter": {},
+            "expression": {"and": [{"equals": ["@outputs('Mode')", "file"]}]},
+            "actions": {
+                "Add_all_done": {"type": "AppendToStringVariable", "runAfter": {}, "inputs": {
+                    "name": "Reply", "value": f"@concat({NL}, {NL}, 'No more emails are ready to file after this list.')"}}},
+            "else": {"actions": {
+                "Add_none": {"type": "AppendToStringVariable", "runAfter": {},
+                             "inputs": {"name": "Reply", "value": nothing}},
+                "Set_key_none": {"type": "SetVariable", "runAfter": ok("Add_none"), "inputs": {
+                    "name": "KeyOut",
+                    "value": "@concat(outputs('Batch_from'), '|', outputs('Batch_from'), '|0||')"}}}}}}}}}
 
     # ---- File ------------------------------------------------------------------------------
     part = lambda i: f"coalesce(first(skip(outputs('Key_parts'), {i})), '')"
@@ -399,32 +428,45 @@ def definition():
                 "authentication": "@parameters('$authentication')"}},
             "Record_moved": {"type": "AppendToArrayVariable",
                 "runAfter": {"Move_email": ["Succeeded", "Failed"], "Move_email_graph": ["Succeeded", "Skipped"]},
-                "inputs": {"name": "Moved", "value": f"@concat('- ', {label}, ' → **', outputs('Target')?['path'], '**')"}},
+                "inputs": {"name": "Moved", "value": {
+                    "n": "@outputs('Sel_number')",
+                    "line": f"@concat('- ', {label}, ' → **', outputs('Target')?['path'], '**')"}}},
             "Record_moved_idx": {"type": "AppendToArrayVariable", "runAfter": ok("Record_moved"),
                 "inputs": {"name": "MovedIdx", "value": "@string(outputs('Sel_original'))"}},
             "Record_failed": {"type": "AppendToArrayVariable",
                 "runAfter": {"Move_email_graph": ["Failed", "TimedOut"]},
-                "inputs": {"name": "Problems", "value": f"@concat('- ', {label}, ': Outlook couldn''t move it')"}}},
+                "inputs": {"name": "Problems", "value": {
+                    "n": "@outputs('Sel_number')", "line": f"@concat('- ', {label}, ': Outlook couldn''t move it')"}}}},
         "else": {"actions": {
             "Record_problem": {"type": "AppendToArrayVariable", "runAfter": {},
-                "inputs": {"name": "Problems", "value": f"@concat('- ', {label}, ': ', outputs('Problem'))"}}}}}
+                "inputs": {"name": "Problems", "value": {
+                    "n": "@outputs('Sel_number')", "line": f"@concat('- ', {label}, ': ', outputs('Problem'))"}}}}}}
     F["File_each"] = {"type": "Foreach", "runAfter": ok("Selections"), "foreach": "@outputs('Selections')",
-                      "runtimeConfiguration": {"concurrency": {"repetitions": 1}}, "actions": fl}
+                      "runtimeConfiguration": {"concurrency": {"repetitions": FILE_PARALLEL}}, "actions": fl}
     moved, problems = "length(variables('Moved'))", "length(variables('Problems'))"
+    done = {"File_each": ["Succeeded", "Failed"]}
+    F["Moved_lines"] = {"type": "Select", "runAfter": done, "inputs": {
+        "from": "@sort(variables('Moved'), 'n')", "select": "@item()?['line']"}}
+    F["Problem_lines"] = {"type": "Select", "runAfter": done, "inputs": {
+        "from": "@sort(variables('Problems'), 'n')", "select": "@item()?['line']"}}
+    F["Filed_now"] = compose("@union(body('Filed_before'), variables('MovedIdx'))", done)
+    left = "sub(length(outputs('Order')), length(outputs('Filed_now')))"
     F["File_message"] = compose(
         f"@concat(if(greater({moved}, 0), concat('✅ Filed ', string({moved}), if(equals({moved}, 1), ' email.', ' emails.'), "
-        f"{NL}, {NL}, join(variables('Moved'), {NL})), 'Nothing was moved.'), "
-        f"if(greater({problems}, 0), concat({NL}, {NL}, '⚠️ Not filed:', {NL}, {NL}, join(variables('Problems'), {NL})), ''), "
-        f"{NL}, {NL}, 'Say **next** for the next batch.', {NL}, {NL}, {footer})",
-        {"File_each": ["Succeeded", "Failed"]})
-    F["Set_reply_file"] = {"type": "SetVariable", "runAfter": ok("File_message"),
-                           "inputs": {"name": "Reply", "value": "@outputs('File_message')"}}
-    F["Set_key_file"] = {"type": "SetVariable", "runAfter": ok("Set_reply_file"), "inputs": {
+        f"{NL}, {NL}, join(body('Moved_lines'), {NL})), 'Nothing was moved.'), "
+        f"if(greater({problems}, 0), concat({NL}, {NL}, '⚠️ Not filed:', {NL}, {NL}, join(body('Problem_lines'), {NL})), ''), "
+        f"if(and(greater({left}, 0), greater(length(outputs('Batch')), 0)), concat({NL}, {NL}, '*', string({left}), "
+        f"if(equals({left}, 1), ' email', ' emails'), ' from that list stay in your Inbox. Say **Help me file** later "
+        f"to go back to them.*'), ''))",
+        ok("Moved_lines", "Problem_lines", "Filed_now"))
+    F["Add_file_result"] = {"type": "AppendToStringVariable", "runAfter": ok("File_message"),
+                            "inputs": {"name": "Reply", "value": "@outputs('File_message')"}}
+    F["Set_key_file"] = {"type": "SetVariable", "runAfter": ok("Add_file_result"), "inputs": {
         "name": "KeyOut",
         "value": "@concat(join(take(outputs('Key_parts'), 4), '|'), '|', "
-                 "join(union(body('Filed_before'), variables('MovedIdx')), ','))"}}
-    stale = (f"@concat('That list has changed since I showed it, or I don''t have it any more, so I didn''t move "
-             f"anything. Say **Help me file** to see a fresh list.', {NL}, {NL}, {footer})")
+                 "join(outputs('Filed_now'), ','))"}}
+    stale = ("@concat('That list has changed since I showed it, or I don''t have it any more, so I didn''t move "
+             "anything. Say **Help me file** to see a fresh list.')")
     P["Key_still_valid"] = {"type": "If", "runAfter": ok("Window"),
         "expression": {"and": [
             {"equals": ["@length(outputs('Key_parts'))", 5]},
@@ -432,14 +474,21 @@ def definition():
             {"equals": ["@add(length(outputs('Window')), length(body('Filed_before')))", "@length(outputs('Order'))"]}]},
         "actions": F,
         "else": {"actions": {
-            "Set_reply_stale": {"type": "SetVariable", "runAfter": {}, "inputs": {"name": "Reply", "value": stale}}}}}
+            "Add_stale": {"type": "AppendToStringVariable", "runAfter": {}, "inputs": {"name": "Reply", "value": stale}},
+            "Hide_list": {"type": "SetVariable", "runAfter": ok("Add_stale"),
+                          "inputs": {"name": "ShowList", "value": False}}}}}
     file_branch = P
 
     A["Is_file"] = {"type": "If",
         "runAfter": ok("Remaining", "Next_after", "Name_candidates", "Ranks", "Paths"),
         "expression": {"and": [{"equals": ["@outputs('Mode')", "file"]}]},
-        "actions": file_branch, "else": {"actions": suggest_branch}}
-    A["Respond_to_the_agent"] = {"type": "Response", "kind": "Skills", "runAfter": ok("Is_file"), "inputs": {
+        "actions": file_branch, "else": {"actions": {}}}
+    A["Show_list"] = {"type": "If", "runAfter": ok("Is_file"),
+        "expression": {"and": [{"equals": ["@variables('ShowList')", True]}]},
+        "actions": list_section, "else": {"actions": {}}}
+    A["Add_footer"] = {"type": "AppendToStringVariable", "runAfter": ok("Show_list"),
+                       "inputs": {"name": "Reply", "value": f"@concat({NL}, {NL}, {footer})"}}
+    A["Respond_to_the_agent"] = {"type": "Response", "kind": "Skills", "runAfter": ok("Add_footer"), "inputs": {
         "statusCode": 200,
         "schema": {"type": "object", "properties": {
             "message": {"title": "message", "x-ms-dynamically-added": True, "type": "string"},
