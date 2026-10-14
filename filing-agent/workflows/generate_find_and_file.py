@@ -209,6 +209,12 @@ def definition():
         "where": "@less(ticks(item()?['receivedDateTime']), ticks(outputs('Batch_from')))"}}
     A["Batch"] = compose(f"@take(reverse(sort(body('Pool'), 'receivedDateTime')), {BATCH})", ok("Pool"))
     A["Remaining"] = compose("@sub(length(body('Pool')), length(outputs('Batch')))", ok("Batch"))
+    # Upper bound recorded in the key: just after the newest email shown, so emails that arrive
+    # (or get read) after the list was shown don't change the list when it's filed.
+    A["Batch_top"] = compose(
+        "@if(equals(length(outputs('Batch')), 0), outputs('Batch_from'), "
+        "formatDateTime(addSeconds(first(outputs('Batch'))?['receivedDateTime'], 1), 'yyyy-MM-ddTHH:mm:ssZ'))",
+        ok("Batch"))
     A["Next_before"] = compose(
         "@coalesce(first(reverse(outputs('Batch')))?['receivedDateTime'], outputs('Batch_from'))", ok("Batch"))
     # Position (1 = newest) and conversation of each batch email, and the batch's conversations.
@@ -396,7 +402,7 @@ def definition():
                      "inputs": {"name": "Reply", "value": "@outputs('Suggest_message')"}}
     S["Set_key_list"] = {"type": "SetVariable", "runAfter": ok("Add_list"), "inputs": {
         "name": "KeyOut",
-        "value": f"@concat(outputs('Batch_from'), '|', outputs('Next_before'), '|', "
+        "value": f"@concat(outputs('Batch_top'), '|', outputs('Next_before'), '|', "
                  f"string({a_count}), ',', string({b_count}), '|', "
                  "join(body('Order_list'), ','), '|')"}}
     nothing = ("@concat('📁 Nothing is ready to file right now. I list Inbox emails you''ve read, "
@@ -608,7 +614,7 @@ def definition():
     file_branch = P
 
     A["Is_file"] = {"type": "If",
-        "runAfter": ok("Remaining", "Next_before", "Convs", "Name_candidates", "Ranks", "Paths", "Read_capped",
+        "runAfter": ok("Remaining", "Next_before", "Batch_top", "Convs", "Name_candidates", "Ranks", "Paths", "Read_capped",
                        "Replied_ids", "Sent_id", "My_addresses"),
         "expression": {"and": [{"equals": ["@outputs('Mode')", "file"]}]},
         "actions": file_branch, "else": {"actions": {}}}

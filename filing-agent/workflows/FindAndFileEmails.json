@@ -462,6 +462,15 @@
             ]
           }
         },
+        "Batch_top": {
+          "type": "Compose",
+          "inputs": "@if(equals(length(outputs('Batch')), 0), outputs('Batch_from'), formatDateTime(addSeconds(first(outputs('Batch'))?['receivedDateTime'], 1), 'yyyy-MM-ddTHH:mm:ssZ'))",
+          "runAfter": {
+            "Batch": [
+              "Succeeded"
+            ]
+          }
+        },
         "Next_before": {
           "type": "Compose",
           "inputs": "@coalesce(first(reverse(outputs('Batch')))?['receivedDateTime'], outputs('Batch_from'))",
@@ -901,6 +910,9 @@
               "Succeeded"
             ],
             "Next_before": [
+              "Succeeded"
+            ],
+            "Batch_top": [
               "Succeeded"
             ],
             "Convs": [
@@ -2105,7 +2117,7 @@
                   },
                   "inputs": {
                     "name": "KeyOut",
-                    "value": "@concat(outputs('Batch_from'), '|', outputs('Next_before'), '|', string(length(body('Sug_replied'))), ',', string(length(body('Sug_read'))), '|', join(body('Order_list'), ','), '|')"
+                    "value": "@concat(outputs('Batch_top'), '|', outputs('Next_before'), '|', string(length(body('Sug_replied'))), ',', string(length(body('Sug_read'))), '|', join(body('Order_list'), ','), '|')"
                   }
                 }
               },

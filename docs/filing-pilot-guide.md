@@ -1,4 +1,4 @@
-# Filing Assistant: pilot guide (v1.1.0.6)
+# Filing Assistant: pilot guide (v1.1.0.7)
 
 For Fortify. **Filing Assistant** is a separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). Daily Digest is unchanged (1.0.0.8).
 
@@ -35,7 +35,7 @@ Undo (users drag emails back in Outlook), filing to two folders, matching on the
 ## Install and test (Fortify dev environment)
 ```bash
 python3 filing-agent/workflows/generate_find_and_file.py   # only after editing the generator
-python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_6.zip
+python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_7.zip
 ```
 1. **Remove the old tools.** In Copilot Studio → Filing Assistant → **Tools**, delete *Get emails to file*, *Get my mail folders*, *Find where threads are filed* and *Move email to a folder*. An import never removes old components.
 2. **Import** the zip in make.powerapps.com → dev environment → **Solutions → Import solution**. When asked for connections, pick your Office 365 Outlook connection.
@@ -43,7 +43,7 @@ python3 build/build_solution.py --source filing-agent       # -> out/FortifyFili
    - It should be **On**. If it's off, turn it on.
    - Under **Run only users**, the Office 365 Outlook connection should say **Provided by run-only user**. If it doesn't, set it.
 4. **Add the flow as the agent's tool.** Copilot Studio → Filing Assistant → **Tools → Add a tool → Flow** → *Filing Assistant - Find and file emails*. Check the tool lists all three inputs (**Mode**, **BatchKey**, **Selections**), each **Dynamically fill with AI**. If BatchKey or Selections is missing, use **+ Add input** to add it; without them the agent can't file and just shows the list again. Under **Completion → Advanced**, make both outputs (**message**, **batchkey**) available to the agent. Then **Publish**.
-5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.6**.
+5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.7**.
 6. **Use it in Microsoft 365 Copilot** (needed for test 6). Once per agent, in Copilot Studio: **Channels → Teams and Microsoft 365 Copilot**, tick **Make agent available in Microsoft 365 Copilot**, **Add channel**, then **Publish**. Then **Availability options**:
    - **See agent in Microsoft 365**: opens Copilot with an **Add** button, just for you. No admin approval needed.
    - **Show to my teammates and shared users**: share the agent with the second account first (**Share** at the top of the agent), then send them the link from **Copy link**.

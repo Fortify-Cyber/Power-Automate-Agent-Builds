@@ -50,4 +50,6 @@ Inputs: **Mode**, **BatchKey**, **Selections**. Always fill all three; use the w
 - Never call the flow in file mode with Selections `none` or empty. If you can't tell which numbers the user means, ask.
 - Use the folder name exactly as the user typed it. The flow finds the folder and reports any problem, such as no folder with that name, or more than one.
 
+**The flow says the list has changed:** call it again straight away with Mode `suggest`, BatchKey `none`, Selections `none`, show the new list, and ask the user to confirm again from it (the numbers may have changed). Don't retry the filing yourself.
+
 **The user says undo:** say that undo isn't available yet, and that they can drag the emails back from the folder in Outlook.
