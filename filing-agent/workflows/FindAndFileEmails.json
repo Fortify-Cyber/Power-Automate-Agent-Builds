@@ -1195,7 +1195,7 @@
                   },
                   "inputs": {
                     "from": "@union(body('Tokens'), if(contains(body('Tokens_lower'), 'all'), body('All_numbers'), json('[]')), if(contains(body('Tokens_lower'), 'replied'), body('Replied_numbers'), json('[]')), if(contains(body('Tokens_lower'), 'read'), body('Read_numbers'), json('[]')))",
-                    "where": "@and(not(empty(item())), not(contains(createArray('all', 'replied', 'read'), toLower(item()))), not(contains(item(), '=')), not(contains(body('Override_numbers'), item())))"
+                    "where": "@and(not(empty(item())), not(contains(createArray('all', 'replied', 'read', 'none'), toLower(item()))), not(contains(item(), '=')), not(contains(body('Override_numbers'), item())))"
                   }
                 },
                 "Selections": {
@@ -1310,7 +1310,8 @@
                       "type": "Query",
                       "runAfter": {
                         "F_Thread_lookup": [
-                          "Succeeded"
+                          "Succeeded",
+                          "Failed"
                         ]
                       },
                       "inputs": {
@@ -1322,7 +1323,8 @@
                       "type": "Select",
                       "runAfter": {
                         "F_Thread_lookup": [
-                          "Succeeded"
+                          "Succeeded",
+                          "Failed"
                         ]
                       },
                       "inputs": {
@@ -1822,7 +1824,8 @@
                       "type": "Query",
                       "runAfter": {
                         "S_Thread_lookup": [
-                          "Succeeded"
+                          "Succeeded",
+                          "Failed"
                         ]
                       },
                       "inputs": {
@@ -1834,7 +1837,8 @@
                       "type": "Select",
                       "runAfter": {
                         "S_Thread_lookup": [
-                          "Succeeded"
+                          "Succeeded",
+                          "Failed"
                         ]
                       },
                       "inputs": {
@@ -1982,7 +1986,8 @@
                   "type": "Query",
                   "runAfter": {
                     "Suggest_each": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed"
                     ]
                   },
                   "inputs": {
@@ -1994,7 +1999,8 @@
                   "type": "Query",
                   "runAfter": {
                     "Suggest_each": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed"
                     ]
                   },
                   "inputs": {
@@ -2006,7 +2012,8 @@
                   "type": "Query",
                   "runAfter": {
                     "Suggest_each": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed"
                     ]
                   },
                   "inputs": {

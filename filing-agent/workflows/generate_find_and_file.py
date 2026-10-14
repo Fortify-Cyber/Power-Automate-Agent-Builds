@@ -107,7 +107,7 @@ def match_steps(p, email, first_after):
         f"coalesce({email}?['conversationId'], '-'), '''&$select=parentFolderId,receivedDateTime,from,isDraft&$top=100')",
         first_after)
     # Something the user sent in this thread after this email arrived means they dealt with it.
-    a[f"{p}Thread_mine"] = {"type": "Query", "runAfter": ok(f"{p}Thread_lookup"), "inputs": {
+    a[f"{p}Thread_mine"] = {"type": "Query", "runAfter": {f"{p}Thread_lookup": ["Succeeded", "Failed"]}, "inputs": {
         "from": f"@coalesce(body('{p}Thread_lookup')?['value'], json('[]'))",
         "where": "@and(not(equals(item()?['isDraft'], true)), "
                  "greater(ticks(coalesce(item()?['receivedDateTime'], '1900-01-01T00:00:00Z')), "
@@ -115,7 +115,7 @@ def match_steps(p, email, first_after):
                  "or(equals(item()?['parentFolderId'], outputs('Sent_id')), "
                  "contains(body('My_addresses'), toLower(coalesce(item()?['from']?['emailAddress']?['address'], '')))))"}}
     # Rank each thread email: 2 = real folder, 1 = Archive, 0 = anything else (Inbox, Sent Items, ...).
-    a[f"{p}Thread_ranked"] = {"type": "Select", "runAfter": ok(f"{p}Thread_lookup"), "inputs": {
+    a[f"{p}Thread_ranked"] = {"type": "Select", "runAfter": {f"{p}Thread_lookup": ["Succeeded", "Failed"]}, "inputs": {
         "from": f"@coalesce(body('{p}Thread_lookup')?['value'], json('[]'))",
         "select": {
             "folder": "@item()?['parentFolderId']",
@@ -341,13 +341,13 @@ def definition():
     S["Suggest_each"]["actions"] = loop
     # The loop runs in parallel, so results arrive in any order; idx is the conversation's newest
     # email's place in Batch (1 = newest), so sorting by idx lists newest conversations first.
-    S["Sug_replied"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
+    S["Sug_replied"] = {"type": "Query", "runAfter": {"Suggest_each": ["Succeeded", "Failed"]}, "inputs": {
         "from": "@variables('Results')",
         "where": "@and(not(empty(item()?['folderId'])), equals(item()?['kind'], 'replied'))"}}
-    S["Sug_read"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
+    S["Sug_read"] = {"type": "Query", "runAfter": {"Suggest_each": ["Succeeded", "Failed"]}, "inputs": {
         "from": "@variables('Results')",
         "where": "@and(not(empty(item()?['folderId'])), not(equals(item()?['kind'], 'replied')))"}}
-    S["Not_sure"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
+    S["Not_sure"] = {"type": "Query", "runAfter": {"Suggest_each": ["Succeeded", "Failed"]}, "inputs": {
         "from": "@variables('Results')", "where": "@empty(item()?['folderId'])"}}
     S["Ordered"] = compose(
         "@union(sort(body('Sug_replied'), 'idx'), sort(body('Sug_read'), 'idx'), sort(body('Not_sure'), 'idx'))",
@@ -463,7 +463,7 @@ def definition():
         "from": "@range(1, outputs('Replied_count'))", "select": "@string(item())"}}
     F["Read_numbers"] = {"type": "Select", "runAfter": {}, "inputs": {
         "from": "@range(add(outputs('Replied_count'), 1), outputs('Read_count'))", "select": "@string(item())"}}
-    words = "createArray('all', 'replied', 'read')"
+    words = "createArray('all', 'replied', 'read', 'none')"
     F["Plain_tokens"] = {"type": "Query",
         "runAfter": ok("Tokens_lower", "Override_numbers", "All_numbers", "Replied_numbers", "Read_numbers"), "inputs": {
         "from": "@union(body('Tokens'), "
