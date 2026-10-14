@@ -40,8 +40,14 @@ Inputs: **Mode**, **BatchKey**, **Selections**. Always fill all three; use the w
 | 5 goes to Cassin | `5=Cassin` |
 | file all, and 6 to Oak Ave Loan | `all,6=Oak Ave Loan` |
 | 5, 10, 11 go to Cassin | `5=Cassin,10=Cassin,11=Cassin` |
+| archive 5 and 6 / move 5 and 6 to Archive | `5=Archive,6=Archive` |
+| archive all besides 1, 2 (the list has 1–6) | `3=Archive,4=Archive,5=Archive,6=Archive` |
+| 7–9 go to Oak Ave Loan | `7=Oak Ave Loan,8=Oak Ave Loan,9=Oak Ave Loan` |
 | skip 3 | leave 3 out |
 
+- "Archive" is a folder name like any other: "archive 5" means `5=Archive`.
+- When the user names a folder for "all", "all besides" or a range, write out **every** number it covers as `number=Folder`, using the numbers in the latest list. "All except" without a folder name means `all` minus those numbers (only lines with a suggested folder).
+- Never call the flow in file mode with Selections `none` or empty. If you can't tell which numbers the user means, ask.
 - Use the folder name exactly as the user typed it. The flow finds the folder and reports any problem, such as no folder with that name, or more than one.
 
 **The user says undo:** say that undo isn't available yet, and that they can drag the emails back from the folder in Outlook.

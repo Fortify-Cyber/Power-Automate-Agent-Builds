@@ -560,6 +560,12 @@ def definition():
             "Record_problem": {"type": "AppendToArrayVariable", "runAfter": {},
                 "inputs": {"name": "Problems", "value": {
                     "n": "@outputs('Sel_number')", "line": f"@concat('- ', {label}, ': ', outputs('Problem'))"}}}}}}
+    # If anything before the move step fails, say so instead of dropping the number silently.
+    fl["Record_error"] = {"type": "AppendToArrayVariable",
+        "runAfter": {"Problem": ["Failed", "Skipped", "TimedOut"]},
+        "inputs": {"name": "Problems", "value": {
+            "n": 9999, "line": "@concat('- ', items('File_each'), ': something went wrong before I could move it. "
+                               "Fortify can see why in the flow''s Run history.')"}}}
     F["File_each"] = {"type": "Foreach", "runAfter": ok("Selections"), "foreach": "@outputs('Selections')",
                       "runtimeConfiguration": {"concurrency": {"repetitions": FILE_PARALLEL}}, "actions": fl}
     moved, problems = "length(variables('MovedIdx'))", "length(variables('Problems'))"
@@ -572,7 +578,9 @@ def definition():
     left = "sub(length(body('All_positions')), length(outputs('Filed_now')))"
     F["File_message"] = compose(
         f"@concat(if(greater({moved}, 0), concat('✅ Filed ', string({moved}), if(equals({moved}, 1), ' email.', ' emails.'), "
-        f"{NL}, {NL}, join(body('Moved_lines'), {NL})), 'Nothing was moved.'), "
+        f"{NL}, {NL}, join(body('Moved_lines'), {NL})), if(greater({problems}, 0), 'Nothing was moved.', "
+        f"concat('Nothing was moved: I didn''t get any numbers to file (I received \"', "
+        f"coalesce(triggerBody()?['text_2'], ''), '\"). Try again, for example **5 goes to Archive**.'))), "
         f"if(greater({problems}, 0), concat({NL}, {NL}, '⚠️ Not filed:', {NL}, {NL}, join(body('Problem_lines'), {NL})), ''), "
         f"if(and(greater({left}, 0), greater(length(outputs('Batch')), 0)), concat({NL}, {NL}, '*', string({left}), "
         f"if(equals({left}, 1), ' email', ' emails'), ' from that list stay in your Inbox. Say **Help me file** later "

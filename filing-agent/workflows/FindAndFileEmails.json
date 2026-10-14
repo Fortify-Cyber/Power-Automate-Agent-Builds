@@ -1612,6 +1612,23 @@
                           }
                         }
                       }
+                    },
+                    "Record_error": {
+                      "type": "AppendToArrayVariable",
+                      "runAfter": {
+                        "Problem": [
+                          "Failed",
+                          "Skipped",
+                          "TimedOut"
+                        ]
+                      },
+                      "inputs": {
+                        "name": "Problems",
+                        "value": {
+                          "n": 9999,
+                          "line": "@concat('- ', items('File_each'), ': something went wrong before I could move it. Fortify can see why in the flow''s Run history.')"
+                        }
+                      }
                     }
                   }
                 },
@@ -1653,7 +1670,7 @@
                 },
                 "File_message": {
                   "type": "Compose",
-                  "inputs": "@concat(if(greater(length(variables('MovedIdx')), 0), concat('✅ Filed ', string(length(variables('MovedIdx'))), if(equals(length(variables('MovedIdx')), 1), ' email.', ' emails.'), decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Moved_lines'), decodeUriComponent('%0A'))), 'Nothing was moved.'), if(greater(length(variables('Problems')), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '⚠️ Not filed:', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Problem_lines'), decodeUriComponent('%0A'))), ''), if(and(greater(sub(length(body('All_positions')), length(outputs('Filed_now'))), 0), greater(length(outputs('Batch')), 0)), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(sub(length(body('All_positions')), length(outputs('Filed_now')))), if(equals(sub(length(body('All_positions')), length(outputs('Filed_now'))), 1), ' email', ' emails'), ' from that list stay in your Inbox. Say **Help me file** later to go back to them.*'), ''))",
+                  "inputs": "@concat(if(greater(length(variables('MovedIdx')), 0), concat('✅ Filed ', string(length(variables('MovedIdx'))), if(equals(length(variables('MovedIdx')), 1), ' email.', ' emails.'), decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Moved_lines'), decodeUriComponent('%0A'))), if(greater(length(variables('Problems')), 0), 'Nothing was moved.', concat('Nothing was moved: I didn''t get any numbers to file (I received \"', coalesce(triggerBody()?['text_2'], ''), '\"). Try again, for example **5 goes to Archive**.'))), if(greater(length(variables('Problems')), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '⚠️ Not filed:', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Problem_lines'), decodeUriComponent('%0A'))), ''), if(and(greater(sub(length(body('All_positions')), length(outputs('Filed_now'))), 0), greater(length(outputs('Batch')), 0)), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(sub(length(body('All_positions')), length(outputs('Filed_now')))), if(equals(sub(length(body('All_positions')), length(outputs('Filed_now'))), 1), ' email', ' emails'), ' from that list stay in your Inbox. Say **Help me file** later to go back to them.*'), ''))",
                   "runAfter": {
                     "Moved_lines": [
                       "Succeeded"
