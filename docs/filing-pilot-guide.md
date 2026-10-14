@@ -40,6 +40,12 @@ python3 build/build_solution.py --source filing-agent       # -> out/FortifyFili
    - Under **Run only users**, the Office 365 Outlook connection should say **Provided by run-only user**. If it doesn't, set it.
 4. **Add the flow as the agent's tool.** Copilot Studio → Filing Assistant → **Tools → Add a tool → Flow** → *Filing Assistant - Find and file emails*. Check the tool lists all three inputs (**Mode**, **BatchKey**, **Selections**), each **Dynamically fill with AI**. If BatchKey or Selections is missing, use **+ Add input** to add it; without them the agent can't file and just shows the list again. Under **Completion → Advanced**, make both outputs (**message**, **batchkey**) available to the agent. Then **Publish**.
 5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.2**.
+6. **Use it in Microsoft 365 Copilot** (needed for test 6). Once per agent, in Copilot Studio: **Channels → Teams and Microsoft 365 Copilot**, tick **Make agent available in Microsoft 365 Copilot**, **Add channel**, then **Publish**. Then **Availability options**:
+   - **See agent in Microsoft 365**: opens Copilot with an **Add** button, just for you. No admin approval needed.
+   - **Show to my teammates and shared users**: share the agent with the second account first (**Share** at the top of the agent), then send them the link from **Copy link**.
+   - **Show to everyone in my org**: needs admin approval in the Microsoft 365 admin center (**Copilot → Agents → Requests**). Use this for the Cassin rollout, not for testing.
+
+   After any later import, **Publish** again so Copilot gets the new instructions. The test pane uses the draft; Copilot uses the last published version.
 
 ### What to check
 | # | Do this | Expect |
