@@ -12,20 +12,24 @@ passes the user's choices through and shows the flow's message.
 Inputs (from the agent):  Mode ("suggest" or "file"), BatchKey, Selections
 Outputs (to the agent):   message (Markdown to show as-is), batchkey (pass back on the next call)
 
-BatchKey is "After|NextAfter|SuggestedCount|Order|Filed": the batch is the dealt-with emails
-received after After up to NextAfter (the ones shown); Order maps each displayed number to its
-position in that batch, and Filed lists the positions already moved. "file" rebuilds the batch
-from those times, checks it still matches (emails shown minus emails filed), and refuses to move
-anything if it doesn't, so the agent never handles message or folder ids.
+Newest first, one line per conversation. Each batch is the newest BATCH emails received before
+Before, grouped by conversation; filing a line moves every email of that conversation in the batch.
 
-After filing, the same reply lists the next batch (emails received after NextAfter), so working
+BatchKey is "Before|NextBefore|RepliedCount,ReadCount|Order|Filed": the batch is the emails
+received before Before and on or after NextBefore (the ones shown). Order lists the displayed
+lines in order, each as the dot-joined positions of its emails in the batch (1 = newest), e.g.
+"1.4,2,3.5"; Filed lists the positions already moved. "file" rebuilds the batch from those times,
+checks it still matches (emails shown minus emails filed), and refuses to move anything if it
+doesn't, so the agent never handles message or folder ids.
+
+After filing, the same reply lists the next batch (emails received before NextBefore), so working
 through a big backlog is one reply per batch. If nothing is left, the key for the list just filed
 is returned instead, so the user can still say where its remaining emails go.
 
-Which emails: every read Inbox email that isn't still flagged. The list puts emails the user
-replied to, replied all to or forwarded (Outlook's PidTagLastVerbExecuted marker), completed the
-flag on, or answered later in the same thread first, under "Replied, forwarded or completed";
-emails only read go under "Read, no reply". Selections can say all, replied or read.
+Which emails: every read Inbox email that isn't still flagged. A conversation goes under "Replied,
+forwarded or completed" when its newest email in the batch was replied to, replied all to or
+forwarded (Outlook's PidTagLastVerbExecuted marker), had its flag completed, or was answered later
+in the thread; otherwise under "Read, no reply". Selections can say all, replied or read.
 
 Matching and moving run in parallel loops (Copilot Studio waits at most 100 seconds for a flow).
 """
@@ -35,9 +39,10 @@ import pathlib
 HERE = pathlib.Path(__file__).resolve().parent
 CONN = "shared_office365"
 CONN_REF = "fc_FilingAssistant.shared_office365.shared-office365-0c11ea16-31cf-4d6b-8706-aa7889bf58e2"
-BATCH = 25
-SUGGEST_PARALLEL = 10   # emails matched at once when listing
-FILE_PARALLEL = 5       # emails matched and moved at once when filing
+BATCH = 30              # emails per batch (shown grouped by conversation, so usually fewer lines)
+SUGGEST_PARALLEL = 10   # conversations matched at once when listing
+FILE_PARALLEL = 5       # conversations matched and moved at once when filing
+FAR_FUTURE = "2999-12-31T00:00:00Z"
 TOP = 1000              # Graph's maximum page size for messages, per query
 NL = "decodeUriComponent('%0A')"
 SELECT = "id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
@@ -151,8 +156,9 @@ def definition():
     A["Key_parts"] = compose(
         "@split(if(equals(toLower(trim(coalesce(triggerBody()?['text_1'], ''))), 'none'), '', "
         "trim(coalesce(triggerBody()?['text_1'], ''))), '|')", {})
-    A["After"] = compose(
-        "@if(less(length(outputs('Key_parts')), 4), '1900-01-01T00:00:00Z', "
+    # Emails received before this time are considered (file: the batch being filed; next: the batch after).
+    A["Before"] = compose(
+        f"@if(less(length(outputs('Key_parts')), 4), '{FAR_FUTURE}', "
         "if(equals(outputs('Mode'), 'file'), first(outputs('Key_parts')), first(skip(outputs('Key_parts'), 1))))",
         ok("Mode", "Key_parts"))
     variables = [("Results", "array", []), ("Moved", "array", []), ("Problems", "array", []), ("MovedIdx", "array", []),
@@ -168,11 +174,11 @@ def definition():
     gets = {"Get_replied": REPLIED.format(v=102), "Get_replied_all": REPLIED.format(v=103),
             "Get_forwarded": REPLIED.format(v=104), "Get_completed": "flag/flagStatus eq 'complete'"}
     for name, flt in gets.items():
-        A[name] = http_get(f"{INBOX}?$filter={flt}&$top={TOP}&$select={SELECT}", ok("After", inits))
-    # Every read Inbox email, oldest first from After (Graph needs the $orderby field first in $filter).
+        A[name] = http_get(f"{INBOX}?$filter={flt}&$top={TOP}&$select={SELECT}", ok("Before", inits))
+    # Every read Inbox email, newest first before Before (Graph needs the $orderby field first in $filter).
     A["Get_read"] = http_get(
-        f"@concat('{INBOX}?$filter=receivedDateTime gt ', outputs('After'), "
-        f"' and isRead eq true&$orderby=receivedDateTime asc&$top={TOP}&$select={SELECT}')", ok("After", inits))
+        f"@concat('{INBOX}?$filter=receivedDateTime lt ', outputs('Before'), "
+        f"' and isRead eq true&$orderby=receivedDateTime desc&$top={TOP}&$select={SELECT}')", ok("Before", inits))
     A["Read_capped"] = compose("@not(empty(coalesce(body('Get_read')?['@odata.nextLink'], '')))", ok("Get_read"))
     A["All_emails"] = compose(
         "@union(" + ", ".join(f"coalesce(body('{n}')?['value'], json('[]'))" for n in list(gets) + ["Get_read"]) + ")",
@@ -193,18 +199,27 @@ def definition():
     A["Candidates"] = {"type": "Query", "runAfter": ok("All_emails"), "inputs": {
         "from": "@outputs('All_emails')",
         "where": "@and(equals(item()?['isRead'], true), not(equals(item()?['flag']?['flagStatus'], 'flagged')), "
-                 "greater(ticks(item()?['receivedDateTime']), ticks(outputs('After'))))"}}
-    # The list to show: in file mode it's the batch after the one being filed.
+                 "less(ticks(item()?['receivedDateTime']), ticks(outputs('Before'))))"}}
+    # The list to show: in file mode it's the batch after (older than) the one being filed.
     A["Batch_from"] = compose(
         "@if(and(equals(outputs('Mode'), 'file'), greaterOrEquals(length(outputs('Key_parts')), 4)), "
-        "first(skip(outputs('Key_parts'), 1)), outputs('After'))", ok("After"))
+        "first(skip(outputs('Key_parts'), 1)), outputs('Before'))", ok("Before"))
     A["Pool"] = {"type": "Query", "runAfter": ok("Candidates", "Batch_from"), "inputs": {
         "from": "@body('Candidates')",
-        "where": "@greater(ticks(item()?['receivedDateTime']), ticks(outputs('Batch_from')))"}}
-    A["Batch"] = compose(f"@take(sort(body('Pool'), 'receivedDateTime'), {BATCH})", ok("Pool"))
+        "where": "@less(ticks(item()?['receivedDateTime']), ticks(outputs('Batch_from')))"}}
+    A["Batch"] = compose(f"@take(reverse(sort(body('Pool'), 'receivedDateTime')), {BATCH})", ok("Pool"))
     A["Remaining"] = compose("@sub(length(body('Pool')), length(outputs('Batch')))", ok("Batch"))
-    A["Next_after"] = compose(
+    A["Next_before"] = compose(
         "@coalesce(first(reverse(outputs('Batch')))?['receivedDateTime'], outputs('Batch_from'))", ok("Batch"))
+    # Position (1 = newest) and conversation of each batch email, and the batch's conversations.
+    A["Batch_indexed"] = {"type": "Select", "runAfter": ok("Batch"), "inputs": {
+        "from": "@range(0, length(outputs('Batch')))",
+        "select": {"pos": "@add(item(), 1)",
+                   "conv": "@coalesce(outputs('Batch')[item()]?['conversationId'], outputs('Batch')[item()]?['id'])",
+                   "email": "@outputs('Batch')[item()]"}}}
+    A["Batch_convs"] = {"type": "Select", "runAfter": ok("Batch_indexed"), "inputs": {
+        "from": "@body('Batch_indexed')", "select": "@item()?['conv']"}}
+    A["Convs"] = compose("@union(body('Batch_convs'), body('Batch_convs'))", ok("Batch_convs"))
 
     # ---- The user's folder tree -----------------------------------------------------------
     A["Get_folders"] = http_get(
@@ -295,17 +310,28 @@ def definition():
     # ---- Suggest -------------------------------------------------------------------------
     S = {}
     S["Suggest_each"] = {"type": "Foreach", "runAfter": {},
-        "foreach": "@range(0, length(outputs('Batch')))",
+        "foreach": "@range(0, length(outputs('Convs')))",
         "runtimeConfiguration": {"concurrency": {"repetitions": SUGGEST_PARALLEL}},
         "actions": {}}
-    loop = {"S_email": compose("@outputs('Batch')[items('Suggest_each')]", {})}
+    # One conversation: its batch emails (newest first); the newest one stands for the conversation.
+    loop = {"S_items": {"type": "Query", "runAfter": {}, "inputs": {
+        "from": "@body('Batch_indexed')",
+        "where": "@equals(item()?['conv'], outputs('Convs')[items('Suggest_each')])"}}}
+    loop["S_email"] = compose("@first(body('S_items'))?['email']", ok("S_items"))
     loop.update(match_steps("S_", "outputs('S_email')", ok("S_email")))
-    loop["Append_result"] = {"type": "AppendToArrayVariable", "runAfter": ok("S_Suggestion"), "inputs": {
+    loop["S_names"] = {"type": "Select", "runAfter": ok("S_items"), "inputs": {
+        "from": "@body('S_items')", "select": "@coalesce(item()?['email']?['from']?['emailAddress']?['name'], '')"}}
+    loop["S_positions"] = {"type": "Select", "runAfter": ok("S_items"), "inputs": {
+        "from": "@body('S_items')", "select": "@string(item()?['pos'])"}}
+    loop["Append_result"] = {"type": "AppendToArrayVariable",
+        "runAfter": ok("S_Suggestion", "S_names", "S_positions"), "inputs": {
         "name": "Results",
         "value": {
-            "idx": "@add(items('Suggest_each'), 1)",
+            "idx": "@first(body('S_items'))?['pos']",
+            "positions": "@join(body('S_positions'), '.')",
+            "count": "@length(body('S_items'))",
             "subject": "@replace(replace(coalesce(outputs('S_email')?['subject'], '(no subject)'), '[', '('), ']', ')')",
-            "sender": "@coalesce(outputs('S_email')?['from']?['emailAddress']?['name'], '')",
+            "sender": "@join(take(union(body('S_names'), body('S_names')), 3), ', ')",
             "received": "@outputs('S_email')?['receivedDateTime']",
             "link": "@coalesce(outputs('S_email')?['webLink'], '')",
             "folderId": "@outputs('S_Suggestion')?['folderId']",
@@ -313,7 +339,8 @@ def definition():
             "reason": "@outputs('S_Suggestion')?['reason']",
             "kind": "@outputs('S_Suggestion')?['kind']"}}}
     S["Suggest_each"]["actions"] = loop
-    # The loop runs in parallel, so results arrive in any order; idx is the email's place in Batch (oldest first).
+    # The loop runs in parallel, so results arrive in any order; idx is the conversation's newest
+    # email's place in Batch (1 = newest), so sorting by idx lists newest conversations first.
     S["Sug_replied"] = {"type": "Query", "runAfter": ok("Suggest_each"), "inputs": {
         "from": "@variables('Results')",
         "where": "@and(not(empty(item()?['folderId'])), equals(item()?['kind'], 'replied'))"}}
@@ -332,11 +359,12 @@ def definition():
         "from": "@body('Numbered')",
         "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', "
                   "item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), "
+                  "if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), "
                   "if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), "
                   f"if(empty(item()?['folderId']), '', concat('  ', {NL}, '→ **', item()?['path'], '** · *', "
                   "item()?['reason'], '*')))"}}
     S["Order_list"] = {"type": "Select", "runAfter": ok("Numbered"), "inputs": {
-        "from": "@body('Numbered')", "select": "@string(item()?['idx'])"}}
+        "from": "@body('Numbered')", "select": "@item()?['positions']"}}
     a_count, b_count = "length(body('Sug_replied'))", "length(body('Sug_read'))"
     s_count, total = f"add({a_count}, {b_count})", "length(body('Numbered'))"
     hint = (f"if(greater({s_count}, 0), concat('Reply **file all** to file ', "
@@ -349,10 +377,12 @@ def definition():
     is_file = "equals(outputs('Mode'), 'file')"
     S["Suggest_message"] = compose(
         f"@concat(if({is_file}, concat({NL}, {NL}, '---', {NL}, {NL}), ''), "
-        f"'## 📁 Ready to file: ', string({total}), ' emails', {NL}, {NL}, "
+        f"'## 📁 Ready to file: ', string(length(outputs('Batch'))), ' emails', "
+        f"if(less({total}, length(outputs('Batch'))), concat(' in ', string({total}), ' conversations'), ''), {NL}, {NL}, "
         f"'*', string(length(body('Pool'))), if(outputs('Read_capped'), '+', ''), "
-        f"if({is_file}, ' more read emails are', ' read emails in your Inbox are'), "
-        f"' ready to file (flagged ones are left out). Showing the oldest ', string({total}), '.*', {NL}, {NL}, "
+        f"if({is_file}, ' older read emails are', ' read emails in your Inbox are'), "
+        f"' ready to file (flagged ones are left out). Showing the newest ', string(length(outputs('Batch'))), "
+        f"'; filing a line files the whole conversation.*', {NL}, {NL}, "
         f"if(greater({a_count}, 0), concat('### ✅ Replied, forwarded or completed', {NL}, {NL}, "
         f"join(take(body('Lines'), {a_count}), concat({NL}, {NL})), {NL}, {NL}), ''), "
         f"if(greater({b_count}, 0), concat('### 📖 Read, no reply', {NL}, {NL}, "
@@ -360,13 +390,13 @@ def definition():
         f"if(greater(length(body('Not_sure')), 0), concat('### ❓ Not sure', {NL}, {NL}, "
         f"join(skip(body('Lines'), {s_count}), concat({NL}, {NL})), {NL}, {NL}), ''), {hint}, "
         f"if(greater(outputs('Remaining'), 0), concat({NL}, {NL}, string(outputs('Remaining')), "
-        f"' more are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
+        f"' older ones are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
         ok("Lines", "Order_list"))
     S["Add_list"] = {"type": "AppendToStringVariable", "runAfter": ok("Suggest_message"),
                      "inputs": {"name": "Reply", "value": "@outputs('Suggest_message')"}}
     S["Set_key_list"] = {"type": "SetVariable", "runAfter": ok("Add_list"), "inputs": {
         "name": "KeyOut",
-        "value": f"@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', "
+        "value": f"@concat(outputs('Batch_from'), '|', outputs('Next_before'), '|', "
                  f"string({a_count}), ',', string({b_count}), '|', "
                  "join(body('Order_list'), ','), '|')"}}
     nothing = ("@concat('📁 Nothing is ready to file right now. I list Inbox emails you''ve read, "
@@ -399,10 +429,25 @@ def definition():
     P["Read_count"] = compose(f"@int(if(isInt({second_c}), {second_c}, '0'))", ok("Replied_count"))
     P["Filed_before"] = {"type": "Query", "runAfter": ok("Read_count"), "inputs": {
         "from": f"@split({part(4)}, ',')", "where": "@not(empty(item()))"}}
+    # The batch as it is now: emails before Before (Candidates) and on or after NextBefore, newest first.
     P["Window_items"] = {"type": "Query", "runAfter": ok("Filed_before"), "inputs": {
         "from": "@body('Candidates')",
-        "where": f"@lessOrEquals(item()?['receivedDateTime'], {part(1)})"}}
-    P["Window"] = compose("@sort(body('Window_items'), 'receivedDateTime')", ok("Window_items"))
+        "where": f"@greaterOrEquals(ticks(item()?['receivedDateTime']), "
+                 f"ticks(if(empty({part(1)}), '{FAR_FUTURE}', {part(1)})))"}}
+    P["Window"] = compose("@reverse(sort(body('Window_items'), 'receivedDateTime'))", ok("Window_items"))
+    # Every position shown, the ones not filed yet, and position -> index in Window (filed emails
+    # have left the Inbox, so the unfiled positions in order are exactly Window's emails in order).
+    P["All_positions"] = {"type": "Query", "runAfter": ok("Window"), "inputs": {
+        "from": f"@split(replace({part(3)}, '.', ','), ',')", "where": "@isInt(item())"}}
+    P["Unfiled"] = {"type": "Query", "runAfter": ok("All_positions"), "inputs": {
+        "from": "@body('All_positions')", "where": "@not(contains(body('Filed_before'), item()))"}}
+    P["Unfiled_ints"] = {"type": "Select", "runAfter": ok("Unfiled"), "inputs": {
+        "from": "@body('Unfiled')", "select": "@int(item())"}}
+    P["Unfiled_sorted"] = compose("@sort(body('Unfiled_ints'))", ok("Unfiled_ints"))
+    P["Pos_pairs"] = {"type": "Select", "runAfter": ok("Unfiled_sorted"), "inputs": {
+        "from": "@range(0, length(outputs('Unfiled_sorted')))",
+        "select": "@concat('\"', string(outputs('Unfiled_sorted')[item()]), '\":', string(item()))"}}
+    P["Pos_map"] = compose("@json(concat('{', join(body('Pos_pairs'), ','), '}'))", ok("Pos_pairs"))
     F = {}
     F["Tokens"] = {"type": "Select", "runAfter": {}, "inputs": {
         "from": "@split(coalesce(triggerBody()?['text_2'], ''), ',')", "select": "@trim(item())"}}
@@ -437,17 +482,17 @@ def definition():
     fl["Sel_valid"] = compose(
         "@and(greater(outputs('Sel_number'), 0), lessOrEquals(outputs('Sel_number'), length(outputs('Order'))))",
         ok("Sel_override"))
-    # Position of this email in the batch as shown, then in the batch as it is now (minus filed ones).
-    fl["Sel_original"] = compose(
-        "@int(if(outputs('Sel_valid'), coalesce(first(skip(outputs('Order'), sub(max(outputs('Sel_number'), 1), 1))), '0'), '0'))",
-        ok("Sel_valid"))
-    fl["Sel_filed"] = compose("@contains(body('Filed_before'), string(outputs('Sel_original')))", ok("Sel_original"))
-    fl["Filed_earlier"] = {"type": "Query", "runAfter": ok("Sel_filed"), "inputs": {
-        "from": "@body('Filed_before')", "where": "@less(int(item()), outputs('Sel_original'))"}}
-    fl["F_email"] = compose(
-        "@coalesce(if(and(outputs('Sel_valid'), not(outputs('Sel_filed'))), first(skip(outputs('Window'), "
-        "sub(max(sub(outputs('Sel_original'), length(body('Filed_earlier'))), 1), 1))), null), json('{}'))",
-        ok("Filed_earlier"))
+    # The positions of this line's emails, the ones not filed yet, and the newest of those.
+    fl["Sel_positions"] = {"type": "Query", "runAfter": ok("Sel_valid"), "inputs": {
+        "from": "@split(if(outputs('Sel_valid'), coalesce(first(skip(outputs('Order'), "
+                "sub(max(outputs('Sel_number'), 1), 1))), ''), ''), '.')",
+        "where": "@isInt(item())"}}
+    fl["Sel_todo"] = {"type": "Query", "runAfter": ok("Sel_positions"), "inputs": {
+        "from": "@body('Sel_positions')", "where": "@not(contains(body('Filed_before'), item()))"}}
+    fl["Sel_filed"] = compose(
+        "@and(greater(length(body('Sel_positions')), 0), equals(length(body('Sel_todo')), 0))", ok("Sel_todo"))
+    window_at = ("coalesce(first(skip(outputs('Window'), coalesce(outputs('Pos_map')?[{p}], 100000))), json('{{}}'))")
+    fl["F_email"] = compose("@" + window_at.format(p="coalesce(first(body('Sel_todo')), '-')"), ok("Sel_filed"))
     fl.update(match_steps("F_", "outputs('F_email')", ok("F_email")))
     fl["Override_matches"] = {"type": "Query", "runAfter": ok("F_Suggestion"), "inputs": {
         "from": "@body('Folders_ready')",
@@ -460,7 +505,7 @@ def definition():
         "path": f"@if(empty(outputs('Sel_override')), outputs('F_Suggestion')?['path'], "
                 f"if({ov_one}, first(body('Override_matches'))?['path'], ''))"}, ok("Override_matches"))
     fl["Problem"] = compose(
-        "@if(not(outputs('Sel_valid')), concat('there''s no email ', string(outputs('Sel_number')), ' in this list'), "
+        "@if(not(outputs('Sel_valid')), concat('there''s no number ', string(outputs('Sel_number')), ' in this list'), "
         "if(outputs('Sel_filed'), 'was already filed', "
         "if(not(empty(outputs('Target')?['id'])), '', "
         "if(empty(outputs('Sel_override')), 'has no suggested folder. Tell me where it goes', "
@@ -469,50 +514,62 @@ def definition():
         ok("Target"))
     label = ("concat('**', string(outputs('Sel_number')), '.** ', "
              "coalesce(outputs('F_email')?['subject'], ''))")
+    k, m = "length(body('Thread_moved'))", "length(body('Sel_todo'))"
     fl["Can_move"] = {"type": "If", "runAfter": ok("Problem"),
         "expression": {"and": [{"equals": ["@outputs('Problem')", ""]}]},
         "actions": {
-            "Move_email": {"type": "OpenApiConnection", "runAfter": {}, "inputs": {
-                "host": {"connectionName": CONN, "operationId": "MoveV2",
-                         "apiId": f"/providers/Microsoft.PowerApps/apis/{CONN}"},
-                "parameters": {"messageId": "@outputs('F_email')?['id']",
-                               "folderPath": "@concat('Id::', outputs('Target')?['id'])"},
-                "authentication": "@parameters('$authentication')"}},
-            # If the connector rejects the Id:: form, move through Graph directly.
-            "Move_email_graph": {"type": "OpenApiConnection", "runAfter": {"Move_email": ["Failed"]}, "inputs": {
-                "host": {"connectionName": CONN, "operationId": "HttpRequest",
-                         "apiId": f"/providers/Microsoft.PowerApps/apis/{CONN}"},
-                "parameters": {"Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages/', "
-                                      "outputs('F_email')?['id'], '/move')",
-                               "Method": "POST",
-                               "Body": "@concat('{\"destinationId\":\"', outputs('Target')?['id'], '\"}')",
-                               "ContentType": "application/json"},
-                "authentication": "@parameters('$authentication')"}},
-            "Record_moved": {"type": "AppendToArrayVariable",
-                "runAfter": {"Move_email": ["Succeeded", "Failed"], "Move_email_graph": ["Succeeded", "Skipped"]},
-                "inputs": {"name": "Moved", "value": {
-                    "n": "@outputs('Sel_number')",
-                    "line": f"@concat('- ', {label}, ' → **', outputs('Target')?['path'], '**')"}}},
-            "Record_moved_idx": {"type": "AppendToArrayVariable", "runAfter": ok("Record_moved"),
-                "inputs": {"name": "MovedIdx", "value": "@string(outputs('Sel_original'))"}},
-            "Record_failed": {"type": "AppendToArrayVariable",
-                "runAfter": {"Move_email_graph": ["Failed", "TimedOut"]},
-                "inputs": {"name": "Problems", "value": {
-                    "n": "@outputs('Sel_number')", "line": f"@concat('- ', {label}, ': Outlook couldn''t move it')"}}}},
+            # Move every not-yet-filed email of the conversation, one at a time.
+            "Move_each": {"type": "Foreach", "runAfter": {}, "foreach": "@body('Sel_todo')",
+                "runtimeConfiguration": {"concurrency": {"repetitions": 1}}, "actions": {
+                "M_email": compose("@" + window_at.format(p="items('Move_each')"), {}),
+                "Move_email": {"type": "OpenApiConnection", "runAfter": ok("M_email"), "inputs": {
+                    "host": {"connectionName": CONN, "operationId": "MoveV2",
+                             "apiId": f"/providers/Microsoft.PowerApps/apis/{CONN}"},
+                    "parameters": {"messageId": "@outputs('M_email')?['id']",
+                                   "folderPath": "@concat('Id::', outputs('Target')?['id'])"},
+                    "authentication": "@parameters('$authentication')"}},
+                # If the connector rejects the Id:: form, move through Graph directly.
+                "Move_email_graph": {"type": "OpenApiConnection", "runAfter": {"Move_email": ["Failed"]}, "inputs": {
+                    "host": {"connectionName": CONN, "operationId": "HttpRequest",
+                             "apiId": f"/providers/Microsoft.PowerApps/apis/{CONN}"},
+                    "parameters": {"Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages/', "
+                                          "outputs('M_email')?['id'], '/move')",
+                                   "Method": "POST",
+                                   "Body": "@concat('{\"destinationId\":\"', outputs('Target')?['id'], '\"}')",
+                                   "ContentType": "application/json"},
+                    "authentication": "@parameters('$authentication')"}},
+                "Record_moved_idx": {"type": "AppendToArrayVariable",
+                    "runAfter": {"Move_email": ["Succeeded", "Failed"], "Move_email_graph": ["Succeeded", "Skipped"]},
+                    "inputs": {"name": "MovedIdx", "value": "@items('Move_each')"}}}},
+            # MovedIdx is shared by parallel iterations; this conversation's positions are its own.
+            "Thread_moved": {"type": "Query", "runAfter": {"Move_each": ["Succeeded", "Failed"]}, "inputs": {
+                "from": "@variables('MovedIdx')", "where": "@contains(body('Sel_todo'), item())"}},
+            "Any_moved": {"type": "If", "runAfter": ok("Thread_moved"),
+                "expression": {"and": [{"greater": [f"@{k}", 0]}]},
+                "actions": {"Record_moved": {"type": "AppendToArrayVariable", "runAfter": {}, "inputs": {
+                    "name": "Moved", "value": {
+                        "n": "@outputs('Sel_number')",
+                        "line": f"@concat('- ', {label}, ' → **', outputs('Target')?['path'], '**', "
+                                f"if(equals({k}, {m}), if(greater({k}, 1), concat(' (', string({k}), ' emails)'), ''), "
+                                f"concat(' (', string({k}), ' of ', string({m}), ' emails; Outlook couldn''t move the rest)')))"}}}},
+                "else": {"actions": {"Record_failed": {"type": "AppendToArrayVariable", "runAfter": {}, "inputs": {
+                    "name": "Problems", "value": {
+                        "n": "@outputs('Sel_number')",
+                        "line": f"@concat('- ', {label}, ': Outlook couldn''t move it')"}}}}}}},
         "else": {"actions": {
             "Record_problem": {"type": "AppendToArrayVariable", "runAfter": {},
                 "inputs": {"name": "Problems", "value": {
                     "n": "@outputs('Sel_number')", "line": f"@concat('- ', {label}, ': ', outputs('Problem'))"}}}}}}
     F["File_each"] = {"type": "Foreach", "runAfter": ok("Selections"), "foreach": "@outputs('Selections')",
                       "runtimeConfiguration": {"concurrency": {"repetitions": FILE_PARALLEL}}, "actions": fl}
-    moved, problems = "length(variables('Moved'))", "length(variables('Problems'))"
+    moved, problems = "length(variables('MovedIdx'))", "length(variables('Problems'))"
     done = {"File_each": ["Succeeded", "Failed"]}
     F["Moved_lines"] = {"type": "Select", "runAfter": done, "inputs": {
         "from": "@sort(variables('Moved'), 'n')", "select": "@item()?['line']"}}
     F["Problem_lines"] = {"type": "Select", "runAfter": done, "inputs": {
         "from": "@sort(variables('Problems'), 'n')", "select": "@item()?['line']"}}
     F["Filed_now"] = compose("@union(body('Filed_before'), variables('MovedIdx'))", done)
-    left = "sub(length(outputs('Order')), length(outputs('Filed_now')))"
+    left = "sub(length(body('All_positions')), length(outputs('Filed_now')))"
     F["File_message"] = compose(
         f"@concat(if(greater({moved}, 0), concat('✅ Filed ', string({moved}), if(equals({moved}, 1), ' email.', ' emails.'), "
         f"{NL}, {NL}, join(body('Moved_lines'), {NL})), 'Nothing was moved.'), "
@@ -529,11 +586,12 @@ def definition():
                  "join(outputs('Filed_now'), ','))"}}
     stale = ("@concat('That list has changed since I showed it, or I don''t have it any more, so I didn''t move "
              "anything. Say **Help me file** to see a fresh list.')")
-    P["Key_still_valid"] = {"type": "If", "runAfter": ok("Window"),
+    P["Key_still_valid"] = {"type": "If", "runAfter": ok("Pos_map"),
         "expression": {"and": [
             {"equals": ["@length(outputs('Key_parts'))", 5]},
             {"greater": ["@length(outputs('Order'))", 0]},
-            {"equals": ["@add(length(outputs('Window')), length(body('Filed_before')))", "@length(outputs('Order'))"]}]},
+            {"greater": ["@length(body('All_positions'))", 0]},
+            {"equals": ["@length(outputs('Window'))", "@length(body('Unfiled'))"]}]},
         "actions": F,
         "else": {"actions": {
             "Add_stale": {"type": "AppendToStringVariable", "runAfter": {}, "inputs": {"name": "Reply", "value": stale}},
@@ -542,14 +600,14 @@ def definition():
     file_branch = P
 
     A["Is_file"] = {"type": "If",
-        "runAfter": ok("Remaining", "Next_after", "Name_candidates", "Ranks", "Paths", "Read_capped",
+        "runAfter": ok("Remaining", "Next_before", "Convs", "Name_candidates", "Ranks", "Paths", "Read_capped",
                        "Replied_ids", "Sent_id", "My_addresses"),
         "expression": {"and": [{"equals": ["@outputs('Mode')", "file"]}]},
         "actions": file_branch, "else": {"actions": {}}}
-    A["Show_list"] = {"type": "If", "runAfter": ok("Is_file"),
+    A["Show_list"] = {"type": "If", "runAfter": {"Is_file": ["Succeeded", "Failed"]},
         "expression": {"and": [{"equals": ["@variables('ShowList')", True]}]},
         "actions": list_section, "else": {"actions": {}}}
-    A["Add_footer"] = {"type": "AppendToStringVariable", "runAfter": ok("Show_list"),
+    A["Add_footer"] = {"type": "AppendToStringVariable", "runAfter": {"Show_list": ["Succeeded", "Failed"]},
                        "inputs": {"name": "Reply", "value": f"@concat({NL}, {NL}, {footer})"}}
     A["Respond_to_the_agent"] = {"type": "Response", "kind": "Skills", "runAfter": ok("Add_footer"), "inputs": {
         "statusCode": 200,
@@ -569,9 +627,10 @@ def definition():
                        "description": "The batchkey from the previous result, copied exactly. none for a new Help me file."},
             "text_2": {"title": "Selections", "type": "string", "x-ms-dynamically-added": True,
                        "x-ms-content-hint": "TEXT",
-                       "description": "For file: comma-separated numbers from the list; all for every suggested one; "
-                                      "replied or read for just that section; number=Folder name to send one "
-                                      "elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."}},
+                       "description": "For file: comma-separated numbers from the list (each number is a whole "
+                                      "conversation); all for every suggested one; replied or read for just that "
+                                      "section; number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. "
+                                      "none for suggest."}},
         # All required: Copilot Studio only lists a flow's optional inputs if someone adds them by hand.
         "required": ["text", "text_1", "text_2"]}}}}
 

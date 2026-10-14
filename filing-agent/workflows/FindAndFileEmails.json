@@ -51,7 +51,7 @@
                   "type": "string",
                   "x-ms-dynamically-added": true,
                   "x-ms-content-hint": "TEXT",
-                  "description": "For file: comma-separated numbers from the list; all for every suggested one; replied or read for just that section; number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."
+                  "description": "For file: comma-separated numbers from the list (each number is a whole conversation); all for every suggested one; replied or read for just that section; number=Folder name to send one elsewhere, e.g. 1,3,4,5=Cassin. none for suggest."
                 }
               },
               "required": [
@@ -74,9 +74,9 @@
           "inputs": "@split(if(equals(toLower(trim(coalesce(triggerBody()?['text_1'], ''))), 'none'), '', trim(coalesce(triggerBody()?['text_1'], ''))), '|')",
           "runAfter": {}
         },
-        "After": {
+        "Before": {
           "type": "Compose",
-          "inputs": "@if(less(length(outputs('Key_parts')), 4), '1900-01-01T00:00:00Z', if(equals(outputs('Mode'), 'file'), first(outputs('Key_parts')), first(skip(outputs('Key_parts'), 1))))",
+          "inputs": "@if(less(length(outputs('Key_parts')), 4), '2999-12-31T00:00:00Z', if(equals(outputs('Mode'), 'file'), first(outputs('Key_parts')), first(skip(outputs('Key_parts'), 1))))",
           "runAfter": {
             "Mode": [
               "Succeeded"
@@ -204,7 +204,7 @@
         "Get_replied": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "After": [
+            "Before": [
               "Succeeded"
             ],
             "Init_showlist": [
@@ -227,7 +227,7 @@
         "Get_replied_all": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "After": [
+            "Before": [
               "Succeeded"
             ],
             "Init_showlist": [
@@ -250,7 +250,7 @@
         "Get_forwarded": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "After": [
+            "Before": [
               "Succeeded"
             ],
             "Init_showlist": [
@@ -273,7 +273,7 @@
         "Get_completed": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "After": [
+            "Before": [
               "Succeeded"
             ],
             "Init_showlist": [
@@ -296,7 +296,7 @@
         "Get_read": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "After": [
+            "Before": [
               "Succeeded"
             ],
             "Init_showlist": [
@@ -310,7 +310,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime gt ', outputs('After'), ' and isRead eq true&$orderby=receivedDateTime asc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead')",
+              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime lt ', outputs('Before'), ' and isRead eq true&$orderby=receivedDateTime desc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead')",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -417,14 +417,14 @@
           },
           "inputs": {
             "from": "@outputs('All_emails')",
-            "where": "@and(equals(item()?['isRead'], true), not(equals(item()?['flag']?['flagStatus'], 'flagged')), greater(ticks(item()?['receivedDateTime']), ticks(outputs('After'))))"
+            "where": "@and(equals(item()?['isRead'], true), not(equals(item()?['flag']?['flagStatus'], 'flagged')), less(ticks(item()?['receivedDateTime']), ticks(outputs('Before'))))"
           }
         },
         "Batch_from": {
           "type": "Compose",
-          "inputs": "@if(and(equals(outputs('Mode'), 'file'), greaterOrEquals(length(outputs('Key_parts')), 4)), first(skip(outputs('Key_parts'), 1)), outputs('After'))",
+          "inputs": "@if(and(equals(outputs('Mode'), 'file'), greaterOrEquals(length(outputs('Key_parts')), 4)), first(skip(outputs('Key_parts'), 1)), outputs('Before'))",
           "runAfter": {
-            "After": [
+            "Before": [
               "Succeeded"
             ]
           }
@@ -441,12 +441,12 @@
           },
           "inputs": {
             "from": "@body('Candidates')",
-            "where": "@greater(ticks(item()?['receivedDateTime']), ticks(outputs('Batch_from')))"
+            "where": "@less(ticks(item()?['receivedDateTime']), ticks(outputs('Batch_from')))"
           }
         },
         "Batch": {
           "type": "Compose",
-          "inputs": "@take(sort(body('Pool'), 'receivedDateTime'), 25)",
+          "inputs": "@take(reverse(sort(body('Pool'), 'receivedDateTime')), 30)",
           "runAfter": {
             "Pool": [
               "Succeeded"
@@ -462,11 +462,48 @@
             ]
           }
         },
-        "Next_after": {
+        "Next_before": {
           "type": "Compose",
           "inputs": "@coalesce(first(reverse(outputs('Batch')))?['receivedDateTime'], outputs('Batch_from'))",
           "runAfter": {
             "Batch": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Batch_indexed": {
+          "type": "Select",
+          "runAfter": {
+            "Batch": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@range(0, length(outputs('Batch')))",
+            "select": {
+              "pos": "@add(item(), 1)",
+              "conv": "@coalesce(outputs('Batch')[item()]?['conversationId'], outputs('Batch')[item()]?['id'])",
+              "email": "@outputs('Batch')[item()]"
+            }
+          }
+        },
+        "Batch_convs": {
+          "type": "Select",
+          "runAfter": {
+            "Batch_indexed": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@body('Batch_indexed')",
+            "select": "@item()?['conv']"
+          }
+        },
+        "Convs": {
+          "type": "Compose",
+          "inputs": "@union(body('Batch_convs'), body('Batch_convs'))",
+          "runAfter": {
+            "Batch_convs": [
               "Succeeded"
             ]
           }
@@ -863,7 +900,10 @@
             "Remaining": [
               "Succeeded"
             ],
-            "Next_after": [
+            "Next_before": [
+              "Succeeded"
+            ],
+            "Convs": [
               "Succeeded"
             ],
             "Name_candidates": [
@@ -952,14 +992,80 @@
               },
               "inputs": {
                 "from": "@body('Candidates')",
-                "where": "@lessOrEquals(item()?['receivedDateTime'], coalesce(first(skip(outputs('Key_parts'), 1)), ''))"
+                "where": "@greaterOrEquals(ticks(item()?['receivedDateTime']), ticks(if(empty(coalesce(first(skip(outputs('Key_parts'), 1)), '')), '2999-12-31T00:00:00Z', coalesce(first(skip(outputs('Key_parts'), 1)), ''))))"
               }
             },
             "Window": {
               "type": "Compose",
-              "inputs": "@sort(body('Window_items'), 'receivedDateTime')",
+              "inputs": "@reverse(sort(body('Window_items'), 'receivedDateTime'))",
               "runAfter": {
                 "Window_items": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "All_positions": {
+              "type": "Query",
+              "runAfter": {
+                "Window": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@split(replace(coalesce(first(skip(outputs('Key_parts'), 3)), ''), '.', ','), ',')",
+                "where": "@isInt(item())"
+              }
+            },
+            "Unfiled": {
+              "type": "Query",
+              "runAfter": {
+                "All_positions": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('All_positions')",
+                "where": "@not(contains(body('Filed_before'), item()))"
+              }
+            },
+            "Unfiled_ints": {
+              "type": "Select",
+              "runAfter": {
+                "Unfiled": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@body('Unfiled')",
+                "select": "@int(item())"
+              }
+            },
+            "Unfiled_sorted": {
+              "type": "Compose",
+              "inputs": "@sort(body('Unfiled_ints'))",
+              "runAfter": {
+                "Unfiled_ints": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Pos_pairs": {
+              "type": "Select",
+              "runAfter": {
+                "Unfiled_sorted": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@range(0, length(outputs('Unfiled_sorted')))",
+                "select": "@concat('\"', string(outputs('Unfiled_sorted')[item()]), '\":', string(item()))"
+              }
+            },
+            "Pos_map": {
+              "type": "Compose",
+              "inputs": "@json(concat('{', join(body('Pos_pairs'), ','), '}'))",
+              "runAfter": {
+                "Pos_pairs": [
                   "Succeeded"
                 ]
               }
@@ -967,7 +1073,7 @@
             "Key_still_valid": {
               "type": "If",
               "runAfter": {
-                "Window": [
+                "Pos_map": [
                   "Succeeded"
                 ]
               },
@@ -986,9 +1092,15 @@
                     ]
                   },
                   {
+                    "greater": [
+                      "@length(body('All_positions'))",
+                      0
+                    ]
+                  },
+                  {
                     "equals": [
-                      "@add(length(outputs('Window')), length(body('Filed_before')))",
-                      "@length(outputs('Order'))"
+                      "@length(outputs('Window'))",
+                      "@length(body('Unfiled'))"
                     ]
                   }
                 ]
@@ -1132,41 +1244,44 @@
                         ]
                       }
                     },
-                    "Sel_original": {
-                      "type": "Compose",
-                      "inputs": "@int(if(outputs('Sel_valid'), coalesce(first(skip(outputs('Order'), sub(max(outputs('Sel_number'), 1), 1))), '0'), '0'))",
+                    "Sel_positions": {
+                      "type": "Query",
                       "runAfter": {
                         "Sel_valid": [
                           "Succeeded"
                         ]
+                      },
+                      "inputs": {
+                        "from": "@split(if(outputs('Sel_valid'), coalesce(first(skip(outputs('Order'), sub(max(outputs('Sel_number'), 1), 1))), ''), ''), '.')",
+                        "where": "@isInt(item())"
                       }
                     },
-                    "Sel_filed": {
-                      "type": "Compose",
-                      "inputs": "@contains(body('Filed_before'), string(outputs('Sel_original')))",
-                      "runAfter": {
-                        "Sel_original": [
-                          "Succeeded"
-                        ]
-                      }
-                    },
-                    "Filed_earlier": {
+                    "Sel_todo": {
                       "type": "Query",
                       "runAfter": {
-                        "Sel_filed": [
+                        "Sel_positions": [
                           "Succeeded"
                         ]
                       },
                       "inputs": {
-                        "from": "@body('Filed_before')",
-                        "where": "@less(int(item()), outputs('Sel_original'))"
+                        "from": "@body('Sel_positions')",
+                        "where": "@not(contains(body('Filed_before'), item()))"
+                      }
+                    },
+                    "Sel_filed": {
+                      "type": "Compose",
+                      "inputs": "@and(greater(length(body('Sel_positions')), 0), equals(length(body('Sel_todo')), 0))",
+                      "runAfter": {
+                        "Sel_todo": [
+                          "Succeeded"
+                        ]
                       }
                     },
                     "F_email": {
                       "type": "Compose",
-                      "inputs": "@coalesce(if(and(outputs('Sel_valid'), not(outputs('Sel_filed'))), first(skip(outputs('Window'), sub(max(sub(outputs('Sel_original'), length(body('Filed_earlier'))), 1), 1))), null), json('{}'))",
+                      "inputs": "@coalesce(first(skip(outputs('Window'), coalesce(outputs('Pos_map')?[coalesce(first(body('Sel_todo')), '-')], 100000))), json('{}'))",
                       "runAfter": {
-                        "Filed_earlier": [
+                        "Sel_filed": [
                           "Succeeded"
                         ]
                       }
@@ -1321,7 +1436,7 @@
                     },
                     "Problem": {
                       "type": "Compose",
-                      "inputs": "@if(not(outputs('Sel_valid')), concat('there''s no email ', string(outputs('Sel_number')), ' in this list'), if(outputs('Sel_filed'), 'was already filed', if(not(empty(outputs('Target')?['id'])), '', if(empty(outputs('Sel_override')), 'has no suggested folder. Tell me where it goes', if(equals(length(body('Override_matches')), 0), concat('there''s no folder named \"', outputs('Sel_override'), '\"'), concat('more than one folder is named \"', outputs('Sel_override'), '\". Tell me which one, using its full path'))))))",
+                      "inputs": "@if(not(outputs('Sel_valid')), concat('there''s no number ', string(outputs('Sel_number')), ' in this list'), if(outputs('Sel_filed'), 'was already filed', if(not(empty(outputs('Target')?['id'])), '', if(empty(outputs('Sel_override')), 'has no suggested folder. Tell me where it goes', if(equals(length(body('Override_matches')), 0), concat('there''s no folder named \"', outputs('Sel_override'), '\"'), concat('more than one folder is named \"', outputs('Sel_override'), '\". Tell me which one, using its full path'))))))",
                       "runAfter": {
                         "Target": [
                           "Succeeded"
@@ -1346,89 +1461,138 @@
                         ]
                       },
                       "actions": {
-                        "Move_email": {
-                          "type": "OpenApiConnection",
+                        "Move_each": {
+                          "type": "Foreach",
                           "runAfter": {},
-                          "inputs": {
-                            "host": {
-                              "connectionName": "shared_office365",
-                              "operationId": "MoveV2",
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                            },
-                            "parameters": {
-                              "messageId": "@outputs('F_email')?['id']",
-                              "folderPath": "@concat('Id::', outputs('Target')?['id'])"
-                            },
-                            "authentication": "@parameters('$authentication')"
-                          }
-                        },
-                        "Move_email_graph": {
-                          "type": "OpenApiConnection",
-                          "runAfter": {
-                            "Move_email": [
-                              "Failed"
-                            ]
+                          "foreach": "@body('Sel_todo')",
+                          "runtimeConfiguration": {
+                            "concurrency": {
+                              "repetitions": 1
+                            }
                           },
-                          "inputs": {
-                            "host": {
-                              "connectionName": "shared_office365",
-                              "operationId": "HttpRequest",
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                          "actions": {
+                            "M_email": {
+                              "type": "Compose",
+                              "inputs": "@coalesce(first(skip(outputs('Window'), coalesce(outputs('Pos_map')?[items('Move_each')], 100000))), json('{}'))",
+                              "runAfter": {}
                             },
-                            "parameters": {
-                              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages/', outputs('F_email')?['id'], '/move')",
-                              "Method": "POST",
-                              "Body": "@concat('{\"destinationId\":\"', outputs('Target')?['id'], '\"}')",
-                              "ContentType": "application/json"
+                            "Move_email": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {
+                                "M_email": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_office365",
+                                  "operationId": "MoveV2",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                                },
+                                "parameters": {
+                                  "messageId": "@outputs('M_email')?['id']",
+                                  "folderPath": "@concat('Id::', outputs('Target')?['id'])"
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              }
                             },
-                            "authentication": "@parameters('$authentication')"
-                          }
-                        },
-                        "Record_moved": {
-                          "type": "AppendToArrayVariable",
-                          "runAfter": {
-                            "Move_email": [
-                              "Succeeded",
-                              "Failed"
-                            ],
-                            "Move_email_graph": [
-                              "Succeeded",
-                              "Skipped"
-                            ]
-                          },
-                          "inputs": {
-                            "name": "Moved",
-                            "value": {
-                              "n": "@outputs('Sel_number')",
-                              "line": "@concat('- ', concat('**', string(outputs('Sel_number')), '.** ', coalesce(outputs('F_email')?['subject'], '')), ' → **', outputs('Target')?['path'], '**')"
+                            "Move_email_graph": {
+                              "type": "OpenApiConnection",
+                              "runAfter": {
+                                "Move_email": [
+                                  "Failed"
+                                ]
+                              },
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_office365",
+                                  "operationId": "HttpRequest",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                                },
+                                "parameters": {
+                                  "Uri": "@concat('https://graph.microsoft.com/v1.0/me/messages/', outputs('M_email')?['id'], '/move')",
+                                  "Method": "POST",
+                                  "Body": "@concat('{\"destinationId\":\"', outputs('Target')?['id'], '\"}')",
+                                  "ContentType": "application/json"
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              }
+                            },
+                            "Record_moved_idx": {
+                              "type": "AppendToArrayVariable",
+                              "runAfter": {
+                                "Move_email": [
+                                  "Succeeded",
+                                  "Failed"
+                                ],
+                                "Move_email_graph": [
+                                  "Succeeded",
+                                  "Skipped"
+                                ]
+                              },
+                              "inputs": {
+                                "name": "MovedIdx",
+                                "value": "@items('Move_each')"
+                              }
                             }
                           }
                         },
-                        "Record_moved_idx": {
-                          "type": "AppendToArrayVariable",
+                        "Thread_moved": {
+                          "type": "Query",
                           "runAfter": {
-                            "Record_moved": [
+                            "Move_each": [
+                              "Succeeded",
+                              "Failed"
+                            ]
+                          },
+                          "inputs": {
+                            "from": "@variables('MovedIdx')",
+                            "where": "@contains(body('Sel_todo'), item())"
+                          }
+                        },
+                        "Any_moved": {
+                          "type": "If",
+                          "runAfter": {
+                            "Thread_moved": [
                               "Succeeded"
                             ]
                           },
-                          "inputs": {
-                            "name": "MovedIdx",
-                            "value": "@string(outputs('Sel_original'))"
-                          }
-                        },
-                        "Record_failed": {
-                          "type": "AppendToArrayVariable",
-                          "runAfter": {
-                            "Move_email_graph": [
-                              "Failed",
-                              "TimedOut"
+                          "expression": {
+                            "and": [
+                              {
+                                "greater": [
+                                  "@length(body('Thread_moved'))",
+                                  0
+                                ]
+                              }
                             ]
                           },
-                          "inputs": {
-                            "name": "Problems",
-                            "value": {
-                              "n": "@outputs('Sel_number')",
-                              "line": "@concat('- ', concat('**', string(outputs('Sel_number')), '.** ', coalesce(outputs('F_email')?['subject'], '')), ': Outlook couldn''t move it')"
+                          "actions": {
+                            "Record_moved": {
+                              "type": "AppendToArrayVariable",
+                              "runAfter": {},
+                              "inputs": {
+                                "name": "Moved",
+                                "value": {
+                                  "n": "@outputs('Sel_number')",
+                                  "line": "@concat('- ', concat('**', string(outputs('Sel_number')), '.** ', coalesce(outputs('F_email')?['subject'], '')), ' → **', outputs('Target')?['path'], '**', if(equals(length(body('Thread_moved')), length(body('Sel_todo'))), if(greater(length(body('Thread_moved')), 1), concat(' (', string(length(body('Thread_moved'))), ' emails)'), ''), concat(' (', string(length(body('Thread_moved'))), ' of ', string(length(body('Sel_todo'))), ' emails; Outlook couldn''t move the rest)')))"
+                                }
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "Record_failed": {
+                                "type": "AppendToArrayVariable",
+                                "runAfter": {},
+                                "inputs": {
+                                  "name": "Problems",
+                                  "value": {
+                                    "n": "@outputs('Sel_number')",
+                                    "line": "@concat('- ', concat('**', string(outputs('Sel_number')), '.** ', coalesce(outputs('F_email')?['subject'], '')), ': Outlook couldn''t move it')"
+                                  }
+                                }
+                              }
                             }
                           }
                         }
@@ -1489,7 +1653,7 @@
                 },
                 "File_message": {
                   "type": "Compose",
-                  "inputs": "@concat(if(greater(length(variables('Moved')), 0), concat('✅ Filed ', string(length(variables('Moved'))), if(equals(length(variables('Moved')), 1), ' email.', ' emails.'), decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Moved_lines'), decodeUriComponent('%0A'))), 'Nothing was moved.'), if(greater(length(variables('Problems')), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '⚠️ Not filed:', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Problem_lines'), decodeUriComponent('%0A'))), ''), if(and(greater(sub(length(outputs('Order')), length(outputs('Filed_now'))), 0), greater(length(outputs('Batch')), 0)), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(sub(length(outputs('Order')), length(outputs('Filed_now')))), if(equals(sub(length(outputs('Order')), length(outputs('Filed_now'))), 1), ' email', ' emails'), ' from that list stay in your Inbox. Say **Help me file** later to go back to them.*'), ''))",
+                  "inputs": "@concat(if(greater(length(variables('MovedIdx')), 0), concat('✅ Filed ', string(length(variables('MovedIdx'))), if(equals(length(variables('MovedIdx')), 1), ' email.', ' emails.'), decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Moved_lines'), decodeUriComponent('%0A'))), 'Nothing was moved.'), if(greater(length(variables('Problems')), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '⚠️ Not filed:', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(body('Problem_lines'), decodeUriComponent('%0A'))), ''), if(and(greater(sub(length(body('All_positions')), length(outputs('Filed_now'))), 0), greater(length(outputs('Batch')), 0)), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(sub(length(body('All_positions')), length(outputs('Filed_now')))), if(equals(sub(length(body('All_positions')), length(outputs('Filed_now'))), 1), ' email', ' emails'), ' from that list stay in your Inbox. Say **Help me file** later to go back to them.*'), ''))",
                   "runAfter": {
                     "Moved_lines": [
                       "Succeeded"
@@ -1561,7 +1725,8 @@
           "type": "If",
           "runAfter": {
             "Is_file": [
-              "Succeeded"
+              "Succeeded",
+              "Failed"
             ]
           },
           "expression": {
@@ -1592,17 +1757,29 @@
                 "Suggest_each": {
                   "type": "Foreach",
                   "runAfter": {},
-                  "foreach": "@range(0, length(outputs('Batch')))",
+                  "foreach": "@range(0, length(outputs('Convs')))",
                   "runtimeConfiguration": {
                     "concurrency": {
                       "repetitions": 10
                     }
                   },
                   "actions": {
+                    "S_items": {
+                      "type": "Query",
+                      "runAfter": {},
+                      "inputs": {
+                        "from": "@body('Batch_indexed')",
+                        "where": "@equals(item()?['conv'], outputs('Convs')[items('Suggest_each')])"
+                      }
+                    },
                     "S_email": {
                       "type": "Compose",
-                      "inputs": "@outputs('Batch')[items('Suggest_each')]",
-                      "runAfter": {}
+                      "inputs": "@first(body('S_items'))?['email']",
+                      "runAfter": {
+                        "S_items": [
+                          "Succeeded"
+                        ]
+                      }
                     },
                     "S_Thread_lookup": {
                       "type": "OpenApiConnection",
@@ -1728,19 +1905,51 @@
                         ]
                       }
                     },
+                    "S_names": {
+                      "type": "Select",
+                      "runAfter": {
+                        "S_items": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@body('S_items')",
+                        "select": "@coalesce(item()?['email']?['from']?['emailAddress']?['name'], '')"
+                      }
+                    },
+                    "S_positions": {
+                      "type": "Select",
+                      "runAfter": {
+                        "S_items": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "from": "@body('S_items')",
+                        "select": "@string(item()?['pos'])"
+                      }
+                    },
                     "Append_result": {
                       "type": "AppendToArrayVariable",
                       "runAfter": {
                         "S_Suggestion": [
+                          "Succeeded"
+                        ],
+                        "S_names": [
+                          "Succeeded"
+                        ],
+                        "S_positions": [
                           "Succeeded"
                         ]
                       },
                       "inputs": {
                         "name": "Results",
                         "value": {
-                          "idx": "@add(items('Suggest_each'), 1)",
+                          "idx": "@first(body('S_items'))?['pos']",
+                          "positions": "@join(body('S_positions'), '.')",
+                          "count": "@length(body('S_items'))",
                           "subject": "@replace(replace(coalesce(outputs('S_email')?['subject'], '(no subject)'), '[', '('), ']', ')')",
-                          "sender": "@coalesce(outputs('S_email')?['from']?['emailAddress']?['name'], '')",
+                          "sender": "@join(take(union(body('S_names'), body('S_names')), 3), ', ')",
                           "received": "@outputs('S_email')?['receivedDateTime']",
                           "link": "@coalesce(outputs('S_email')?['webLink'], '')",
                           "folderId": "@outputs('S_Suggestion')?['folderId']",
@@ -1824,7 +2033,7 @@
                   },
                   "inputs": {
                     "from": "@body('Numbered')",
-                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
+                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
                   }
                 },
                 "Order_list": {
@@ -1836,12 +2045,12 @@
                   },
                   "inputs": {
                     "from": "@body('Numbered')",
-                    "select": "@string(item()?['idx'])"
+                    "select": "@item()?['positions']"
                   }
                 },
                 "Suggest_message": {
                   "type": "Compose",
-                  "inputs": "@concat(if(equals(outputs('Mode'), 'file'), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '---', decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), '## 📁 Ready to file: ', string(length(body('Numbered'))), ' emails', decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(length(body('Pool'))), if(outputs('Read_capped'), '+', ''), if(equals(outputs('Mode'), 'file'), ' more read emails are', ' read emails in your Inbox are'), ' ready to file (flagged ones are left out). Showing the oldest ', string(length(body('Numbered'))), '.*', decodeUriComponent('%0A'), decodeUriComponent('%0A'), if(greater(length(body('Sug_replied')), 0), concat('### ✅ Replied, forwarded or completed', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(body('Lines'), length(body('Sug_replied'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(length(body('Sug_read')), 0), concat('### 📖 Read, no reply', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(skip(body('Lines'), length(body('Sug_replied'))), length(body('Sug_read'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(length(body('Not_sure')), 0), concat('### ❓ Not sure', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(skip(body('Lines'), add(length(body('Sug_replied')), length(body('Sug_read')))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(add(length(body('Sug_replied')), length(body('Sug_read'))), 0), concat('Reply **file all** to file ', if(equals(add(length(body('Sug_replied')), length(body('Sug_read'))), 1), '1', concat('1–', string(add(length(body('Sug_replied')), length(body('Sug_read')))))), if(and(greater(length(body('Sug_replied')), 0), greater(length(body('Sug_read')), 0)), concat(', or **file replied only** for ', if(equals(length(body('Sug_replied')), 1), '1', concat('1–', string(length(body('Sug_replied')))))), ''), '. Or adjust: **file all except 1** · **', string(length(body('Numbered'))), ' goes to [folder name]** · **skip 2**. Nothing moves until you say so.'), 'None of these has a suggested folder. Tell me where any of them go, for example **1 goes to [folder name]**. Nothing moves until you say so.'), if(greater(outputs('Remaining'), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), string(outputs('Remaining')), ' more are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
+                  "inputs": "@concat(if(equals(outputs('Mode'), 'file'), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), '---', decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), '## 📁 Ready to file: ', string(length(outputs('Batch'))), ' emails', if(less(length(body('Numbered')), length(outputs('Batch'))), concat(' in ', string(length(body('Numbered'))), ' conversations'), ''), decodeUriComponent('%0A'), decodeUriComponent('%0A'), '*', string(length(body('Pool'))), if(outputs('Read_capped'), '+', ''), if(equals(outputs('Mode'), 'file'), ' older read emails are', ' read emails in your Inbox are'), ' ready to file (flagged ones are left out). Showing the newest ', string(length(outputs('Batch'))), '; filing a line files the whole conversation.*', decodeUriComponent('%0A'), decodeUriComponent('%0A'), if(greater(length(body('Sug_replied')), 0), concat('### ✅ Replied, forwarded or completed', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(body('Lines'), length(body('Sug_replied'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(length(body('Sug_read')), 0), concat('### 📖 Read, no reply', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(take(skip(body('Lines'), length(body('Sug_replied'))), length(body('Sug_read'))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(length(body('Not_sure')), 0), concat('### ❓ Not sure', decodeUriComponent('%0A'), decodeUriComponent('%0A'), join(skip(body('Lines'), add(length(body('Sug_replied')), length(body('Sug_read')))), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'))), decodeUriComponent('%0A'), decodeUriComponent('%0A')), ''), if(greater(add(length(body('Sug_replied')), length(body('Sug_read'))), 0), concat('Reply **file all** to file ', if(equals(add(length(body('Sug_replied')), length(body('Sug_read'))), 1), '1', concat('1–', string(add(length(body('Sug_replied')), length(body('Sug_read')))))), if(and(greater(length(body('Sug_replied')), 0), greater(length(body('Sug_read')), 0)), concat(', or **file replied only** for ', if(equals(length(body('Sug_replied')), 1), '1', concat('1–', string(length(body('Sug_replied')))))), ''), '. Or adjust: **file all except 1** · **', string(length(body('Numbered'))), ' goes to [folder name]** · **skip 2**. Nothing moves until you say so.'), 'None of these has a suggested folder. Tell me where any of them go, for example **1 goes to [folder name]**. Nothing moves until you say so.'), if(greater(outputs('Remaining'), 0), concat(decodeUriComponent('%0A'), decodeUriComponent('%0A'), string(outputs('Remaining')), ' older ones are ready after these. When you file, I''ll show the next ones (or say **next** to skip ahead).'), ''))",
                   "runAfter": {
                     "Lines": [
                       "Succeeded"
@@ -1872,7 +2081,7 @@
                   },
                   "inputs": {
                     "name": "KeyOut",
-                    "value": "@concat(outputs('Batch_from'), '|', outputs('Next_after'), '|', string(length(body('Sug_replied'))), ',', string(length(body('Sug_read'))), '|', join(body('Order_list'), ','), '|')"
+                    "value": "@concat(outputs('Batch_from'), '|', outputs('Next_before'), '|', string(length(body('Sug_replied'))), ',', string(length(body('Sug_read'))), '|', join(body('Order_list'), ','), '|')"
                   }
                 }
               },
@@ -1938,7 +2147,8 @@
           "type": "AppendToStringVariable",
           "runAfter": {
             "Show_list": [
-              "Succeeded"
+              "Succeeded",
+              "Failed"
             ]
           },
           "inputs": {
