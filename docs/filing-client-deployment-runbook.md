@@ -79,7 +79,7 @@ They open Filing Assistant in Copilot and say **Help me file**. The first time, 
 ## What it can and can't do (for your security review)
 - **Each person's own mailbox only**, through their own Outlook connection. There's no app registration, service account or tenant-wide permission.
 - **It only moves email from the Inbox to the user's own folders, and only after the user names what to file in the chat.** It can't delete, send, reply, flag or categorize. It never creates, renames or deletes folders.
-- **It reads** subjects, senders, dates and folder names. It never reads email bodies or attachments.
+- **It reads** subjects, senders, dates, folder names and Outlook's short **preview** of each email (the first ~255 characters Outlook already shows in the message list; the list displays up to 140 of them). It never reads full email bodies or attachments.
 - **The suggestions, the list and the moves are done by the flow's fixed logic**, not by the AI. The AI only passes the user's choices to the flow. An email's content can't instruct it to do anything.
 - **Web search is off.**
 - **The managed package uninstalls cleanly:** **Solutions → Fortify Filing Assistant → Delete**.

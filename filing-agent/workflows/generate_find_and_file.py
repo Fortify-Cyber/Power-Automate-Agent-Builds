@@ -39,13 +39,14 @@ import pathlib
 HERE = pathlib.Path(__file__).resolve().parent
 CONN = "shared_office365"
 CONN_REF = "fc_FilingAssistant.shared_office365.shared-office365-0c11ea16-31cf-4d6b-8706-aa7889bf58e2"
-BATCH = 30              # emails per batch (shown grouped by conversation, so usually fewer lines)
+BATCH = 20              # emails per batch (shown grouped by conversation, so usually fewer lines)
+PREVIEW = 140           # characters of the newest email's opening text shown under each line
 SUGGEST_PARALLEL = 10   # conversations matched at once when listing
 FILE_PARALLEL = 5       # conversations matched and moved at once when filing
 FAR_FUTURE = "2999-12-31T00:00:00Z"
 TOP = 1000              # Graph's maximum page size for messages, per query
 NL = "decodeUriComponent('%0A')"
-SELECT = "id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead"
+SELECT = "id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview"
 INBOX = "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
 REPLIED = "singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq {v})"
 
@@ -340,6 +341,7 @@ def definition():
             "sender": "@join(take(union(body('S_names'), body('S_names')), 3), ', ')",
             "received": "@outputs('S_email')?['receivedDateTime']",
             "link": "@coalesce(outputs('S_email')?['webLink'], '')",
+            "preview": f"@if(greater(length(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' '))), {PREVIEW}), concat(trim(substring(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), 0, {PREVIEW})), '…'), trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')))",
             "folderId": "@outputs('S_Suggestion')?['folderId']",
             "path": "@outputs('S_Suggestion')?['path']",
             "reason": "@outputs('S_Suggestion')?['reason']",
@@ -367,6 +369,7 @@ def definition():
                   "item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), "
                   "if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), "
                   "if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), "
+                  f"if(empty(item()?['preview']), '', concat('  ', {NL}, '“', item()?['preview'], '”')), "
                   f"if(empty(item()?['folderId']), '', concat('  ', {NL}, '→ **', item()?['path'], '** · *', "
                   "item()?['reason'], '*')))"}}
     S["Order_list"] = {"type": "Select", "runAfter": ok("Numbered"), "inputs": {

@@ -218,7 +218,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 102)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 102)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -241,7 +241,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 103)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 103)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -264,7 +264,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 104)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 104)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -287,7 +287,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=flag/flagStatus eq 'complete'&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=flag/flagStatus eq 'complete'&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -310,7 +310,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime lt ', outputs('Before'), ' and isRead eq true&$orderby=receivedDateTime desc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead')",
+              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime lt ', outputs('Before'), ' and isRead eq true&$orderby=receivedDateTime desc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview')",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -446,7 +446,7 @@
         },
         "Batch": {
           "type": "Compose",
-          "inputs": "@take(reverse(sort(body('Pool'), 'receivedDateTime')), 30)",
+          "inputs": "@take(reverse(sort(body('Pool'), 'receivedDateTime')), 20)",
           "runAfter": {
             "Pool": [
               "Succeeded"
@@ -1985,6 +1985,7 @@
                           "sender": "@join(take(union(body('S_names'), body('S_names')), 3), ', ')",
                           "received": "@outputs('S_email')?['receivedDateTime']",
                           "link": "@coalesce(outputs('S_email')?['webLink'], '')",
+                          "preview": "@if(greater(length(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' '))), 140), concat(trim(substring(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), 0, 140)), '…'), trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')))",
                           "folderId": "@outputs('S_Suggestion')?['folderId']",
                           "path": "@outputs('S_Suggestion')?['path']",
                           "reason": "@outputs('S_Suggestion')?['reason']",
@@ -2069,7 +2070,7 @@
                   },
                   "inputs": {
                     "from": "@body('Numbered')",
-                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
+                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['preview']), '', concat('  ', decodeUriComponent('%0A'), '“', item()?['preview'], '”')), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
                   }
                 },
                 "Order_list": {
