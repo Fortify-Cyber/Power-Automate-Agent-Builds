@@ -1,4 +1,4 @@
-# Filing Assistant: pilot guide (v1.1.0.8)
+# Filing Assistant: pilot guide (v1.1.0.9)
 
 For Fortify. **Filing Assistant** is a separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). Daily Digest is unchanged (1.0.0.8).
 
@@ -12,7 +12,7 @@ All the mechanical work runs as **code in a Power Automate cloud flow**, *Filing
    Up to 1,000 read emails are considered per run, counting back from the start of the current list. Older emails of a conversation that fall in a later list come up again there, suggested to the same folder (same thread).
 2. **Suggest a folder**, in this order:
    1. **Same thread:** another email in the conversation is already in one of the user's folders. A specific folder beats Archive; Archive counts if that's where the thread is. Inbox, Sent Items, Drafts, Deleted Items, Junk Email and Outbox never count.
-   2. **Folder name in the subject:** whole words, treating `_ - . , : / &` as spaces ("Fortify_SOW_Cassin_9.17.26" → Cassin; "Twin Bridges" isn't "Bridge"). The deepest matching folder wins; an exact tie is Not sure. Never suggests Archive, system folders, folders named only with a number (2026), or Closed/Dead folders and anything inside them.
+   2. **Folder name in the subject:** whole words, treating `_ - . , : / &` as spaces ("Fortify_SOW_Cassin_9.17.26" → Cassin; "Twin Bridges" isn't "Bridge"). The deepest matching folder wins; an exact tie is Not sure. Never suggests Archive, system folders, folders named only with a number (2026), generic names (New, Misc, Pending, Reference, …), or any folder whose name or parent has the word *closed* or *dead* ("Closed/Dead", "Deals Closed") and anything inside them.
    3. Otherwise **Not sure**.
 3. **Confirm:** "file all" (both sections), "file replied only", "file all except 2", "5 goes to Cassin", "skip 3", in any combination. The agent passes them to the flow as `all`, `replied`, `read`, `1,3,4`, `5=Cassin`, and so on.
 4. **File:** the flow moves each confirmed email (Outlook *Move email (V2)* with `Id::<folder id>`, falling back to Graph `POST /me/messages/{id}/move`), reports what moved and what didn't, and **shows the next (older) 20 in the same reply**. So 100 emails take about five replies ("file all" each time). Emails the user didn't file stay in the Inbox; **Help me file** later starts again from the newest, and they come back further down.
@@ -35,7 +35,7 @@ Undo (users drag emails back in Outlook), filing to two folders, matching on the
 ## Install and test (Fortify dev environment)
 ```bash
 python3 filing-agent/workflows/generate_find_and_file.py   # only after editing the generator
-python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_8.zip
+python3 build/build_solution.py --source filing-agent       # -> out/FortifyFilingAssistant_1_1_0_9.zip
 ```
 1. **Remove the old tools.** In Copilot Studio → Filing Assistant → **Tools**, delete *Get emails to file*, *Get my mail folders*, *Find where threads are filed* and *Move email to a folder*. An import never removes old components.
 2. **Import** the zip in make.powerapps.com → dev environment → **Solutions → Import solution**. When asked for connections, pick your Office 365 Outlook connection.
@@ -43,7 +43,7 @@ python3 build/build_solution.py --source filing-agent       # -> out/FortifyFili
    - It should be **On**. If it's off, turn it on.
    - Under **Run only users**, the Office 365 Outlook connection should say **Provided by run-only user**. If it doesn't, set it.
 4. **Add the flow as the agent's tool.** Copilot Studio → Filing Assistant → **Tools → Add a tool → Flow** → *Filing Assistant - Find and file emails*. Check the tool lists all three inputs (**Mode**, **BatchKey**, **Selections**), each **Dynamically fill with AI**. If BatchKey or Selections is missing, use **+ Add input** to add it; without them the agent can't file and just shows the list again. Under **Completion → Advanced**, make both outputs (**message**, **batchkey**) available to the agent. Then **Publish**.
-5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.8**.
+5. **Test:** refresh the tab, click **Start over**, and say **Help me file**. The reply should end with **v1.1.0.9**.
 6. **Use it in Microsoft 365 Copilot** (needed for test 6). Once per agent, in Copilot Studio: **Channels → Teams and Microsoft 365 Copilot**, tick **Make agent available in Microsoft 365 Copilot**, **Add channel**, then **Publish**. Then **Availability options**:
    - **See agent in Microsoft 365**: opens Copilot with an **Add** button, just for you. No admin approval needed.
    - **Show to my teammates and shared users**: share the agent with the second account first (**Share** at the top of the agent), then send them the link from **Copy link**.

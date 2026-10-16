@@ -218,7 +218,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 102)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 102)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -241,7 +241,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 103)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 103)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -264,7 +264,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 104)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq 104)&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -287,7 +287,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=flag/flagStatus eq 'complete'&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview",
+              "Uri": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=flag/flagStatus eq 'complete'&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,flag,isRead,bodyPreview",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -310,7 +310,7 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
-              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime lt ', outputs('Before'), ' and isRead eq true&$orderby=receivedDateTime desc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview')",
+              "Uri": "@concat('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime lt ', outputs('Before'), ' and isRead eq true&$orderby=receivedDateTime desc&$top=1000&$select=id,subject,from,receivedDateTime,conversationId,flag,isRead,bodyPreview')",
               "Method": "GET"
             },
             "authentication": "@parameters('$authentication')"
@@ -812,7 +812,13 @@
               "n2": "@toLower(coalesce(outputs('Names')?[item()?['p2']], ''))",
               "n3": "@toLower(coalesce(outputs('Names')?[item()?['p3']], ''))",
               "n4": "@toLower(coalesce(outputs('Names')?[item()?['p4']], ''))",
-              "n5": "@toLower(coalesce(outputs('Names')?[item()?['p5']], ''))"
+              "n5": "@toLower(coalesce(outputs('Names')?[item()?['p5']], ''))",
+              "nn0": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(item()?['name'], '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')",
+              "nn1": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(coalesce(outputs('Names')?[item()?['p1']], ''), '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')",
+              "nn2": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(coalesce(outputs('Names')?[item()?['p2']], ''), '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')",
+              "nn3": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(coalesce(outputs('Names')?[item()?['p3']], ''), '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')",
+              "nn4": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(coalesce(outputs('Names')?[item()?['p4']], ''), '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')",
+              "nn5": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(coalesce(outputs('Names')?[item()?['p5']], ''), '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')"
             }
           }
         },
@@ -832,8 +838,8 @@
               "depth": "@item()?['depth']",
               "archive": "@and(equals(item()?['depth'], 1), equals(toLower(item()?['name']), 'archive'))",
               "threadOk": "@and(not(contains(createArray('sent items', 'deleted items', 'junk email', 'drafts', 'outbox', 'conversation history', 'sync issues', 'rss feeds', 'rss subscriptions', 'notes', 'journal', 'calendar', 'contacts', 'tasks'), item()?['root'])), or(not(and(equals(item()?['depth'], 1), contains(createArray('inbox', 'archive', 'sent items', 'deleted items', 'junk email', 'drafts', 'outbox', 'conversation history', 'sync issues', 'rss feeds', 'rss subscriptions', 'notes', 'journal', 'calendar', 'contacts', 'tasks', 'clutter', 'scheduled', 'conflicts', 'local failures', 'server failures'), toLower(item()?['name'])))), and(equals(item()?['depth'], 1), equals(toLower(item()?['name']), 'archive'))))",
-              "nameOk": "@and(not(contains(createArray('sent items', 'deleted items', 'junk email', 'drafts', 'outbox', 'conversation history', 'sync issues', 'rss feeds', 'rss subscriptions', 'notes', 'journal', 'calendar', 'contacts', 'tasks'), item()?['root'])), not(and(equals(item()?['depth'], 1), contains(createArray('inbox', 'archive', 'sent items', 'deleted items', 'junk email', 'drafts', 'outbox', 'conversation history', 'sync issues', 'rss feeds', 'rss subscriptions', 'notes', 'journal', 'calendar', 'contacts', 'tasks', 'clutter', 'scheduled', 'conflicts', 'local failures', 'server failures'), toLower(item()?['name'])))), not(or(contains(createArray('closed', 'dead', 'deals closed', 'closed deals'), toLower(item()?['name'])), contains(createArray('closed', 'dead', 'deals closed', 'closed deals'), item()?['n1']), contains(createArray('closed', 'dead', 'deals closed', 'closed deals'), item()?['n2']), contains(createArray('closed', 'dead', 'deals closed', 'closed deals'), item()?['n3']), contains(createArray('closed', 'dead', 'deals closed', 'closed deals'), item()?['n4']), contains(createArray('closed', 'dead', 'deals closed', 'closed deals'), item()?['n5']))), not(isInt(replace(item()?['name'], ' ', ''))))",
-              "norm": "@concat(' ', trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(toLower(coalesce(item()?['name'], '')), '_', ' '), '-', ' '), '.', ' '), ',', ' '), ':', ' '), ';', ' '), '/', ' '), '&', ' '), '(', ' '), ')', ' '), '[', ' '), ']', ' '), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), ' ')"
+              "nameOk": "@and(not(contains(createArray('sent items', 'deleted items', 'junk email', 'drafts', 'outbox', 'conversation history', 'sync issues', 'rss feeds', 'rss subscriptions', 'notes', 'journal', 'calendar', 'contacts', 'tasks'), item()?['root'])), not(and(equals(item()?['depth'], 1), contains(createArray('inbox', 'archive', 'sent items', 'deleted items', 'junk email', 'drafts', 'outbox', 'conversation history', 'sync issues', 'rss feeds', 'rss subscriptions', 'notes', 'journal', 'calendar', 'contacts', 'tasks', 'clutter', 'scheduled', 'conflicts', 'local failures', 'server failures'), toLower(item()?['name'])))), not(or(contains(item()?['nn0'], ' closed '), contains(item()?['nn0'], ' dead '), contains(item()?['nn1'], ' closed '), contains(item()?['nn1'], ' dead '), contains(item()?['nn2'], ' closed '), contains(item()?['nn2'], ' dead '), contains(item()?['nn3'], ' closed '), contains(item()?['nn3'], ' dead '), contains(item()?['nn4'], ' closed '), contains(item()?['nn4'], ' dead '), contains(item()?['nn5'], ' closed '), contains(item()?['nn5'], ' dead '))), not(isInt(replace(item()?['name'], ' ', ''))), not(or(contains(createArray('new', 'old', 'misc', 'miscellaneous', 'other', 'others', 'general', 'temp', 'personal', 'reference', 'admin', 'documents', 'docs', 'files', 'follow up', 'followup', 'to do', 'todo', 'pending', 'done', 'important', 'urgent', 'saved', 'keep', 'review', 'notes', 'mail', 'email', 'emails', 'items', 'projects', 'clients', 'current', 'current deals', 'matters', 'deals', 'active', 'open', 'complete', 'completed', 'final', 'draft', 'info', 'fyi', 'tech', 'pto', 'networking', 'operational', 'operations', 'business development', 'bd', 'marketing'), trim(item()?['nn0'])), less(length(trim(item()?['nn0'])), 3))))",
+              "norm": "@item()?['nn0']"
             }
           }
         },
@@ -1981,10 +1987,9 @@
                           "idx": "@first(body('S_items'))?['pos']",
                           "positions": "@join(body('S_positions'), '.')",
                           "count": "@length(body('S_items'))",
-                          "subject": "@replace(replace(coalesce(outputs('S_email')?['subject'], '(no subject)'), '[', '('), ']', ')')",
+                          "subject": "@replace(replace(replace(replace(coalesce(outputs('S_email')?['subject'], '(no subject)'), '[', '('), ']', ')'), '*', ''), '_', ' ')",
                           "sender": "@join(take(union(body('S_names'), body('S_names')), 3), ', ')",
                           "received": "@outputs('S_email')?['receivedDateTime']",
-                          "link": "@coalesce(outputs('S_email')?['webLink'], '')",
                           "preview": "@if(greater(length(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' '))), 140), concat(trim(substring(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), 0, 140)), '…'), trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')))",
                           "folderId": "@outputs('S_Suggestion')?['folderId']",
                           "path": "@outputs('S_Suggestion')?['path']",
@@ -2070,7 +2075,7 @@
                   },
                   "inputs": {
                     "from": "@body('Numbered')",
-                    "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['preview']), '', concat('  ', decodeUriComponent('%0A'), '“', item()?['preview'], '”')), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
+                    "select": "@concat('**', string(item()?['n']), '. ', item()?['subject'], '** · ', item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), if(empty(item()?['preview']), '', concat('  ', decodeUriComponent('%0A'), '“', item()?['preview'], '”')), if(empty(item()?['folderId']), '', concat('  ', decodeUriComponent('%0A'), '→ **', item()?['path'], '** · *', item()?['reason'], '*')))"
                   }
                 },
                 "Order_list": {

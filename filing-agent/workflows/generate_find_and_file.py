@@ -46,7 +46,7 @@ FILE_PARALLEL = 5       # conversations matched and moved at once when filing
 FAR_FUTURE = "2999-12-31T00:00:00Z"
 TOP = 1000              # Graph's maximum page size for messages, per query
 NL = "decodeUriComponent('%0A')"
-SELECT = "id,subject,from,receivedDateTime,conversationId,webLink,flag,isRead,bodyPreview"
+SELECT = "id,subject,from,receivedDateTime,conversationId,flag,isRead,bodyPreview"
 INBOX = "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
 REPLIED = "singleValueExtendedProperties/any(ep: ep/id eq 'Integer 0x1081' and cast(ep/value, Edm.Int32) eq {v})"
 
@@ -57,7 +57,16 @@ SYSTEM = ["inbox", "archive", "sent items", "deleted items", "junk email", "draf
 BLOCKED_ROOTS = ["sent items", "deleted items", "junk email", "drafts", "outbox", "conversation history",
                  "sync issues", "rss feeds", "rss subscriptions", "notes", "journal", "calendar",
                  "contacts", "tasks"]
-CLOSED = ["closed", "dead", "deals closed", "closed deals"]
+# A folder is closed when its name, or any folder above it, has the word "closed" or "dead" ("Closed/Dead",
+# "Deals Closed"). Closed folders and everything inside them are never suggested by subject.
+CLOSED_WORDS = ["closed", "dead"]
+# Folder names too generic to match on a subject word ("New" would match "New filing ...").
+GENERIC = ["new", "old", "misc", "miscellaneous", "other", "others", "general", "temp", "personal", "reference",
+           "admin", "documents", "docs", "files", "follow up", "followup", "to do", "todo", "pending", "done",
+           "important", "urgent", "saved", "keep", "review", "notes", "mail", "email", "emails", "items",
+           "projects", "clients", "current", "current deals", "matters", "deals", "active", "open", "complete",
+           "completed", "final", "draft", "info", "fyi", "tech", "pto", "networking", "operational", "operations",
+           "business development", "bd", "marketing"]
 
 
 def arr(values):
@@ -284,21 +293,25 @@ def definition():
             "root": "@toLower(coalesce(" + ", ".join(raw[j] for j in range(5, 0, -1)) + ", item()?['name'], ''))"}
     for j in range(1, 6):
         info[f"n{j}"] = f"@toLower({N[j]})"
+    # Normalized (padded) names of the folder and its ancestors, for whole-word checks.
+    info["nn0"] = "@" + norm("item()?['name']")
+    for j in range(1, 6):
+        info[f"nn{j}"] = "@" + norm(N[j])
     A["Folder_info"] = {"type": "Select", "runAfter": ok("Chain_5"),
                         "inputs": {"from": "@body('Chain_5')", "select": info}}
     blocked = f"contains({arr(BLOCKED_ROOTS)}, item()?['root'])"
     system = f"and(equals(item()?['depth'], 1), contains({arr(SYSTEM)}, toLower(item()?['name'])))"
     archive = "and(equals(item()?['depth'], 1), equals(toLower(item()?['name']), 'archive'))"
-    closed = "or(" + ", ".join([f"contains({arr(CLOSED)}, toLower(item()?['name']))"] +
-                               [f"contains({arr(CLOSED)}, item()?['n{j}'])" for j in range(1, 6)]) + ")"
+    closed = "or(" + ", ".join(f"contains(item()?['nn{j}'], ' {w} ')" for j in range(0, 6) for w in CLOSED_WORDS) + ")"
+    generic = f"or(contains({arr(GENERIC)}, trim(item()?['nn0'])), less(length(trim(item()?['nn0'])), 3))"
     numeric = "isInt(replace(item()?['name'], ' ', ''))"
     A["Folders_ready"] = {"type": "Select", "runAfter": ok("Folder_info"), "inputs": {
         "from": "@body('Folder_info')",
         "select": {"id": "@item()?['id']", "name": "@item()?['name']", "path": "@item()?['path']",
                    "depth": "@item()?['depth']", "archive": f"@{archive}",
                    "threadOk": f"@and(not({blocked}), or(not({system}), {archive}))",
-                   "nameOk": f"@and(not({blocked}), not({system}), not({closed}), not({numeric}))",
-                   "norm": "@" + norm("item()?['name']")}}}
+                   "nameOk": f"@and(not({blocked}), not({system}), not({closed}), not({numeric}), not({generic}))",
+                   "norm": "@item()?['nn0']"}}}
     A["Path_pairs"] = {"type": "Select", "runAfter": ok("Folders_ready"), "inputs": {
         "from": "@body('Folders_ready')",
         "select": f"@concat('\"', item()?['id'], '\":\"', {json_str(chr(39)*0 + 'item()?[' + chr(39) + 'path' + chr(39) + ']')}, '\"')"}}
@@ -337,10 +350,9 @@ def definition():
             "idx": "@first(body('S_items'))?['pos']",
             "positions": "@join(body('S_positions'), '.')",
             "count": "@length(body('S_items'))",
-            "subject": "@replace(replace(coalesce(outputs('S_email')?['subject'], '(no subject)'), '[', '('), ']', ')')",
+            "subject": "@replace(replace(replace(replace(coalesce(outputs('S_email')?['subject'], '(no subject)'), '[', '('), ']', ')'), '*', ''), '_', ' ')",
             "sender": "@join(take(union(body('S_names'), body('S_names')), 3), ', ')",
             "received": "@outputs('S_email')?['receivedDateTime']",
-            "link": "@coalesce(outputs('S_email')?['webLink'], '')",
             "preview": f"@if(greater(length(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' '))), {PREVIEW}), concat(trim(substring(trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')), 0, {PREVIEW})), '…'), trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('S_email')?['bodyPreview'], ''), decodeUriComponent('%0D'), ' '), decodeUriComponent('%0A'), ' '), decodeUriComponent('%09'), ' '), '*', ''), '_', ' '), '#', ''), '[', '('), ']', ')'), '`', ''), '<', ''), '>', ''), '|', ' '), '  ', ' '), '  ', ' '), '  ', ' ')))",
             "folderId": "@outputs('S_Suggestion')?['folderId']",
             "path": "@outputs('S_Suggestion')?['path']",
@@ -365,7 +377,7 @@ def definition():
         "select": "@addProperty(outputs('Ordered')[item()], 'n', add(item(), 1))"}}
     S["Lines"] = {"type": "Select", "runAfter": ok("Numbered"), "inputs": {
         "from": "@body('Numbered')",
-        "select": "@concat('**', string(item()?['n']), '.** [', item()?['subject'], '](', item()?['link'], ') · ', "
+        "select": "@concat('**', string(item()?['n']), '. ', item()?['subject'], '** · ', "
                   "item()?['sender'], ' · ', formatDateTime(item()?['received'], 'MMM d'), "
                   "if(greater(item()?['count'], 1), concat(' · *', string(item()?['count']), ' emails*'), ''), "
                   "if(and(empty(item()?['folderId']), not(equals(item()?['kind'], 'replied'))), ' · *read, no reply*', ''), "
