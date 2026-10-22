@@ -4,7 +4,8 @@
 Sources (all in copilot-tips/):
   solution.yml         solution, flow, connection references, environment variables
   email-template.html  the email; compiled into the flow's "Email HTML" step
-  tips/tips.csv        the tip library (loaded into SharePoint by scripts/New-TipsList.ps1)
+  tips/*.csv           tip libraries (tips.csv general, legal-tips.csv for law firms), loaded
+                       into SharePoint by scripts/New-TipsList.ps1
 
     python3 build/build_tips_solution.py                 # -> out/FridayCopilotTips_<version>.zip
     python3 build/build_tips_solution.py --check         # also round-trip through `pac solution unpack`
@@ -49,11 +50,17 @@ def load_yaml(path):
         return yaml.safe_load(f)
 
 
-def load_tips():
-    with open(ROOT / "tips" / "tips.csv", encoding="utf-8-sig", newline="") as f:
+def libraries():
+    return sorted((ROOT / "tips").glob("*.csv"))
+
+
+def load_tips(path=None):
+    path = path or ROOT / "tips" / "tips.csv"
+    name = f"tips/{path.name}"
+    with open(path, encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames != TIP_COLUMNS:
-            sys.exit(f"tips/tips.csv: columns must be exactly {','.join(TIP_COLUMNS)}")
+            sys.exit(f"{name}: columns must be exactly {','.join(TIP_COLUMNS)}")
         tips = list(reader)
     problems = []
     for n, t in enumerate(tips, 2):
@@ -70,7 +77,7 @@ def load_tips():
         if len(t["Subject"]) > 90:
             problems.append(f"line {n}: Subject is over 90 characters")
     if problems:
-        sys.exit("tips/tips.csv:\n  " + "\n  ".join(problems))
+        sys.exit(f"{name}:\n  " + "\n  ".join(problems))
     return tips
 
 
@@ -742,7 +749,8 @@ def env_var_xml(e):
 def build(version=None):
     cfg = load_yaml(ROOT / "solution.yml")
     version = version or cfg["version"]
-    load_tips()  # validate the library on every build
+    for lib in libraries():  # validate every library on every build
+        load_tips(lib)
     parts = template_parts(read_template())
     flow = build_flow(cfg, parts)
     n_actions = validate_flow(flow)
@@ -772,13 +780,13 @@ def build(version=None):
     return zip_path
 
 
-def previews(org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Tips Team"):
+def previews(lib, org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Tips Team"):
     """Render every tip as it will look in the inbox, for review before loading the list."""
     parts = template_parts(read_template())
-    folder = OUT / "previews"
+    folder = OUT / "previews" / lib.stem
     shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True)
-    tips = load_tips()
+    tips = load_tips(lib)
     links, bodies = [], []
     for n, t in enumerate(tips, 1):
         e = lambda s: esc_html(s.strip())
@@ -806,7 +814,7 @@ def previews(org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Tips Te
 def verify_links():
     """Every LearnUrl must load; every VideoUrl must be a live YouTube video."""
     bad = 0
-    for n, t in enumerate(load_tips(), 1):
+    for n, t in ((f"{lib.stem} {n:2d}", t) for lib in libraries() for n, t in enumerate(load_tips(lib), 1)):
         checks = [("LearnUrl", t["LearnUrl"])]
         if t["VideoUrl"]:
             checks.append(("VideoUrl", "https://www.youtube.com/oembed?format=json&url="
@@ -821,7 +829,7 @@ def verify_links():
                 status, extra = getattr(ex, "code", "ERR"), str(ex)
             ok = status == 200
             bad += not ok
-            print(f"{'OK ' if ok else 'BAD'} tip {n:2d} {col}: {status} {extra}")
+            print(f"{'OK ' if ok else 'BAD'} {n} {col}: {status} {extra}")
     if bad:
         sys.exit(f"{bad} link(s) failed")
 
@@ -850,6 +858,7 @@ if __name__ == "__main__":
     if args.check:
         check(z)
     if args.previews:
-        previews()
+        for lib in libraries():
+            previews(lib, *(("Cassin & Cassin LLP", "#1b2a4a", "The Fortify Cyber Team") if "legal" in lib.stem else ()))
     if args.verify_links:
         verify_links()

@@ -15,6 +15,10 @@
     ./scripts/New-TipsList.ps1 -SiteUrl https://fortifycyber.sharepoint.com/sites/IT -FirstFriday 2026-10-02
 
 .EXAMPLE
+    # Swap the queue for another library (earlier Queued tips become Skipped, nothing is deleted)
+    ./scripts/New-TipsList.ps1 -SiteUrl https://fortifycyber.sharepoint.com/sites/AI -TipsCsv ./tips/legal-tips.csv -ReplaceQueued
+
+.EXAMPLE
     # Cassin: different tenant, same library
     ./scripts/New-TipsList.ps1 -SiteUrl https://cassin.sharepoint.com/sites/AI -FirstFriday 2026-10-16 -TenantId <cassin-tenant-id>
 #>
@@ -27,6 +31,8 @@ param(
     [string]$TipsCsv = (Join-Path $PSScriptRoot "../tips/tips.csv"),
     [string]$TenantId,
     [switch]$SkipImport,
+    # Set every tip that is still Queued to Skipped before adding the new ones (swap the library)
+    [switch]$ReplaceQueued,
     # Sign in with a code at https://microsoft.com/devicelogin (for remote or headless shells)
     [switch]$UseDeviceCode
 )
@@ -125,12 +131,21 @@ if (-not $SkipImport) {
     if ($FirstFriday.DayOfWeek -ne "Friday") { throw "-FirstFriday $($FirstFriday.ToString('yyyy-MM-dd')) is a $($FirstFriday.DayOfWeek)" }
 
     $titles = @()
-    $page = "/sites/$($site.id)/lists/$($list.id)/items?`$expand=fields(`$select=Title,WeekDate)&`$top=500"
+    $page = "/sites/$($site.id)/lists/$($list.id)/items?`$expand=fields(`$select=Title,WeekDate,Status)&`$top=500"
     $latest = $null
+    $replaced = 0
     while ($page) {
         $resp = Invoke-Graph GET $page
         foreach ($i in $resp.value) {
             $titles += $i.fields.Title
+            if ($i.fields.Status -ne "Queued") { continue }
+            if ($ReplaceQueued) {
+                Invoke-Graph PATCH "/sites/$($site.id)/lists/$($list.id)/items/$($i.id)/fields" @{ Status = "Skipped" } | Out-Null
+                Write-Host "  skipped (replaced): $($i.fields.Title)"
+                $replaced++
+                continue
+            }
+            # Only tips still waiting to go out push the schedule back.
             if ($i.fields.WeekDate -and ([datetime]$i.fields.WeekDate -gt $latest)) { $latest = [datetime]$i.fields.WeekDate }
         }
         $page = if ($resp.'@odata.nextLink') { $resp.'@odata.nextLink' -replace '^https://graph.microsoft.com/v1.0', '' } else { $null }
@@ -161,6 +176,7 @@ if (-not $SkipImport) {
         $next = $next.AddDays(7)
         $added++
     }
+    if ($ReplaceQueued) { Write-Host "Set $replaced earlier Queued tip(s) to Skipped (set them back to Queued to reuse them)." }
     Write-Host "Added $added tip(s)."
 }
 
