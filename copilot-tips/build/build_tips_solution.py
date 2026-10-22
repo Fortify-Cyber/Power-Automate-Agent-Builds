@@ -859,6 +859,6 @@ if __name__ == "__main__":
         check(z)
     if args.previews:
         for lib in libraries():
-            previews(lib, *(("Cassin & Cassin LLP", "#1b2a4a", "The Fortify Cyber Team") if "legal" in lib.stem else ()))
+            previews(lib, *(("Your Law Firm", "#1b2a4a", "The Fortify Cyber Team") if "legal" in lib.stem else ()))
     if args.verify_links:
         verify_links()
