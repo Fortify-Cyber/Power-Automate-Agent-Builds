@@ -68,6 +68,8 @@ Two parts: **Fortify** exports a managed package from the dev environment (part 
 ### First use, for each user
 They open Filing Assistant in Copilot and say **Help me file**. The first time, they're asked to connect Outlook; they click **Allow**. Send them the short "how it works" summary.
 
+**Recommended at Cassin: connect once from the phone.** In the pilot, clicking **Allow** on a computer (Teams or Copilot in the browser) sometimes did nothing, while the same step worked first time in the **Microsoft 365 Copilot app on a phone**. Sign-in logs showed no blocked sign-ins for the Power Platform services, so it isn't a Conditional Access block. Until it's resolved, ask each user to do their first **Help me file** and **Allow** in the Copilot app on their phone; after that it works on their computer too.
+
 ---
 
 ## Upgrading to a new version
