@@ -13,6 +13,8 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 
 **Filing as a skill** (experiment, dev only): `filing-skill/outlook-filing/SKILL.md` is the filing rules as a Microsoft 365 Copilot / Agent Builder skill, and `filing-skill-test/` is a comparison agent that follows the same rules (from a SharePoint document) with Outlook tools. See [docs/filing-skill-test.md](docs/filing-skill-test.md).
 
+**Daily Digest as an organization prompt** (trial): `prompts/daily-digest.md` is a plain Copilot Chat version to publish from the Microsoft 365 admin center (Copilot → Prompts), with steps and a comparison checklist.
+
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
 
 ## Repository layout
