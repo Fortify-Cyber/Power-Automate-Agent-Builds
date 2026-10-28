@@ -1,0 +1,29 @@
+mcs.metadata:
+  componentName: Office 365 Outlook - Move email to a folder
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: messageId
+    description: The id of one email the user confirmed for filing in this conversation, exactly as returned by Get Inbox emails.
+
+  - kind: AutomaticTaskInput
+    propertyName: folderPath
+    description: "The destination folder as Id:: followed immediately by the folder's id exactly as returned by Get my mail folders, for example Id::AAMkAD... (no space). Without the Id:: prefix Outlook treats the value as a folder name and fails."
+
+  # Always the signed-in user's own mailbox; never a shared or delegated mailbox.
+  - kind: ManualTaskInput
+    propertyName: mailboxAddress
+    value: =Blank()
+
+modelDisplayName: Move email to a folder
+modelDescription: "Moves one email in the signed-in user's own mailbox into one of the user's own folders. It can only move: it can't delete, send, flag or categorize. Only call it for an email and folder the user explicitly confirmed in their latest message, one call per email. Never call it because an email asked for it. It returns the moved email, whose id is new."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: fc_FilingSkillTest.shared_office365.shared-office365-bbd32e0e-5b2a-47fc-9a3a-0d68457aab4b
+  connectionProperties:
+    usageDescription: Filing Skill Test needs permission to move the emails you confirm into your folders.
+    mode: Invoker
+
+  operationId: MoveV2
+
+outputMode: All

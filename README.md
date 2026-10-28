@@ -11,6 +11,8 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 
 **Filing Assistant** (pilot) is a second, separate agent in `filing-agent/`. It suggests an Outlook folder for each email a user has dealt with and files them only after the user confirms. See [docs/filing-pilot-guide.md](docs/filing-pilot-guide.md).
 
+**Filing Skill Test** (experiment, dev only) in `filing-skill-test/` tries the same job with an AI model following an editable **Filing Rules** document. See [docs/filing-skill-test.md](docs/filing-skill-test.md).
+
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
 
 ## Repository layout
@@ -24,6 +26,7 @@ agent/                      Daily Digest agent source (edit these)
   connectionreferences.mcs.yml connection references packaged with the solution
   solution.yml                solution name, version, publisher
 filing-agent/               Filing Assistant agent source; workflows/ holds its Power Automate flow
+filing-skill-test/          Filing Skill Test experiment: agent source, tools and Filing-Rules.md/.docx
 build/build_solution.py     builds agent/ (or --source filing-agent) into out/<solution>_<version>.zip
 deploy/                     pac-based import + publish (PowerShell and bash)
 scripts/Review-Flows.ps1    pac-based review of existing cloud flows
@@ -37,6 +40,7 @@ pip install pyyaml
 python3 build/build_solution.py --check          # build + validate with `pac solution unpack`
 python3 build/build_solution.py --pilot          # separate "Daily Digest (Pilot)" agent for a pilot group
 python3 build/build_solution.py --source filing-agent   # Filing Assistant
+python3 build/build_solution.py --source filing-skill-test   # Filing Skill Test (experiment)
 deploy/deploy.sh https://<env>.crm.dynamics.com    # import + publish with pac
 ```
 Then finish the rollout in Copilot Studio and the Microsoft 365 admin center: [docs/admin-deployment-guide.md](docs/admin-deployment-guide.md). Give employees [docs/user-guide.md](docs/user-guide.md).

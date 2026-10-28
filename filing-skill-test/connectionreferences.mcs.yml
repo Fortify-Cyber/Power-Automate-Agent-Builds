@@ -1,0 +1,5 @@
+# Every tool runs in Invoker mode (end-user credentials): each person only reads and files their own mail.
+connectionReferences:
+  - connectionReferenceLogicalName: fc_FilingSkillTest.shared_office365.shared-office365-bbd32e0e-5b2a-47fc-9a3a-0d68457aab4b
+    displayName: Filing Skill Test - Office 365 Outlook
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365

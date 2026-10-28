@@ -1,0 +1,11 @@
+# EXPERIMENT (dev only): model-driven filing that follows an editable rules document.
+# Built with: python3 build/build_solution.py --source filing-skill-test
+uniqueName: FortifyFilingSkillTest
+displayName: Fortify Filing Skill Test
+description: Experiment. A Copilot agent that files emails by following an editable Filing Rules document, to compare against the flow-based Filing Assistant. Dev environment only.
+version: 0.1.0.0
+publisher:
+  uniqueName: FortifyCyber
+  displayName: Fortify Cyber
+  prefix: fc
+  optionValuePrefix: 83972

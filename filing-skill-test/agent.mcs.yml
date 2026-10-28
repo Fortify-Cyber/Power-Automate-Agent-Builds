@@ -1,0 +1,18 @@
+mcs.metadata:
+  componentName: Filing Skill Test
+  description: Experiment. Files emails by following the Filing Rules document. Dev environment only.
+kind: GptComponentMetadata
+displayName: Filing Skill Test
+# Instructions are maintained in filing-skill-test/instructions.md and injected at build time.
+instructions: ""
+conversationStarters:
+  - title: Help me file
+    text: Help me file
+
+gptCapabilities:
+  webBrowsing: false
+
+aISettings:
+  model:
+    # Change the model in Copilot Studio for each test run; this is only the starting point.
+    modelNameHint: GPT5Chat
