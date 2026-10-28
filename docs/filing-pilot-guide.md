@@ -3,7 +3,7 @@
 For Fortify. **Filing Assistant** is a separate Copilot Studio agent that suggests an Outlook folder for each email the user has already dealt with, and files them only after the user confirms. It implements the request in [handoff/email-filing-agent-brief.md](handoff/email-filing-agent-brief.md). Daily Digest is unchanged (1.0.0.8).
 
 ## How it works (since 1.1.0.0)
-All the mechanical work runs as **code in a Power Automate cloud flow**, *Filing Assistant - Find and file emails*. The same mailbox gives the same list every time. The agent (GPT-5.5 Chat) only turns the user's words into the flow's inputs and shows the flow's reply.
+All the mechanical work runs as **code in a Power Automate cloud flow**, *Filing Assistant - Find and file emails*. The same mailbox gives the same list every time. The agent (GPT-5 Chat) only turns the user's words into the flow's inputs and shows the flow's reply.
 
 1. **Find emails to file:** every **read** Inbox email that isn't **still flagged** (flags mean "still working on it"). **Newest first**, 20 emails at a time, shown **one line per conversation** ("· 4 emails") with the opening of the newest email (Outlook's preview, up to 140 characters). Filing a line files every email of that conversation in the list. Each list has up to three sections:
    - **✅ Replied, forwarded or completed** (judged on the conversation's newest email in the list, so a thread with an unanswered new message goes under Read): the user replied, replied all or forwarded (Outlook's `PidTagLastVerbExecuted` marker, `0x1081` = 102/103/104, one Graph query per value), marked the flag complete, or **sent something later in the same thread** (a message in Sent Items or from their own address, after this email arrived).
@@ -27,7 +27,7 @@ All the mechanical work runs as **code in a Power Automate cloud flow**, *Filing
 | Component | What it does |
 |---|---|
 | Flow *Filing Assistant - Find and file emails* | Everything above. Inputs: Mode (`suggest`/`file`), BatchKey, Selections (`none` when not used). Outputs: `message` (Markdown shown as-is), `batchkey`. Source: `filing-agent/workflows/generate_find_and_file.py` → `FindAndFileEmails.json`. |
-| Agent *Filing Assistant* | Instructions only (`filing-agent/instructions.md`), model GPT-5.5 Chat. One tool: the flow, added in Copilot Studio (step 4 below). |
+| Agent *Filing Assistant* | Instructions only (`filing-agent/instructions.md`), model GPT-5 Chat (GPT-5.5 Chat retires 30 Oct 2026). One tool: the flow, added in Copilot Studio (step 4 below). |
 
 ### Not in this version
 Undo (users drag emails back in Outlook), filing to two folders, matching on the email body, partial folder-name matches ("Oak Ave payoff" → "Oak Ave Loan"), a "ready to file" line in the Daily Digest, and an Outlook button.

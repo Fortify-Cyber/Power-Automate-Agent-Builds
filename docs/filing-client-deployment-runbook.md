@@ -48,7 +48,7 @@ Two parts: **Fortify** exports a managed package from the dev environment (part 
 ### 4. Check the agent and test (5 min)
 1. **https://copilotstudio.microsoft.com** → same environment → **Agents → Filing Assistant**.
 2. **Tools:** the tool **Filing Assistant - Find and file emails** should list three inputs, **Mode**, **BatchKey** and **Selections**, each set to *Dynamically fill with AI*. If one is missing, add it with **+ Add input**. Under **Completion → Advanced**, both outputs, **message** and **batchkey**, should be available to the agent.
-3. **Settings → Generative AI → model:** it's set to **GPT-5.5 Chat**. If that model isn't offered in your environment, pick the closest available **GPT-5 Chat** model (not a preview or experimental one).
+3. **Settings → Generative AI → model:** it's set to **GPT-5 Chat**. Don't use preview or experimental models, and avoid *GPT Chat Latest* (it changes underneath without notice). If Copilot Studio shows a retirement warning for the selected model, ask Fortify which model to move to.
 4. **Test** pane: say **Help me file**. Approve the Outlook connection prompt. A numbered list should appear, ending with *Filing Assistant v…*.
 5. **Publish** (top right).
 
