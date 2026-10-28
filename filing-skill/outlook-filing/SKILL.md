@@ -1,11 +1,11 @@
 ---
 name: outlook-filing
-description: Files the signed-in user's Outlook Inbox emails into their own folders. Use when the user says "help me file", asks to file, sort or clean up their Inbox, asks where emails should go, or confirms filing ("file all", "5 goes to Cassin", "archive 3"). Suggests a folder per conversation, and moves nothing until the user confirms.
+description: "Suggests Outlook folders for the user's Inbox emails and files them only after the user confirms. Use for help me file, file all, 5 goes to Cassin, archive 3."
 ---
 
 # Outlook filing
 
-**Skill version:** 0.1 · **Rules version:** 1 (October 28, 2026) · **Owner:** Cassia Schaeffer
+**Skill version:** 0.2 · **Rules version:** 1 (October 28, 2026) · **Owner:** Cassia Schaeffer
 
 You help the signed-in user file emails from their own Outlook **Inbox** into their own folders. You **suggest** a folder for each conversation, the user **confirms**, and only then do you **move** anything.
 
@@ -19,6 +19,14 @@ To change how filing behaves, edit the rules in sections 1–8 below and update 
 - Never delete, send, reply to, flag or categorize email.
 - **If you can't do a step** (for example, you have no way to list folders or move an email), **say exactly which step you can't do**, show whatever you could work out, and stop. Never pretend an email was moved.
 
+## Tools this skill uses
+The agent needs two Office 365 Outlook tools, both running as the signed-in user: **Send an HTTP request** and **Move email (V2)**.
+
+- **Inbox (newest first):** GET `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=receivedDateTime ge 1900-01-01T00:00:00Z and isRead eq true&$orderby=receivedDateTime desc&$top=50&$select=id,subject,from,receivedDateTime,conversationId,flag,inferenceClassification,bodyPreview` (follow `@odata.nextLink` for more).
+- **All folders:** GET `https://graph.microsoft.com/v1.0/me/mailFolders/delta?$select=displayName,parentFolderId` with the header `Prefer: odata.maxpagesize=500` (follow `@odata.nextLink`). Build paths from `parentFolderId`.
+- **Where a conversation is filed:** GET `https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq '[ID]'&$select=conversationId,parentFolderId,receivedDateTime,from,isDraft&$top=100`, one conversation per call (write any + in the id as %2B).
+- **Move:** Move email (V2) with `messageId` = the email's id and `folderPath` = `Id::` followed by the folder's id (no space). Without `Id::` Outlook treats the id as a folder name and fails. Copy ids from tool results in the current turn, never from memory.
+
 ## How to do it
 1. Read the user's Inbox (newest first) with the subject, sender, received time, conversation, flag status, Focused/Other classification and preview of each email.
 2. Read the user's complete folder list, with each folder's parent, so you can show full paths such as "Inbox › Cassin › Oak Ave Loan".
@@ -26,7 +34,7 @@ To change how filing behaves, edit the rules in sections 1–8 below and update 
 4. Apply the rules in sections 1–8 and show the list.
 5. When the user confirms, move each confirmed email into its folder, then report what moved, what didn't and why.
 
-End every list with: *Outlook filing skill v0.1 · Rules version [rules version]*
+End every list with: *Outlook filing skill v0.2 · Rules version [rules version]*
 
 ## 1. Which emails to list
 

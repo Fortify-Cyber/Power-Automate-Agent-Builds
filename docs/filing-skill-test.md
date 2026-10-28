@@ -3,21 +3,21 @@
 **Question:** can filing work as a **skill** you call from an ordinary Microsoft 365 Copilot chat, with the behaviour written as editable rules, as well as the flow-based Filing Assistant? If so, Cassia could change behaviour by editing the rules instead of waiting for a new build.
 
 Three things are compared:
-1. **The skill** (`filing-skill/outlook-filing/SKILL.md`, zipped as `out/outlook-filing-skill_0_1.zip`): the Filing Rules plus safety rules, as an Agent Skills `SKILL.md`. It has **no tools of its own**; it relies on whatever Copilot can already do with the user's mail. This is the main test.
+1. **The skill** (`filing-skill/outlook-filing/SKILL.md`, zipped as `out/outlook-filing-skill_0_2.zip`): the Filing Rules, safety rules and the Outlook calls to make, as an Agent Skills `SKILL.md`, added to a new Copilot Studio agent of the **GitHub Copilot** type together with two Outlook tools. This is the main test.
 2. **Filing Skill Test agent**: the same rules, read from a SharePoint document, plus four Outlook tools (read Inbox, list folders, find where a conversation is filed, move email). This shows what the rules can do when the model *does* have mail tools.
 3. **Filing Assistant** (the current pilot): fixed code in a flow. The baseline.
 
 ## Part A: the skill (do this first)
-1. **Upload it.** In Microsoft 365 Copilot, open **Agent Builder** (Create agent) and add a skill by uploading `outlook-filing-skill_0_1.zip`, or by pasting the contents of `SKILL.md`. Skills are new (preview, rolling out around October 2026), so menu names may differ. If your tenant has the **skill catalog** in Copilot Studio, you can also add it there. If skills aren't available in your tenant yet, note that; it's a result.
-2. **Call it from an ordinary chat:** "Help me file". If the skill is attached to an agent, @-mention that agent.
-3. **Watch which steps it can do**, and note each one on the scorecard:
-   - Can it **list your Inbox** with previews and Focused/Other?
-   - Can it **list your folders** with full paths?
-   - Can it **see where a conversation is already filed**?
-   - Can it **move** an email when you confirm "file 1"?
-   The skill is written to say plainly which step it can't do, rather than pretend. My expectation is that it can make suggestions from mail search but can't list every folder reliably or move email, because a skill adds instructions, not tools. The test confirms or disproves that.
-4. Then run the same scorecard rows as the other two (accuracy, invented folders, consistency over 3 chats, volume).
-5. **Rule change:** edit the skill (for example "at most 10 emails", rules version 2), re-upload, and note when it takes effect.
+Skills can only be added to Copilot Studio agents built on the **GitHub Copilot** agent type (preview). Agents shown as "Powered by: **Standard**" (all existing Fortify agents) don't have a Skills section. That agent type is **billed per use**: Microsoft says using, building and testing it "might consume Copilot Credits", so watch **Power Platform admin center → Licensing → Copilot Studio** during the test.
+
+1. **Create the agent:** Copilot Studio → the arrow next to **New agent** → choose the **GitHub Copilot** agent type (preview) → name it *Filing Skill (GitHub Copilot)*. If that choice isn't offered, the preview isn't enabled in this environment; note that as a result.
+2. **Add the skill:** **Build** tab → **Skills** → **Add skill** → **Upload a skill** → `out/outlook-filing-skill_0_2.zip` (or `filing-skill/outlook-filing/SKILL.md` on its own).
+3. **Add the Outlook tools** the skill uses: **Office 365 Outlook → Send an HTTP request** and **Office 365 Outlook → Move email (V2)**, both using the end user's credentials. The skill tells the agent which Graph calls to make.
+4. **Pick the model**, save, and test in the test pane: "Help me file". Every list should end with *Outlook filing skill v0.2 · Rules version 1*.
+5. Record on the scorecard which steps it could do (list Inbox, list folders, find where a conversation is filed, move), then the same rows as the other columns (accuracy, invented folders, consistency over 3 chats, volume).
+6. **Rule change:** edit `SKILL.md` (for example "at most 10 emails", rules version 2), then **Skills → the skill → … → Replace**, and check the next chat follows it. This should take effect immediately, unlike SharePoint knowledge.
+
+**Who can see it:** a skill belongs to the agent you add it to. Nobody else sees it until you share or publish that agent, the same as any other agent. There's no organization-wide skill catalog in the product yet (Microsoft's roadmap lists one); for now you share a skill by downloading and re-uploading its file.
 
 If the skill can suggest but not move, a workable combination is the skill for suggestions plus Filing Assistant (or the test agent's move tool) for filing, which Part B shows.
 
