@@ -42,6 +42,7 @@ python3 build/build_solution.py --check          # build + validate with `pac so
 python3 build/build_solution.py --pilot          # separate "Daily Digest (Pilot)" agent for a pilot group
 python3 build/build_solution.py --source filing-agent   # Filing Assistant
 python3 build/build_solution.py --source filing-skill-test   # Filing Skill Test (experiment)
+python3 build/build_skill_plugin.py                         # outlook-filing skill as a Copilot plugin
 deploy/deploy.sh https://<env>.crm.dynamics.com    # import + publish with pac
 ```
 Then finish the rollout in Copilot Studio and the Microsoft 365 admin center: [docs/admin-deployment-guide.md](docs/admin-deployment-guide.md). Give employees [docs/user-guide.md](docs/user-guide.md).

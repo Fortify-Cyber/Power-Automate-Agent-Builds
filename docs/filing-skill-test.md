@@ -7,6 +7,21 @@ Three things are compared:
 2. **Filing Skill Test agent**: the same rules, read from a SharePoint document, plus four Outlook tools (read Inbox, list folders, find where a conversation is filed, move email). This shows what the rules can do when the model *does* have mail tools.
 3. **Filing Assistant** (the current pilot): fixed code in a flow. The baseline.
 
+## Part A0: the skill in Copilot Chat, deployed by the admin (the main path)
+Build the plugin package (skills only):
+```bash
+python3 build/build_skill_plugin.py   # -> out/fortify-email-filing-plugin_0_3_0.zip
+```
+It contains `manifest.json` (Microsoft 365 app manifest v1.28, validated against Microsoft's schema), two icons and `skills/outlook-filing/SKILL.md`.
+
+**Try it yourself first:** sideload it with the Microsoft 365 Agents Toolkit CLI (`npm install -g @microsoft/m365agentstoolkit-cli`, `atk auth login`, `atk install --file-path out/fortify-email-filing-plugin_0_3_0.zip --scope Personal`), or upload it in Copilot Chat's skills area if your tenant lets users upload skills.
+
+**Push it to everyone:** Microsoft 365 admin center → **Agents → Tools → Upload** → choose the zip → deploy/install it for a group (the pilot group first), then **Everyone**. Admin-deployed plugins appear in both Copilot Chat and Copilot Cowork. (Microsoft's build guide also describes **Manage apps → Upload custom app**, which lists it under *Discover* for people to add themselves rather than installing it for them.)
+
+**How people use it:** in the Copilot prompt box, Copilot uses the skill automatically when someone says "help me file", or they pick **outlook-filing** themselves from **Agents and Skills** (in Cowork, type **/** or use **+**). Skills in Copilot Chat are rolling out worldwide from October to mid-November 2026.
+
+**What to check:** the same steps as Part A (can it list the Inbox, list folders, see where a conversation is filed, move an email?). In Copilot Chat the skill has only Copilot's built-in mail access, so it may suggest well but be unable to move email; the skill is told to say so rather than pretend.
+
 ## Part A: the skill (do this first)
 Skills can only be added to Copilot Studio agents built on the **GitHub Copilot** agent type (preview). Agents shown as "Powered by: **Standard**" (all existing Fortify agents) don't have a Skills section. That agent type is **billed per use**: Microsoft says using, building and testing it "might consume Copilot Credits", so watch **Power Platform admin center → Licensing → Copilot Studio** during the test.
 

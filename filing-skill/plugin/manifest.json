@@ -1,0 +1,28 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.28/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.28",
+  "version": "0.3.0",
+  "id": "4f35a678-af08-5436-8a11-755d76435961",
+  "developer": {
+    "name": "Fortify Cyber",
+    "websiteUrl": "https://fortifycyber.com",
+    "privacyUrl": "https://fortifycyber.com/privacy",
+    "termsOfUseUrl": "https://fortifycyber.com/terms"
+  },
+  "name": {
+    "short": "Email Filing",
+    "full": "Email Filing skills by Fortify Cyber"
+  },
+  "description": {
+    "short": "Suggests Outlook folders for Inbox emails; files only after you confirm",
+    "full": "Adds the outlook-filing skill to Microsoft 365 Copilot. Say \"help me file\" (or pick the skill) and Copilot lists your Inbox conversations with a suggested folder for each, following your firm's filing rules. Nothing moves until you confirm."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0F6CBD",
+  "agentSkills": [
+    { "folder": "./skills/outlook-filing" }
+  ]
+}
