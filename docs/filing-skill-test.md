@@ -1,6 +1,29 @@
-# Filing Skill Test: experiment plan (dev only)
+# Filing as a skill: experiment plan (dev only)
 
-**Question:** can a current AI model, following an editable rules document, file email as well as the flow-based Filing Assistant? If so, Cassia could change behaviour by editing a document instead of waiting for a new build.
+**Question:** can filing work as a **skill** you call from an ordinary Microsoft 365 Copilot chat, with the behaviour written as editable rules, as well as the flow-based Filing Assistant? If so, Cassia could change behaviour by editing the rules instead of waiting for a new build.
+
+Three things are compared:
+1. **The skill** (`filing-skill/outlook-filing/SKILL.md`, zipped as `out/outlook-filing-skill_0_1.zip`): the Filing Rules plus safety rules, as an Agent Skills `SKILL.md`. It has **no tools of its own**; it relies on whatever Copilot can already do with the user's mail. This is the main test.
+2. **Filing Skill Test agent**: the same rules, read from a SharePoint document, plus four Outlook tools (read Inbox, list folders, find where a conversation is filed, move email). This shows what the rules can do when the model *does* have mail tools.
+3. **Filing Assistant** (the current pilot): fixed code in a flow. The baseline.
+
+## Part A: the skill (do this first)
+1. **Upload it.** In Microsoft 365 Copilot, open **Agent Builder** (Create agent) and add a skill by uploading `outlook-filing-skill_0_1.zip`, or by pasting the contents of `SKILL.md`. Skills are new (preview, rolling out around October 2026), so menu names may differ. If your tenant has the **skill catalog** in Copilot Studio, you can also add it there. If skills aren't available in your tenant yet, note that; it's a result.
+2. **Call it from an ordinary chat:** "Help me file". If the skill is attached to an agent, @-mention that agent.
+3. **Watch which steps it can do**, and note each one on the scorecard:
+   - Can it **list your Inbox** with previews and Focused/Other?
+   - Can it **list your folders** with full paths?
+   - Can it **see where a conversation is already filed**?
+   - Can it **move** an email when you confirm "file 1"?
+   The skill is written to say plainly which step it can't do, rather than pretend. My expectation is that it can make suggestions from mail search but can't list every folder reliably or move email, because a skill adds instructions, not tools. The test confirms or disproves that.
+4. Then run the same scorecard rows as the other two (accuracy, invented folders, consistency over 3 chats, volume).
+5. **Rule change:** edit the skill (for example "at most 10 emails", rules version 2), re-upload, and note when it takes effect.
+
+If the skill can suggest but not move, a workable combination is the skill for suggestions plus Filing Assistant (or the test agent's move tool) for filing, which Part B shows.
+
+## Part B: the agent with tools and the baseline
+
+**What's being compared**
 
 **What's being compared**
 
@@ -43,20 +66,21 @@ Use the **same test mailbox** for both agents. Compare **suggestions** first (no
 ## Scorecard
 Pass marks come from the client brief: at least 85% of suggestions right, no invented folders, nothing filed before confirmation.
 
-| Measure | Filing Assistant | Skill Test: GPT-5 Chat | Skill Test: Claude Opus 4.8 |
-|---|---|---|---|
-| Suggestions matching the answer key (of 20) | | | |
-| Wrong folder suggested | | | |
-| **Invented folders** (must be 0) | | | |
-| Emails missed or listed twice | | | |
-| Same list in all 3 runs? | n/a (fixed code) | | |
-| Followed the "never suggest" list? | | | |
-| Partial matches correct (count) | n/a (not built) | | |
-| Skipped the "Other" tab? | n/a (not built) | | |
-| Got through ~100 emails? | | | |
-| Seconds per reply (list / file) | | | |
-| Filing moved the right emails, all of each conversation? | | | |
-| Rule edit took effect after | n/a (rebuild) | | |
-| Showed the right Filing Rules version? | n/a | | |
+| Measure | Skill (Copilot chat) | Filing Assistant | Test agent: GPT-5 Chat | Test agent: Claude Opus 4.8 |
+|---|---|---|---|---|
+| Could list Inbox / folders / thread location / move? | | yes / yes / yes / yes | | |
+| Suggestions matching the answer key (of 20) | | | | |
+| Wrong folder suggested | | | | |
+| **Invented folders** (must be 0) | | | | |
+| Emails missed or listed twice | | | | |
+| Same list in all 3 runs? | | n/a (fixed code) | | |
+| Followed the "never suggest" list? | | | | |
+| Partial matches correct (count) | | n/a (not built) | | |
+| Skipped the "Other" tab? | | n/a (not built) | | |
+| Got through ~100 emails? | | | | |
+| Seconds per reply (list / file) | | | | |
+| Filing moved the right emails, all of each conversation? | | | | |
+| Rule edit took effect after | | n/a (rebuild) | | |
+| Showed the right Filing Rules version? | | n/a | | |
 
-**Decision:** if a Skill Test column passes every row (85%+, zero invented folders, consistent across runs, handles volume, files correctly), it's a candidate to replace or sit alongside Filing Assistant. If it fails on consistency or invented folders, keep the flow and move the editable parts into a settings list the flow reads instead (option 1).
+**Decision:** if the skill (or a test-agent column) passes every row (85%+, zero invented folders, consistent across runs, handles volume, files correctly), it's a candidate to replace or sit alongside Filing Assistant. If it fails on consistency or invented folders, keep the flow and move the editable parts into a settings list the flow reads instead (option 1).

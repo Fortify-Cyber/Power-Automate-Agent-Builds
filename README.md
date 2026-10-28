@@ -11,7 +11,7 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 
 **Filing Assistant** (pilot) is a second, separate agent in `filing-agent/`. It suggests an Outlook folder for each email a user has dealt with and files them only after the user confirms. See [docs/filing-pilot-guide.md](docs/filing-pilot-guide.md).
 
-**Filing Skill Test** (experiment, dev only) in `filing-skill-test/` tries the same job with an AI model following an editable **Filing Rules** document. See [docs/filing-skill-test.md](docs/filing-skill-test.md).
+**Filing as a skill** (experiment, dev only): `filing-skill/outlook-filing/SKILL.md` is the filing rules as a Microsoft 365 Copilot / Agent Builder skill, and `filing-skill-test/` is a comparison agent that follows the same rules (from a SharePoint document) with Outlook tools. See [docs/filing-skill-test.md](docs/filing-skill-test.md).
 
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
 
@@ -26,6 +26,7 @@ agent/                      Daily Digest agent source (edit these)
   connectionreferences.mcs.yml connection references packaged with the solution
   solution.yml                solution name, version, publisher
 filing-agent/               Filing Assistant agent source; workflows/ holds its Power Automate flow
+filing-skill/                Filing skill experiment: outlook-filing/SKILL.md (zip it to upload)
 filing-skill-test/          Filing Skill Test experiment: agent source, tools and Filing-Rules.md/.docx
 build/build_solution.py     builds agent/ (or --source filing-agent) into out/<solution>_<version>.zip
 deploy/                     pac-based import + publish (PowerShell and bash)
