@@ -1,0 +1,58 @@
+[
+  {
+    "TipNumber": 1,
+    "Title": "Catch up on any email thread in seconds",
+    "TipDate": "2026-10-02",
+    "Headline": "Summarize a long email thread in Outlook",
+    "WorksWith": "Copilot Chat (everyone)",
+    "WhyItHelps": "Get the key points of a long back-and-forth without scrolling through every reply.",
+    "Steps": "1. In Outlook, open the long email conversation\n2. Select Summary by Copilot (or Summarize) at the top of the thread\n3. Read the summary and click the numbered citations to jump to the original emails",
+    "Prompt": "Summarize this email thread in 3 bullets: what was decided, what's still open, and what I need to do next.",
+    "VideoLink": "https://www.youtube.com/watch?v=D-DfXUSbQcw",
+    "VideoTitle": "Summarize and draft emails with Microsoft 365 Copilot in Outlook",
+    "ArticleLink": "https://support.microsoft.com/en-us/outlook/copilot-pages/summarize-an-email-thread-with-copilot-in-outlook",
+    "ArticleTitle": "Summarize an email thread with Copilot in Outlook"
+  },
+  {
+    "TipNumber": 2,
+    "Title": "Beat the blank email",
+    "TipDate": "2026-10-09",
+    "Headline": "Draft an email with Copilot in Outlook",
+    "WorksWith": "Copilot Chat (everyone)",
+    "WhyItHelps": "Copilot writes a solid first draft from a one-line request, so you just review, tweak and send.",
+    "Steps": "1. In Outlook, start a New mail (or a reply)\n2. Select the Copilot icon in the toolbar, then Draft (classic Outlook: Draft with Copilot)\n3. Type what you want to say and select Generate\n4. Adjust length or tone, select Keep it, then edit and send",
+    "Prompt": "Write a polite email declining a meeting invitation for next Tuesday, offering two alternative times later in the week.",
+    "VideoLink": "https://www.youtube.com/watch?v=PrI7xxo8AKQ",
+    "VideoTitle": "5 Ways to Use Copilot in Outlook | Microsoft 365",
+    "ArticleLink": "https://support.microsoft.com/en-us/outlook/copilot-pages/draft-an-email-message-with-copilot-in-outlook",
+    "ArticleTitle": "Draft an email message with Copilot in Outlook"
+  },
+  {
+    "TipNumber": 3,
+    "Title": "Hand Copilot a file and ask away",
+    "TipDate": "2026-10-16",
+    "Headline": "Upload a file and ask Copilot about it",
+    "WorksWith": "Copilot Chat (everyone)",
+    "WhyItHelps": "Get a quick summary or answers from a long PDF, Word doc or spreadsheet without reading every page.",
+    "Steps": "1. In Copilot Chat, type what you want, e.g. Summarize the document\n2. Select the + (Add content) button, then Upload images and files or Attach cloud files\n3. Pick your file and select Send\n4. Tip: you can also type / and start typing a file name to add it",
+    "Prompt": "Summarize this document in 5 bullet points, then list any deadlines, dollar amounts or action items it mentions.",
+    "VideoLink": "https://www.youtube.com/watch?v=75vF2ysGgbo",
+    "VideoTitle": "Analyze an uploaded document with Microsoft 365 Copilot Chat",
+    "ArticleLink": "https://support.microsoft.com/en-us/microsoft-365-copilot/analyze-an-uploaded-document-in-copilot-chat",
+    "ArticleTitle": "Analyze an uploaded document in Copilot Chat"
+  },
+  {
+    "TipNumber": 4,
+    "Title": "Turn a long email thread into an open-issues list",
+    "TipDate": "2026-10-23",
+    "Headline": "Turn a long email thread into an open-issues list",
+    "WorksWith": "Microsoft 365 Copilot license",
+    "WhyItHelps": "You get a who-owes-what-by-when list from a long thread with opposing counsel, the client or the other side in minutes, instead of rebuilding it by hand before every call.",
+    "Steps": "1. Open Copilot Chat (in new Outlook or Outlook on the web, select the Copilot button at the top; or go to m365.cloud.microsoft/chat) and make sure Work IQ is turned on\n2. Type / and use the Emails tab to add the most recent messages in the thread\n3. Paste the prompt below and send\n4. Check each item against the cited emails before you circulate the list, and keep it marked draft until an attorney has reviewed it",
+    "Prompt": "Using the emails I referenced, build an open-issues list for [matter]. Table columns: # | Issue | Raised by (name and party) | Who owes the next action | What is owed | Due date (write 'none stated' if no date) | Status (open, agreed, closed) | Date of the latest email on it. Treat an issue as closed only if every side confirmed it in writing. List items with no clear owner in a separate section. Do not guess dates or owners.",
+    "VideoLink": "https://www.youtube.com/watch?v=7MA6VwMV-Qc",
+    "VideoTitle": "Catch Up on Long Email Threads Faster with Copilot",
+    "ArticleLink": "https://support.microsoft.com/en-us/microsoft-365-copilot/refer-to-specific-files-and-more-in-microsoft-365-copilot",
+    "ArticleTitle": "Refer to specific files and more in Microsoft Copilot"
+  }
+]

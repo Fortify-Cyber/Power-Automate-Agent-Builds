@@ -1,0 +1,34 @@
+[
+  {
+    "Title": "Summarize and draft emails with Microsoft 365 Copilot in Outlook",
+    "VideoLink": "https://www.youtube.com/watch?v=D-DfXUSbQcw",
+    "App": "Outlook",
+    "Source": "Microsoft",
+    "Level": "Beginner",
+    "Description": "Thread summaries and first drafts in Outlook. Goes with Friday Tip 1."
+  },
+  {
+    "Title": "5 Ways to Use Copilot in Outlook",
+    "VideoLink": "https://www.youtube.com/watch?v=PrI7xxo8AKQ",
+    "App": "Outlook",
+    "Source": "Microsoft",
+    "Level": "Beginner",
+    "Description": "Drafting, coaching, summarizing and scheduling with Copilot in Outlook. Goes with Friday Tip 2."
+  },
+  {
+    "Title": "Analyze an uploaded document with Microsoft 365 Copilot Chat",
+    "VideoLink": "https://www.youtube.com/watch?v=75vF2ysGgbo",
+    "App": "Copilot Chat",
+    "Source": "Microsoft",
+    "Level": "Beginner",
+    "Description": "Attach a PDF, Word document or spreadsheet and ask questions about it. Goes with Friday Tip 3."
+  },
+  {
+    "Title": "Catch up on long email threads faster with Copilot",
+    "VideoLink": "https://www.youtube.com/watch?v=7MA6VwMV-Qc",
+    "App": "Copilot Chat",
+    "Source": "Microsoft",
+    "Level": "Intermediate",
+    "Description": "Reference specific emails in Copilot Chat and get a structured answer. Goes with Friday Tip 4."
+  }
+]

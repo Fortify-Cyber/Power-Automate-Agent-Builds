@@ -1,0 +1,20 @@
+[
+  {
+    "Name": "Welcome-to-the-AI-Hub",
+    "Title": "Welcome to the Cassin AI Hub",
+    "Description": "One place for prompts, Friday tips, videos and agents.",
+    "Html": "<p>The AI Hub is the firm's home for getting more out of Microsoft 365 Copilot. You'll find:</p><ul><li><strong>Prompt Library:</strong> prompts written for our deals and documents, from term sheet comparisons to closing checklists. Add your own.</li><li><strong>Friday Tips:</strong> every weekly tip, with the steps, the prompt and a video.</li><li><strong>Demo Videos:</strong> short walkthroughs for Outlook, Word, Excel, Teams and Copilot Chat.</li><li><strong>Agents &amp; Tools:</strong> Daily Digest, the Email Filing Assistant and what's coming next.</li></ul><p>The site is run by the AI Working Group with Fortify Cyber. If something's missing, use <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">Feedback</a> and tell us.</p>"
+  },
+  {
+    "Name": "Meet-Daily-Digest",
+    "Title": "Meet Daily Digest: your inbox, sorted before you start",
+    "Description": "A morning summary of what needs you, from your own mailbox.",
+    "Html": "<p>Daily Digest is a Copilot agent that reads your inbox and gives you a short morning briefing: 🔴 high priority, 📨 waiting on your reply, 👥 team items you're copied on, and 📰 updates, with marketing and cold outreach filtered out.</p><p><strong>To try it:</strong> open Daily Digest in Microsoft 365 Copilot, Teams or Outlook and say \"Run my daily digest\". To get it every weekday, schedule that prompt once. It takes about five minutes.</p><p>It only reads your own mailbox, with your own sign-in, and the only email it can send is your digest, to you.</p>"
+  },
+  {
+    "Name": "Email-Filing-Assistant-Pilot",
+    "Title": "Email Filing Assistant: suggest, never auto-move",
+    "Description": "What the pilot is testing and how it was designed with the team.",
+    "Html": "<p>After the AI Working Group's feedback, the Email Filing Assistant follows a few firm rules:</p><ul><li>It only suggests a folder for emails you've already dealt with.</li><li>You confirm every filing. Nothing moves on its own.</li><li>It never touches flags or categories.</li><li>It's optional. If you don't use folders, you don't have to use it.</li></ul><p>A small pilot group is testing it now. If you'd like to join, or have thoughts on how filing should work, <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">let us know</a>.</p>"
+  }
+]

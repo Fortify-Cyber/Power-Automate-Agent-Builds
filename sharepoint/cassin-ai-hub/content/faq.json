@@ -1,0 +1,52 @@
+[
+  {
+    "Title": "Do I have Microsoft 365 Copilot?",
+    "Topic": "Getting started",
+    "Answer": "Yes. Everyone at the firm has a Microsoft 365 Copilot license. That gives you Copilot Chat plus Copilot inside Outlook, Word, Excel, PowerPoint and Teams, and lets Copilot work with your own email, meetings and files."
+  },
+  {
+    "Title": "Where do I find Copilot?",
+    "Topic": "Getting started",
+    "Answer": "Go to m365.cloud.microsoft/chat, or select Copilot in Teams, Outlook, Word or Excel. In Outlook and Word, look for the Copilot icon in the toolbar."
+  },
+  {
+    "Title": "Can I use Copilot with client and matter information?",
+    "Topic": "Using AI responsibly",
+    "Answer": "Microsoft 365 Copilot works inside the firm's Microsoft 365 environment and only sees what you already have access to. Microsoft doesn't use your prompts or files to train its models. Follow the firm's policies for client and confidential information, and don't paste client information into public AI tools such as free ChatGPT or Gemini."
+  },
+  {
+    "Title": "Can I trust what Copilot tells me?",
+    "Topic": "Using AI responsibly",
+    "Answer": "Treat it like a first draft from a capable junior: useful, fast and sometimes wrong. Click the citations, check figures and dates against the source, and have an attorney review anything going to a client or the other side."
+  },
+  {
+    "Title": "Why does Copilot give different answers to the same question?",
+    "Topic": "Getting better results",
+    "Answer": "Answers vary a little each time. Be specific: say what you want, the format (a table, bullets, a word limit) and what to do when it's unsure (for example 'write not found rather than guessing'). The prompts in the Prompt Library already do this."
+  },
+  {
+    "Title": "Copilot couldn't find an email or file I know exists. Why?",
+    "Topic": "Getting better results",
+    "Answer": "Name it directly: type / in Copilot Chat and pick the email or file. Very recent items can take a few minutes to become searchable, and Copilot can only see items you have access to."
+  },
+  {
+    "Title": "How do I get the Daily Digest?",
+    "Topic": "Agents",
+    "Answer": "Open Daily Digest in Microsoft 365 Copilot, Teams or Outlook and say \"Run my daily digest\". You can schedule that prompt for every weekday morning. See Agents & Tools for details."
+  },
+  {
+    "Title": "How do I add a prompt to the Prompt Library?",
+    "Topic": "This site",
+    "Answer": "Open the Prompt Library and select Submit a prompt. Your prompt is visible to you straight away and to everyone else once the AI Working Group approves it."
+  },
+  {
+    "Title": "I missed a Friday tip. Where can I find it?",
+    "Topic": "This site",
+    "Answer": "Every tip is in Friday Tips, newest first, with its prompt, steps and video."
+  },
+  {
+    "Title": "Who do I ask for help?",
+    "Topic": "Getting started",
+    "Answer": "Ask the AI Working Group, or use Feedback on this site. Fortify Cyber supports the program and reads every submission."
+  }
+]

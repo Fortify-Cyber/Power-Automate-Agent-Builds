@@ -1,0 +1,201 @@
+[
+  {
+    "Name": "Hub-Home",
+    "Title": "Home",
+    "Layout": "Home",
+    "IsHomePage": true,
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 3,
+        "Columns": [[
+          { "Type": "Text", "Html": "<h2>Welcome to the Cassin AI Hub</h2><p>Everything you need to get more out of Microsoft 365 Copilot at Cassin &amp; Cassin: ready-to-use prompts for deals, email and documents, every Friday tip, short how-to videos, and the agents built for the firm.</p><p><a href=\"{{siteUrl}}/SitePages/Get-Started.aspx\"><strong>New to Copilot? Start here →</strong></a></p>" }
+        ]]
+      },
+      {
+        "Template": "ThreeColumn",
+        "Emphasis": 1,
+        "Columns": [
+          [{ "Type": "Text", "Html": "<h3>Prompt Library</h3><p>Tested prompts for loan documents, closing checklists, client updates and more. Copy, fill in the [brackets], go.</p><p><a href=\"{{siteUrl}}/SitePages/Prompt-Library.aspx\">Browse prompts →</a></p>" }],
+          [{ "Type": "Text", "Html": "<h3>Friday Tips</h3><p>Every Friday Copilot Tip in one place: the steps, the prompt and a short video. Missed one? It's here.</p><p><a href=\"{{siteUrl}}/SitePages/Friday-Tips.aspx\">See all tips →</a></p>" }],
+          [{ "Type": "Text", "Html": "<h3>Demo Videos</h3><p>Two-to-five-minute walkthroughs of Copilot in Outlook, Word, Excel, Teams and Copilot Chat.</p><p><a href=\"{{siteUrl}}/SitePages/Demo-Videos.aspx\">Watch videos →</a></p>" }]
+        ]
+      },
+      {
+        "Template": "ThreeColumn",
+        "Emphasis": 1,
+        "Columns": [
+          [{ "Type": "Text", "Html": "<h3>Agents &amp; Tools</h3><p>Daily Digest, the Email Filing Assistant and what we're building next, with how to start each one.</p><p><a href=\"{{siteUrl}}/SitePages/Agents-and-Tools.aspx\">See agents →</a></p>" }],
+          [{ "Type": "Text", "Html": "<h3>Use AI Responsibly</h3><p>Five habits for using Copilot on client work: what it can see, how to check it, and where it shouldn't go.</p><p><a href=\"{{siteUrl}}/SitePages/Use-AI-Responsibly.aspx\">Read the guidelines →</a></p>" }],
+          [{ "Type": "Text", "Html": "<h3>Share Feedback</h3><p>An idea for a prompt, a tip or an agent? Something not working? Tell us. We read every one.</p><p><a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">Give feedback →</a></p>" }]
+        ]
+      },
+      {
+        "Template": "TwoColumnLeft",
+        "Emphasis": 0,
+        "Columns": [
+          [{ "Type": "News" }],
+          [
+            { "Type": "Text", "Html": "<h3>This week's Friday tip</h3>" },
+            { "Type": "List", "List": "Friday Tips", "View": "Latest tip" }
+          ]
+        ]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[
+          { "Type": "Text", "Html": "<h3>Featured prompts</h3><p>A few favorites to try this week. Open one to see how to use it.</p>" },
+          { "Type": "List", "List": "Prompt Library", "View": "Featured" }
+        ]]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 2,
+        "Columns": [[
+          { "Type": "Text", "Html": "<p><strong>Copilot can make mistakes.</strong> Give its answers a quick check before you rely on them or send them on, and follow the firm's policies for client and confidential information. Questions? Ask the AI Working Group or <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">send us feedback</a>.</p>" }
+        ]]
+      }
+    ]
+  },
+  {
+    "Name": "Get-Started",
+    "Title": "Get Started with Copilot",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "TwoColumnLeft",
+        "Emphasis": 0,
+        "Columns": [
+          [{ "Type": "Text", "Html": "<h2>Your first five minutes</h2><ol><li><strong>Open Copilot Chat.</strong> Go to <a href=\"https://m365.cloud.microsoft/chat\">m365.cloud.microsoft/chat</a>, or select Copilot in Teams or Outlook.</li><li><strong>Try one prompt.</strong> Pick anything from the <a href=\"{{siteUrl}}/SitePages/Prompt-Library.aspx\">Prompt Library</a>, fill in the [brackets] and send it.</li><li><strong>Summarize a long email thread.</strong> In Outlook, open a long conversation and select Summary by Copilot.</li><li><strong>Turn on your Daily Digest.</strong> See <a href=\"{{siteUrl}}/SitePages/Agents-and-Tools.aspx\">Agents &amp; Tools</a>.</li><li><strong>Watch a two-minute video.</strong> Start with <a href=\"{{siteUrl}}/SitePages/Demo-Videos.aspx\">Demo Videos</a>.</li></ol><h2>Where Copilot lives</h2><table><tbody><tr><td><strong>App</strong></td><td><strong>Try this first</strong></td></tr><tr><td>Copilot Chat</td><td>Attach a document and ask for a summary with deadlines and dollar amounts.</td></tr><tr><td>Outlook</td><td>Summarize a thread, draft a reply, or get coaching on a sensitive email.</td></tr><tr><td>Word</td><td>Check defined terms and cross-references, or explain a provision in plain English.</td></tr><tr><td>Excel</td><td>Ask questions of a rent roll or deal list (format it as a table first).</td></tr><tr><td>Teams</td><td>Get a recap of a transcribed meeting with action items and owners.</td></tr></tbody></table>" }],
+          [{ "Type": "Text", "Html": "<h3>How to write a good prompt</h3><p>Give Copilot four things:</p><ul><li><strong>Goal:</strong> what you want (\"an open-issues list\").</li><li><strong>Context:</strong> the matter, the audience, why you need it.</li><li><strong>Source:</strong> the emails or files to use. Type / to pick them.</li><li><strong>Expectations:</strong> format, length, and what to do when it isn't sure (\"write not found rather than guessing\").</li></ul><p>Not sure how to ask? Tell Copilot what you want and ask it to write the prompt for you.</p>" }]
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Prompt-Library",
+    "Title": "Prompt Library",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "TwoColumnLeft",
+        "Emphasis": 1,
+        "Columns": [
+          [{ "Type": "Text", "Html": "<p>Prompts that work at Cassin, written for our deals and our documents. Select a prompt to open it, copy the text into Copilot and fill in the [brackets]. Use the search box or filter by <strong>Category</strong>, <strong>Practice</strong> or <strong>Works in</strong>.</p>" }],
+          [
+            { "Type": "Text", "Html": "<p><strong>Have a prompt that works?</strong> Share it. It appears for everyone once the AI Working Group approves it.</p>" },
+            { "Type": "Button", "Label": "Submit a prompt", "Url": "{{siteUrl}}/Lists/PromptLibrary/NewForm.aspx" }
+          ]
+        ]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[ { "Type": "List", "List": "Prompt Library", "View": "By category" } ]]
+      }
+    ]
+  },
+  {
+    "Name": "Friday-Tips",
+    "Title": "Friday Tips",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 1,
+        "Columns": [[ { "Type": "Text", "Html": "<p>One small thing to try each week, about five minutes each. Every tip is here, newest first, with the steps, the prompt to copy and a short video. Have an idea for a future tip? <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">Tell us</a>.</p>" }]]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[ { "Type": "List", "List": "Friday Tips", "View": "All tips" } ]]
+      }
+    ]
+  },
+  {
+    "Name": "Demo-Videos",
+    "Title": "Demo Videos",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 1,
+        "Columns": [[ { "Type": "Text", "Html": "<p>Short walkthroughs, most under five minutes. Filter by <strong>App</strong> or <strong>Level</strong>. Videos recorded at Cassin (for example a Teams recording of a Working Group demo) are stored in the <a href=\"{{siteUrl}}/Recordings\">Recordings</a> library and listed here.</p>" }]]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[ { "Type": "List", "List": "Demo Videos", "View": "By app" } ]]
+      }
+    ]
+  },
+  {
+    "Name": "Agents-and-Tools",
+    "Title": "Agents & Tools",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 1,
+        "Columns": [[ { "Type": "Text", "Html": "<p>Agents are Copilot helpers built for one job at Cassin. Each one works with your own sign-in and only sees what you can already see. The AI Working Group picks what we build next, so if there's a workflow you'd like help with, <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">suggest it</a>.</p>" }]]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[ { "Type": "List", "List": "AI Agents", "View": "All agents" } ]]
+      }
+    ]
+  },
+  {
+    "Name": "Use-AI-Responsibly",
+    "Title": "Use AI Responsibly",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "TwoColumnLeft",
+        "Emphasis": 0,
+        "Columns": [
+          [{ "Type": "Text", "Html": "<h2>Five habits</h2><ol><li><strong>Use the firm's Copilot for client work.</strong> Microsoft 365 Copilot runs inside the firm's Microsoft 365 environment and only sees what you can already see. Don't paste client or matter information into public AI tools such as free ChatGPT or Gemini.</li><li><strong>Check before you rely.</strong> Click the citations. Compare figures, dates, names and section numbers against the source. Copilot can be confidently wrong.</li><li><strong>A lawyer reviews it before it leaves the firm.</strong> Anything going to a client, a lender or the other side gets attorney review, the same as work from a junior colleague.</li><li><strong>Ask it to say when it doesn't know.</strong> Add \"write not found rather than guessing\" to prompts that pull facts from documents.</li><li><strong>Keep the firm's rules.</strong> Follow the firm's policies for client and confidential information, records and ethical walls. AI doesn't change them.</li></ol>" }],
+          [{ "Type": "Text", "Html": "<h3>What Copilot can see</h3><p>Only email, chats, meetings and files that you already have permission to open. It doesn't give you access to anything new.</p><h3>Where your prompts go</h3><p>Microsoft doesn't use your prompts, responses or files to train its AI models.</p><h3>Not sure?</h3><p>Ask the AI Working Group before you try it on a live matter.</p>" }]
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "FAQ",
+    "Title": "FAQ",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[ { "Type": "List", "List": "AI FAQ", "View": "By topic" } ]]
+      }
+    ]
+  },
+  {
+    "Name": "Feedback",
+    "Title": "Feedback",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "TwoColumnLeft",
+        "Emphasis": 1,
+        "Columns": [
+          [{ "Type": "Text", "Html": "<h2>Tell us what you think</h2><p>Ideas for prompts, tips or agents, something that isn't working, or a win worth sharing: it all helps decide what we build next. Only you and the site owners can see what you submit.</p>" },
+           { "Type": "Button", "Label": "Share feedback", "Url": "{{siteUrl}}/Lists/HubFeedback/NewForm.aspx" }],
+          [{ "Type": "Text", "Html": "<h3>What happens next</h3><ul><li>The AI Working Group reviews new feedback each week.</li><li>You'll see the status change here: New, Reviewing, Planned, Done.</li><li>Good ideas become Friday tips, library prompts or agents.</li></ul>" }]
+        ]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [[
+          { "Type": "Text", "Html": "<h3>Your feedback</h3>" },
+          { "Type": "List", "List": "Hub Feedback", "View": "My feedback" }
+        ]]
+      }
+    ]
+  }
+]

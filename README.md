@@ -49,3 +49,6 @@ pac power-automate list-flow-actions --workflow-id <id>
 pac power-automate list-flow-runs --workflow-id <id>
 ./scripts/Review-Flows.ps1 -EnvironmentUrl https://<env>.crm.dynamics.com -NameFilter Digest -OrgDomain contoso.com
 ```
+
+## Other deliverables
+- [`sharepoint/cassin-ai-hub/`](sharepoint/cassin-ai-hub/): the Cassin AI Hub SharePoint site (prompt library, Friday tips, videos, agents, feedback). See its README to deploy.

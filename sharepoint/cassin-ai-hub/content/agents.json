@@ -1,0 +1,30 @@
+[
+  {
+    "Title": "Daily Digest",
+    "AgentStatus": "Live",
+    "WhatItDoes": "A morning summary of your inbox: high priority items, emails waiting on your reply, team items you're copied on, and updates, with marketing filtered out. It reads only your own mailbox, with your own sign-in.",
+    "HowToStart": "Open Daily Digest in Microsoft 365 Copilot, Teams or Outlook and say \"Run my daily digest\". To get it every weekday, schedule that prompt once (about 5 minutes).",
+    "Champion": ""
+  },
+  {
+    "Title": "Email Filing Assistant",
+    "AgentStatus": "Pilot",
+    "WhatItDoes": "Suggests the client or matter folder for emails you've already dealt with. It never moves anything on its own: you confirm every filing, and it never touches flags or categories. Optional.",
+    "HowToStart": "Currently with a small pilot group. Tell us in Feedback if you'd like to try it.",
+    "Champion": ""
+  },
+  {
+    "Title": "Closing Checklist Builder",
+    "AgentStatus": "Up next",
+    "WhatItDoes": "Builds a first-draft closing checklist from the commitment letter and loan documents. One of the two leading candidates from the AI Working Group vote.",
+    "HowToStart": "Not available yet. Use the 'Build a closing checklist from a commitment letter' prompt in the Prompt Library in the meantime.",
+    "Champion": ""
+  },
+  {
+    "Title": "Deal Intake and Issues List Builder",
+    "AgentStatus": "Up next",
+    "WhatItDoes": "Captures a new deal's key facts and keeps a running issues list from the email traffic. One of the two leading candidates from the AI Working Group vote.",
+    "HowToStart": "Not available yet. Use the 'Turn a long email thread into an open-issues list' prompt in the meantime.",
+    "Champion": ""
+  }
+]
