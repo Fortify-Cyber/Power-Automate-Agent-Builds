@@ -354,7 +354,10 @@ function Test-HubWebPart([string] $Page) {
         $script:hubWebPart = [bool] (Get-PnPPageComponent -Page $Page -ListAvailable |
             Where-Object { $_.Id.Trim("{}") -eq $hubWebPartId })
         if ($script:hubWebPart) { Write-Host "  using the Cassin AI Hub web part" }
-        else { Write-Host "  Cassin AI Hub web part not installed: using standard list web parts (see README step 3)" -ForegroundColor Yellow }
+        else {
+            Write-Host "  Cassin AI Hub web part not found in the app catalog, so the pages use standard list web parts." -ForegroundColor Yellow
+            Write-Host "  Upload package/cassin-ai-hub-webpart.sppkg (README step 3). If you just did, wait 5 minutes and re-run with -RebuildPages." -ForegroundColor Yellow
+        }
     }
     $script:hubWebPart
 }
@@ -399,6 +402,18 @@ function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order
     }
 }
 
+# A page someone has open in Edit mode is checked out or locked, and can't be deleted.
+# Undo a checkout and retry; if it's still locked, skip that page rather than stop.
+function Remove-HubPage([string] $Name) {
+    try { Remove-PnPPage -Identity "$Name.aspx" -Force; return $true } catch { }
+    try { Undo-PnPFileCheckedOut -Url "$siteRel/SitePages/$Name.aspx" } catch { }
+    try { Remove-PnPPage -Identity "$Name.aspx" -Force; return $true } catch {
+        Write-Host "  $Name`: skipped, the page is open for editing in a browser. Close that tab (Discard changes)," -ForegroundColor Yellow
+        Write-Host "  wait about 10 minutes for the lock to clear, then run this again with -RebuildPages." -ForegroundColor Yellow
+        return $false
+    }
+}
+
 function Test-PageExists([string] $Name) {
     try { Get-PnPPage -Identity "$Name.aspx" | Out-Null; $true } catch { $false }
 }
@@ -410,7 +425,7 @@ if ($RebuildPages) { try { Set-PnPHomePage -RootFolderRelativeUrl "SitePages/Hom
 foreach ($pg in (Read-Content "pages.json")) {
     if (Test-PageExists $pg.Name) {
         if (-not $RebuildPages) { Write-Host "  $($pg.Title): exists, skipped (use -RebuildPages to recreate)"; continue }
-        Remove-PnPPage -Identity "$($pg.Name).aspx" -Force
+        if (-not (Remove-HubPage $pg.Name)) { continue }
     }
     $header = if ($pg.Layout -eq "Home") { @{} } else { @{ HeaderLayoutType = "ColorBlock" } }
     Add-PnPPage -Name $pg.Name -Title $pg.Title -LayoutType $pg.Layout -CommentsEnabled:$false @header | Out-Null
