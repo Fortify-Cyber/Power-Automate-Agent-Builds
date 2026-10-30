@@ -109,7 +109,10 @@ function Get-ChoiceXml([string[]] $Choices) {
 function Add-HubField {
     param([string] $List, [string] $Name, [string] $Display, [string] $Type,
           [string] $Extra = "", [string] $Inner = "")
-    if (Find-Object { Get-PnPField -List $List -Identity $Name }) { return }
+    # Get-PnPField also matches on display name, so compare the internal name: a built-in
+    # hidden field can share a display name with ours.
+    $found = Find-Object { Get-PnPField -List $List -Identity $Name }
+    if ($found -and $found.InternalName -eq $Name) { return }
     $xml = "<Field ID=`"{$([guid]::NewGuid())}`" Type=`"$Type`" Name=`"$Name`" StaticName=`"$Name`" DisplayName=`"$Name`" $Extra>$Inner</Field>"
     Add-PnPFieldFromXml -List $List -FieldXml $xml | Out-Null
     Set-PnPField -List $List -Identity $Name -Values @{ Title = $Display } | Out-Null
@@ -146,7 +149,9 @@ function Set-HubView([string] $List, [string] $Title, [string[]] $Fields, [strin
 }
 function Set-Formatter([string] $List, [string] $Field, [hashtable] $Json) {
     $Json['$schema'] = "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json"
-    Set-PnPField -List $List -Identity $Field -Values @{ CustomFormatter = ($Json | ConvertTo-Json -Depth 10 -Compress) } | Out-Null
+    # [string] unwraps the PSObject that pipeline output carries; Set-PnPField rejects it otherwise.
+    $text = [string] ($Json | ConvertTo-Json -Depth 10 -Compress)
+    Set-PnPField -List $List -Identity $Field -Values @{ CustomFormatter = $text } | Out-Null
 }
 function Test-ListEmpty([string] $List) { (Get-PnPList -Identity $List).ItemCount -eq 0 }
 
@@ -238,19 +243,23 @@ $L = "Lists/DemoVideos"
 New-HubList "Demo Videos" $L "Video" "Short how-to videos for Copilot and the firm's agents."
 Add-HubField    $L "VideoLink" "Link" "URL" "Format=`"Hyperlink`" Required=`"TRUE`""
 Add-ChoiceField $L "App" "App" ($apps + "Agents") -Extra "Required=`"TRUE`""
-Add-ChoiceField $L "Level" "Level" @("Beginner", "Intermediate", "Advanced") -Default "Beginner"
+# Not "Level": every list has a hidden built-in "_Level" field titled Level (a number), and
+# Add-PnPListItem resolved the key to it. Remove the column an earlier run created under that name.
+$oldLevel = Find-Object { Get-PnPField -List $L -Identity "Level" }
+if ($oldLevel -and $oldLevel.InternalName -eq "Level") { Remove-PnPField -List $L -Identity $oldLevel -Force }
+Add-ChoiceField $L "SkillLevel" "Level" @("Beginner", "Intermediate", "Advanced") -Default "Beginner"
 Add-ChoiceField $L "VideoSource" "From" @("Microsoft", "Fortify", "Cassin") -Default "Cassin"
 Add-NoteField   $L "VideoDescription" "What it covers"
 
 if (Test-ListEmpty $L) {
     foreach ($v in (Read-Content "videos.json")) {
         Add-PnPListItem -List $L -Values @{
-            Title = $v.Title; VideoLink = "$($v.VideoLink), Watch"; App = $v.App; Level = $v.Level
+            Title = $v.Title; VideoLink = "$($v.VideoLink), Watch"; App = $v.App; SkillLevel = $v.Level
             VideoSource = $v.Source; VideoDescription = $v.Description } | Out-Null
     }
     Write-Host "  added starter videos"
 }
-Set-HubView $L "By app" @("LinkTitle", "VideoLink", "VideoDescription", "Level", "VideoSource") `
+Set-HubView $L "By app" @("LinkTitle", "VideoLink", "VideoDescription", "SkillLevel", "VideoSource") `
     "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"App`" /></GroupBy><OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -Default
 Set-Formatter $L "VideoLink" $watchBtn
 
@@ -352,7 +361,7 @@ function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order
             Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -DefaultWebPartType News | Out-Null
         }
         "Button" {
-            $url = Expand-Tokens $Part.Url
+            $url = [string] (Expand-Tokens $Part.Url)
             try {
                 Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -DefaultWebPartType Button `
                     -WebPartProperties @{ label = $Part.Label; linkUrl = $url; alignment = "Left" } | Out-Null
