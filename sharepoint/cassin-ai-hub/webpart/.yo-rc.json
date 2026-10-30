@@ -1,0 +1,22 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "cassin-ai-hub-webpart",
+    "environment": "spo",
+    "packageManager": "npm",
+    "skipFeatureDeployment": true,
+    "useGulp": false,
+    "componentType": "webpart",
+    "template": "none",
+    "componentName": "Cassin AI Hub",
+    "componentDescription": "Cassin AI Hub sections: tips, prompts, videos, agents, FAQ and feedback, drawn from the hub's lists.",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.0",
+    "sdksVersions": {},
+    "version": "1.24.0",
+    "libraryName": "cassin-ai-hub-webpart",
+    "libraryId": "5516668a-203b-4fa3-8b4f-54dc26ac9db0",
+    "solutionShortDescription": "cassin-ai-hub-webpart description"
+  }
+}

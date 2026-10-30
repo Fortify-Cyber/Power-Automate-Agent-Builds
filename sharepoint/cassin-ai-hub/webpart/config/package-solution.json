@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "Cassin AI Hub web part",
+    "id": "5516668a-203b-4fa3-8b4f-54dc26ac9db0",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "Fortify Cyber",
+      "websiteUrl": "https://fortifycyber.com",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.24.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Cassin AI Hub sections drawn from the hub lists"
+      },
+      "longDescription": {
+        "default": "Shows the Cassin AI Hub prompt library, Friday tips, videos, agents, FAQ and feedback in the Cassin design, read live from the hub site lists."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "Cassin AI Hub web part",
+        "description": "Adds the Cassin AI Hub web part.",
+        "id": "377228b5-9ba5-4eea-a89d-bcdd0dac0d4d",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/cassin-ai-hub-webpart.sppkg"
+  }
+}

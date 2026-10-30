@@ -343,20 +343,46 @@ Write-Step "Pages"
 $listUrls = @{ "Prompt Library" = "Lists/PromptLibrary"; "Friday Tips" = "Lists/FridayTips"; "Demo Videos" = "Lists/DemoVideos"
                "AI Agents" = "Lists/AIAgents"; "AI FAQ" = "Lists/AIFAQ"; "Hub Feedback" = "Lists/HubFeedback" }
 
+# The Cassin AI Hub web part (webpart/, shipped as package/cassin-ai-hub-webpart.sppkg) draws
+# each list section in the hub design. Without it in the app catalog, "Hub" parts fall back
+# to SharePoint's standard list web part showing the same list.
+$hubWebPartId = "49691dea-d53b-4628-9298-1e11ab7a38cd"
+$script:hubWebPart = $null
+
+function Test-HubWebPart([string] $Page) {
+    if ($null -eq $script:hubWebPart) {
+        $script:hubWebPart = [bool] (Get-PnPPageComponent -Page $Page -ListAvailable |
+            Where-Object { $_.Id.Trim("{}") -eq $hubWebPartId })
+        if ($script:hubWebPart) { Write-Host "  using the Cassin AI Hub web part" }
+        else { Write-Host "  Cassin AI Hub web part not installed: using standard list web parts (see README step 3)" -ForegroundColor Yellow }
+    }
+    $script:hubWebPart
+}
+
+function Add-ListPart([string] $Page, [int] $Section, [int] $Column, [int] $Order, $Part) {
+    $url  = $listUrls[$Part.List]
+    $list = Get-PnPList -Identity $url
+    $view = Get-PnPView -List $url -Identity $Part.View
+    Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -DefaultWebPartType List -WebPartProperties @{
+        isDocumentLibrary = $false; selectedListId = $list.Id.ToString(); listTitle = $list.Title
+        selectedListUrl = "$siteRel/$url"; webRelativeListUrl = "/$url"; selectedViewId = $view.Id.ToString()
+        hideCommandBar = $false; webpartHeightKey = 4 } | Out-Null
+}
+
 function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order, $Part) {
     switch ($Part.Type) {
         "Text" {
             Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order -Text (Expand-Tokens $Part.Html) | Out-Null
         }
-        "List" {
-            $url  = $listUrls[$Part.List]
-            $list = Get-PnPList -Identity $url
-            $view = Get-PnPView -List $url -Identity $Part.View
-            Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -DefaultWebPartType List -WebPartProperties @{
-                isDocumentLibrary = $false; selectedListId = $list.Id.ToString(); listTitle = $list.Title
-                selectedListUrl = "$siteRel/$url"; webRelativeListUrl = "/$url"; selectedViewId = $view.Id.ToString()
-                hideCommandBar = $false; webpartHeightKey = 4 } | Out-Null
+        "Hub" {
+            if (Test-HubWebPart $Page) {
+                Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -Component $hubWebPartId `
+                    -WebPartProperties @{ section = [string] $Part.Section; maxItems = 6 } | Out-Null
+            } else {
+                Add-ListPart $Page $Section $Column $Order $Part
+            }
         }
+        "List" { Add-ListPart $Page $Section $Column $Order $Part }
         "News" {
             Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -DefaultWebPartType News | Out-Null
         }
@@ -376,6 +402,10 @@ function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order
 function Test-PageExists([string] $Name) {
     try { Get-PnPPage -Identity "$Name.aspx" | Out-Null; $true } catch { $false }
 }
+
+# SharePoint won't delete the site's home page, so point home at the default page while
+# the hub pages are rebuilt. The hub home page is set again below.
+if ($RebuildPages) { try { Set-PnPHomePage -RootFolderRelativeUrl "SitePages/Home.aspx" } catch { } }
 
 foreach ($pg in (Read-Content "pages.json")) {
     if (Test-PageExists $pg.Name) {

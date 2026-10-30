@@ -27,7 +27,7 @@ Cassin's Conditional Access blocks device-code sign-in (error 53003), so **a Cas
 
 **You need:**
 - the **SharePoint Administrator** or **Global Administrator** role at Cassin
-- **PowerShell 7.4 or later**: `winget install Microsoft.PowerShell`
+- **PowerShell 7.4 or later**: `winget install Microsoft.PowerShell` on Windows, `brew install --cask powershell` (or `powershell@preview`) on a Mac, then start it with `pwsh`
 - the **PnP.PowerShell** module (3.x): `Install-Module PnP.PowerShell -Scope CurrentUser`
 - this folder (`sharepoint/cassin-ai-hub`) copied to that device
 
@@ -42,7 +42,15 @@ Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "PnP PowerShell (Cass
 ```
 Sign in when the browser opens and **accept the consent prompt**. Copy the **Client ID** it prints. The app only has *delegated* permissions, so it can do no more than the signed-in admin.
 
-### 3. Run the build (5–10 min)
+### 3. Install the Cassin web part (5 min, once)
+The pages use a custom web part that draws the prompts, tips, videos, agents, FAQ and feedback as Cassin-styled cards with Copy buttons and search. Without it, the script falls back to SharePoint's standard list tables.
+1. Go to **SharePoint admin center → More features → Apps → Open**, then **Manage apps**. If asked, let it create the app catalog.
+2. Select **Upload** and choose `package/cassin-ai-hub-webpart.sppkg`.
+3. In the panel that opens, choose **Enable this app and add it to all sites**, then **Enable**.
+
+It reads the hub's lists as the signed-in person, with no extra permissions and nothing sent outside Microsoft 365. Headings load Cassin's brand fonts from Google Fonts; if that's blocked, they fall back to Georgia.
+
+### 4. Run the build (5–10 min)
 From the `cassin-ai-hub` folder:
 ```powershell
 ./Deploy-CassinAIHub.ps1 -TenantName <tenant> -ClientId <client-id-from-step-2>
@@ -52,26 +60,28 @@ You'll sign in once for the admin center and once for the new site. The script:
 2. applies the theme, a navy header with the Cassin logo, and a footer
 3. creates the six lists and the Recordings library, then loads the starter content
 4. sets permissions: site **Visitors** can read everything and can **add** to Prompt Library and Hub Feedback
-5. builds the pages and news posts, sets the home page, and builds the menu
+5. builds the pages (with the Cassin web part) and news posts, sets the home page, and builds the menu
 
-It's safe to run again. Lists and content aren't duplicated, and pages that already exist are skipped unless you add `-RebuildPages`, which **overwrites edits made in the browser**.
+It's safe to run again. Lists and content aren't duplicated, and pages that already exist are skipped unless you add `-RebuildPages`, which **overwrites edits made in the browser**. If you installed the web part after a first run, re-run with `-RebuildPages` to switch the pages over.
 
-### 4. Check it (5 min)
+If the footer menu doesn't exist yet, the script skips the footer links and says so. Add them in the browser (scroll to the footer, select **Edit**).
+
+### 5. Check it (5 min)
 Open the site and check:
 - [ ] Home shows the news posts, this week's tip and the featured prompts.
 - [ ] **Prompt Library**: the Submit a prompt button opens the form. Submit a test prompt, then approve it from the list's **Approve/reject items** view.
 - [ ] **Feedback**: submit a test item and confirm it appears under *Your feedback*.
 - [ ] The menu shows the eight items, with Get Started opening a three-item dropdown.
 
-If a web part shows "This web part isn't configured" (Microsoft occasionally changes web part settings), edit the page, select the web part and pick the list and view named in the table above. That takes about a minute.
+If a section says it couldn't load, or you see a plain list table instead of cards, check step 3 and re-run with `-RebuildPages`. To change what a Cassin web part shows, edit the page, select it, and pick a **Section** in its settings.
 
-### 5. Optional polish (10 min, in the browser)
-- **Brand fonts.** SharePoint themes can't change fonts. To use Cassin's website fonts (Roboto Serif for headings, IBM Plex Sans for text, both free), add them in **SharePoint admin center → Brand center → Fonts** and apply them to the site under **Settings → Change the look**.
+### 6. Optional polish (10 min, in the browser)
+- **Brand fonts for the rest of the page.** The Cassin web part already uses Cassin's fonts. For page text and the header, add Roboto Serif and IBM Plex Sans (both free) in **SharePoint admin center → Brand center → Fonts** and apply them under **Settings → Change the look**.
 - **Home page tiles.** For icon tiles instead of text links, replace the two link rows on Home with a **Quick links** web part (Tiles or Filmstrip layout).
 - **News images.** Add a banner image to each news post. Posts without one get a generic thumbnail.
 - **Anonymous feedback.** The feedback list records who submitted. If people want to stay anonymous, create a Microsoft Form with anonymous responses and add it to the Feedback page with the **Microsoft Forms** web part.
 
-### 6. Launch
+### 7. Launch
 1. Add the AI Working Group as **site owners** (Settings → Site permissions). Owners approve prompts and answer feedback.
 2. Pilot: add a few people to the **Visitors** group.
 3. Firm-wide: run the script again with `-ShareWithEveryone`, or share the site with *Everyone except external users* as **Read**.
@@ -92,7 +102,7 @@ If a web part shows "This web part isn't configured" (Microsoft occasionally cha
 **Friday Tip automation.** The weekly tip flow currently runs from Fortify's tenant (`fortifycyber.sharepoint.com/sites/AI`), so it can't write to Cassin's site directly. Either add each tip to the hub by hand (about 2 minutes), or later move the flow into Cassin's tenant and have it add a row to **Friday Tips** when it sends.
 
 ## Rolling back
-Delete the site in **SharePoint admin center → Active sites**. It stays restorable from *Deleted sites* for 93 days. To remove the theme as well: `Remove-PnPTenantTheme -Identity Cassin`.
+Delete the site in **SharePoint admin center → Active sites**. It stays restorable from *Deleted sites* for 93 days. To remove the theme as well: `Remove-PnPTenantTheme -Identity Cassin`. To remove the web part, delete *Cassin AI Hub web part* from the app catalog's **Manage apps**.
 
 ## Files
 ```
@@ -101,5 +111,7 @@ content/                 everything the site shows: prompts, tips, videos, agent
 theme/cassin-theme.json  SharePoint theme palette from Cassin's brand colors
 assets/                  Cassin logo (white, for the navy header)
 preview/                 clickable preview: build_preview.py turns template.html + content into index.html
+package/                 cassin-ai-hub-webpart.sppkg, the built web part to upload (step 3)
+webpart/                 the web part's source (SharePoint Framework); see webpart/README.md to rebuild
 ```
 After editing `content/`, run `python3 preview/build_preview.py` to refresh the preview, and re-run the deploy script to load new list content. The deploy script only seeds **empty** lists, so add rows to an existing list in SharePoint itself.
