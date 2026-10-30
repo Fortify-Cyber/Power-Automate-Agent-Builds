@@ -431,10 +431,18 @@ Add-Nav "Agents & Tools" "SitePages/Agents-and-Tools.aspx" | Out-Null
 Add-Nav "News" "_layouts/15/news.aspx" | Out-Null
 Add-Nav "Feedback" "SitePages/Feedback.aspx" | Out-Null
 
-Get-PnPNavigationNode -Location Footer | ForEach-Object { Remove-PnPNavigationNode -Identity $_ -Force }
-Add-PnPNavigationNode -Location Footer -Title "Copilot Chat" -Url "https://m365.cloud.microsoft/chat" | Out-Null
-Add-PnPNavigationNode -Location Footer -Title "Use AI responsibly" -Url "$siteRel/SitePages/Use-AI-Responsibly.aspx" | Out-Null
-Add-PnPNavigationNode -Location Footer -Title "Feedback" -Url "$siteRel/SitePages/Feedback.aspx" | Out-Null
+# A new site has no footer menu until someone edits the footer once in the browser, and
+# PnP can't create it ("Unable to define Navigation Node collection"). The links are
+# optional, so carry on and say how to add them.
+try {
+    Get-PnPNavigationNode -Location Footer | ForEach-Object { Remove-PnPNavigationNode -Identity $_ -Force }
+    Add-PnPNavigationNode -Location Footer -Title "Copilot Chat" -Url "https://m365.cloud.microsoft/chat" | Out-Null
+    Add-PnPNavigationNode -Location Footer -Title "Use AI responsibly" -Url "$siteRel/SitePages/Use-AI-Responsibly.aspx" | Out-Null
+    Add-PnPNavigationNode -Location Footer -Title "Feedback" -Url "$siteRel/SitePages/Feedback.aspx" | Out-Null
+} catch {
+    Write-Host "  Footer links skipped: SharePoint hasn't created the footer menu yet. Add them in the browser" -ForegroundColor Yellow
+    Write-Host "  (scroll to the footer, select Edit) or re-run this script after editing the footer once." -ForegroundColor Yellow
+}
 
 Write-Step "Done"
 Write-Host "Open $siteUrl" -ForegroundColor Green
