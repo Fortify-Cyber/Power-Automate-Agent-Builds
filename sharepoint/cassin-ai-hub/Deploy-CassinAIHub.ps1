@@ -413,23 +413,29 @@ foreach ($n in (Read-Content "news.json")) {
 # 6. Navigation
 # ---------------------------------------------------------------------------
 Write-Step "Navigation"
-Get-PnPNavigationNode -Location TopNavigationBar | ForEach-Object { Remove-PnPNavigationNode -Identity $_ -Force }
-function Add-Nav([string] $Title, [string] $Path, $Parent = $null) {
+# A communication site's menu bar shows either the top navigation or the quick launch,
+# depending on the site's settings, so write the same menu to both.
+function Add-Nav([string] $Location, [string] $Title, [string] $Path, $Parent = $null) {
     $url = if ($Path -match "^https?://") { $Path } else { "$siteRel/$Path" }
-    if ($Parent) { Add-PnPNavigationNode -Location TopNavigationBar -Title $Title -Url $url -Parent $Parent }
-    else         { Add-PnPNavigationNode -Location TopNavigationBar -Title $Title -Url $url }
+    if ($Parent) { Add-PnPNavigationNode -Location $Location -Title $Title -Url $url -Parent $Parent }
+    else         { Add-PnPNavigationNode -Location $Location -Title $Title -Url $url }
 }
-Add-Nav "Home" "SitePages/Hub-Home.aspx" | Out-Null
-$start = Add-Nav "Get Started" "SitePages/Get-Started.aspx"
-Add-Nav "Get started with Copilot" "SitePages/Get-Started.aspx" $start | Out-Null
-Add-Nav "Use AI responsibly" "SitePages/Use-AI-Responsibly.aspx" $start | Out-Null
-Add-Nav "FAQ" "SitePages/FAQ.aspx" $start | Out-Null
-Add-Nav "Prompt Library" "SitePages/Prompt-Library.aspx" | Out-Null
-Add-Nav "Friday Tips" "SitePages/Friday-Tips.aspx" | Out-Null
-Add-Nav "Demo Videos" "SitePages/Demo-Videos.aspx" | Out-Null
-Add-Nav "Agents & Tools" "SitePages/Agents-and-Tools.aspx" | Out-Null
-Add-Nav "News" "_layouts/15/news.aspx" | Out-Null
-Add-Nav "Feedback" "SitePages/Feedback.aspx" | Out-Null
+foreach ($loc in "TopNavigationBar", "QuickLaunch") {
+    Get-PnPNavigationNode -Location $loc | ForEach-Object { Remove-PnPNavigationNode -Identity $_ -Force }
+    Add-Nav $loc "Home" "SitePages/Hub-Home.aspx" | Out-Null
+    $start = Add-Nav $loc "Get Started" "SitePages/Get-Started.aspx"
+    Add-Nav $loc "Get started with Copilot" "SitePages/Get-Started.aspx" $start | Out-Null
+    Add-Nav $loc "Use AI responsibly" "SitePages/Use-AI-Responsibly.aspx" $start | Out-Null
+    Add-Nav $loc "FAQ" "SitePages/FAQ.aspx" $start | Out-Null
+    Add-Nav $loc "Prompt Library" "SitePages/Prompt-Library.aspx" | Out-Null
+    Add-Nav $loc "Friday Tips" "SitePages/Friday-Tips.aspx" | Out-Null
+    Add-Nav $loc "Demo Videos" "SitePages/Demo-Videos.aspx" | Out-Null
+    Add-Nav $loc "Agents & Tools" "SitePages/Agents-and-Tools.aspx" | Out-Null
+    Add-Nav $loc "News" "_layouts/15/news.aspx" | Out-Null
+    Add-Nav $loc "Feedback" "SitePages/Feedback.aspx" | Out-Null
+    $titles = (Get-PnPNavigationNode -Location $loc | ForEach-Object Title) -join " | "
+    Write-Host "  $loc`: $titles"
+}
 
 # A new site has no footer menu until someone edits the footer once in the browser, and
 # PnP can't create it ("Unable to define Navigation Node collection"). The links are
