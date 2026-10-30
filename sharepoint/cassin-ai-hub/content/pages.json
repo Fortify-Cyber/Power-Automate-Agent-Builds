@@ -163,7 +163,7 @@
           [
             {
               "Type": "Text",
-              "Html": "<p><strong>Have a prompt that works?</strong> Share it. It appears for everyone once the AI Working Group approves it.</p>"
+              "Html": "<p><strong>Have a prompt that works?</strong> Share it. It appears for everyone once the AI Working Group approves it. Leave out client names and deal details.</p>"
             },
             {
               "Type": "Button",

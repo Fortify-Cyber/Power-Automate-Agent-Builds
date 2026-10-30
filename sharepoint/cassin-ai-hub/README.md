@@ -48,7 +48,9 @@ The pages use a custom web part that draws the prompts, tips, videos, agents, FA
 2. Select **Upload** and choose `package/cassin-ai-hub-webpart.sppkg`.
 3. In the panel that opens, choose **Enable this app and add it to all sites**, then **Enable**.
 
-It reads the hub's lists as the signed-in person, with no extra permissions and nothing sent outside Microsoft 365. Headings load Cassin's brand fonts from Google Fonts; if that's blocked, they fall back to Georgia.
+It reads the hub's lists as the signed-in person, with no extra permissions and nothing sent outside Microsoft 365. Cassin's brand fonts are bundled inside it, so no outside requests are made.
+
+To update it later, upload the new `.sppkg` the same way and choose **Replace**. Pages pick up the new version automatically.
 
 ### 4. Run the build (5–10 min)
 From the `cassin-ai-hub` folder:

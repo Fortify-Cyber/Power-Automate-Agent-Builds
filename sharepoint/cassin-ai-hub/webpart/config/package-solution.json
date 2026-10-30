@@ -3,7 +3,7 @@
   "solution": {
     "name": "Cassin AI Hub web part",
     "id": "5516668a-203b-4fa3-8b4f-54dc26ac9db0",
-    "version": "1.0.0.0",
+    "version": "1.0.1.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "developer": {
@@ -29,7 +29,7 @@
         "title": "Cassin AI Hub web part",
         "description": "Adds the Cassin AI Hub web part.",
         "id": "377228b5-9ba5-4eea-a89d-bcdd0dac0d4d",
-        "version": "1.0.0.0"
+        "version": "1.0.1.0"
       }
     ]
   },

@@ -1,10 +1,12 @@
+import { FONT_FACES } from './fonts';
+
 // The Cassin look from the hub mockup (sharepoint/cassin-ai-hub/preview), scoped under .cah
 // so it can't leak into the rest of the SharePoint page. Injected once per page.
 export const CSS = `
 .cah { --navy:#021D3C; --primary:#00426C; --primary-dark:#003251; --blue:#0077CE; --sky:#4DD8FF;
   --sand:#EFE7DF; --sand-2:#F2ECE6; --sand-line:#DDD3CA; --soft:#EFF3F6; --soft-line:#C7D5DF;
   --prompt-bg:#F7F9FC; --muted:#3B5068; --faint:#6E7C8C; --line:#E4E1DD;
-  --serif:"Roboto Serif",Georgia,"Times New Roman",serif; --sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --serif:"Cassin Serif","Roboto Serif",Georgia,"Times New Roman",serif; --sans:"Cassin Plex","IBM Plex Sans","Segoe UI",system-ui,sans-serif;
   color:var(--navy); font:16px/1.55 var(--sans); }
 .cah *, .cah *::before, .cah *::after { box-sizing:border-box; }
 .cah a { color:var(--blue); }
@@ -72,18 +74,12 @@ export const CSS = `
   .cah .tip .num b { font-size:24px; }
 }`;
 
-export const FONTS_URL = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=Roboto+Serif:opsz,wght@8..144,300;8..144,400&display=swap';
-
 export function ensureStyles(): void {
   if (document.getElementById('cassin-ai-hub-css')) return;
   const style = document.createElement('style');
   style.id = 'cassin-ai-hub-css';
-  style.textContent = CSS;
+  // Fonts are bundled (fonts.ts), so nothing is fetched from outside Microsoft 365. If a
+  // content policy blocks data: fonts, the stack falls back to Georgia and Segoe UI.
+  style.textContent = FONT_FACES + CSS;
   document.head.appendChild(style);
-  // Brand fonts. If the browser or a content policy blocks Google Fonts, the stack falls
-  // back to Georgia and Segoe UI and nothing else changes.
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = FONTS_URL;
-  document.head.appendChild(link);
 }

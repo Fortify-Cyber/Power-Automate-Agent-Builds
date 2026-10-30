@@ -188,6 +188,7 @@ Add-NoteField   $L "HowToUse" "How to use it"
 Add-NoteField   $L "WatchOuts" "Check before you rely on it"
 Add-HubField    $L "Featured" "Featured" "Boolean" $noNewForm "<Default>0</Default>"
 Add-HubField    $L "Contributor" "Source" "Text" $noNewForm
+Set-PnPField -List $L -Identity "PromptText" -Values @{ Description = "Use [brackets] for the parts people fill in. Don't include client names, deal details or anything confidential: approved prompts are visible to the whole firm." } | Out-Null
 
 if (Test-ListEmpty $L) {
     foreach ($p in (Read-Content "prompts.json")) {
@@ -347,19 +348,25 @@ $listUrls = @{ "Prompt Library" = "Lists/PromptLibrary"; "Friday Tips" = "Lists/
 # each list section in the hub design. Without it in the app catalog, "Hub" parts fall back
 # to SharePoint's standard list web part showing the same list.
 $hubWebPartId = "49691dea-d53b-4628-9298-1e11ab7a38cd"
-$script:hubWebPart = $null
+$script:hubComponent = $null
+$script:hubChecked = $false
 
-function Test-HubWebPart([string] $Page) {
-    if ($null -eq $script:hubWebPart) {
-        $script:hubWebPart = [bool] (Get-PnPPageComponent -Page $Page -ListAvailable |
-            Where-Object { $_.Id.Trim("{}") -eq $hubWebPartId })
-        if ($script:hubWebPart) { Write-Host "  using the Cassin AI Hub web part" }
+# Returns the web part's component object, or $null when it isn't installed. Pass this object
+# to Add-PnPPageWebPart, not the id: PnP matches a bare id against component ids that
+# SharePoint wraps in braces, finds nothing, and silently adds a web part with an empty id,
+# which breaks the whole page ("Component id is not a valid Guid").
+function Get-HubComponent([string] $Page) {
+    if (-not $script:hubChecked) {
+        $script:hubChecked = $true
+        $script:hubComponent = Get-PnPPageComponent -Page $Page -ListAvailable |
+            Where-Object { $_.Id.Trim("{}") -eq $hubWebPartId } | Select-Object -First 1
+        if ($script:hubComponent) { Write-Host "  using the Cassin AI Hub web part" }
         else {
             Write-Host "  Cassin AI Hub web part not found in the app catalog, so the pages use standard list web parts." -ForegroundColor Yellow
             Write-Host "  Upload package/cassin-ai-hub-webpart.sppkg (README step 3). If you just did, wait 5 minutes and re-run with -RebuildPages." -ForegroundColor Yellow
         }
     }
-    $script:hubWebPart
+    $script:hubComponent
 }
 
 function Add-ListPart([string] $Page, [int] $Section, [int] $Column, [int] $Order, $Part) {
@@ -378,9 +385,11 @@ function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order
             Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order -Text (Expand-Tokens $Part.Html) | Out-Null
         }
         "Hub" {
-            if (Test-HubWebPart $Page) {
-                Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -Component $hubWebPartId `
-                    -WebPartProperties @{ section = [string] $Part.Section; maxItems = 6 } | Out-Null
+            $component = Get-HubComponent $Page
+            if ($component) {
+                $wp = Add-PnPPageWebPart -Page $Page -Section $Section -Column $Column -Order $Order -Component $component `
+                    -WebPartProperties @{ section = [string] $Part.Section; maxItems = 6 }
+                if (-not $wp.WebPartId) { throw "The Cassin AI Hub web part was added to $Page without its id. Stopping before the page is published." }
             } else {
                 Add-ListPart $Page $Section $Column $Order $Part
             }
