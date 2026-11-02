@@ -209,11 +209,12 @@
 <script>
 const DATA = /*__DATA__*/null;
 const ROUTES = { "Hub-Home": "home", "Get-Started": "start", "Prompt-Library": "prompts", "Friday-Tips": "tips",
-  "Demo-Videos": "videos", "Agents-and-Tools": "agents", "Use-AI-Responsibly": "responsible", "FAQ": "faq", "Feedback": "feedback" };
+  "Demo-Videos": "videos", "Agents-and-Tools": "agents", "Use-AI-Responsibly": "responsible", "Client-AI-Opt-Outs": "optouts", "FAQ": "faq", "Feedback": "feedback" };
 const PAGE_BY_ROUTE = Object.fromEntries(DATA.pages.map(p => [ROUTES[p.Name], p]));
 const NAV = [
   ["Home", "home"],
-  ["Get Started", null, [["Get started with Copilot", "start"], ["Use AI responsibly", "responsible"], ["FAQ", "faq"]]],
+  ["Get Started", null, [["Get started with Copilot", "start"], ["FAQ", "faq"]]],
+  ["AI Policy", null, [[DATA.settings.policyTitle, DATA.settings.policyUrl], ["Client AI opt-outs", "optouts"], ["Use AI responsibly", "responsible"]]],
   ["Prompt Library", "prompts"], ["Friday Tips", "tips"], ["Demo Videos", "videos"],
   ["Agents & Tools", "agents"], ["News", "news"], ["Feedback", "feedback"]
 ];
@@ -229,7 +230,8 @@ function localize(html) {
     .replace(/\{\{siteUrl\}\}\/SitePages\/([\w-]+)\.aspx/g, (_, n) => "#/" + (ROUTES[n] || "home"))
     .replace(/\{\{siteUrl\}\}\/Lists\/PromptLibrary\/NewForm\.aspx/g, "#/prompts?new")
     .replace(/\{\{siteUrl\}\}\/Lists\/HubFeedback\/NewForm\.aspx/g, "#/feedback?new")
-    .replace(/\{\{siteUrl\}\}\/Recordings/g, "#/videos");
+    .replace(/\{\{siteUrl\}\}\/Recordings/g, "#/videos")
+    .replace(/\{\{policyUrl\}\}/g, esc(DATA.settings.policyUrl));
 }
 
 function renderNav(route) {
@@ -238,7 +240,7 @@ function renderNav(route) {
     if (!kids) return `<a href="#/${r}" class="${route === r ? "on" : ""}">${esc(label)}</a>`;
     const on = kids.some(k => k[1] === route);
     return `<div class="dd ${on ? "on" : ""}"><button type="button" aria-haspopup="true" onclick="this.parentNode.classList.toggle('open')">${esc(label)} ▾</button>
-      <div class="dd-menu">${kids.map(([l, kr]) => `<a href="#/${kr}">${esc(l)}</a>`).join("")}</div></div>`;
+      <div class="dd-menu">${kids.map(([l, kr]) => /^https?:/.test(kr) ? `<a href="${esc(kr)}" target="_blank" rel="noopener">${esc(l)} ↗</a>` : `<a href="#/${kr}">${esc(l)}</a>`).join("")}</div></div>`;
   }).join("");
 }
 document.addEventListener("click", e => { if (!e.target.closest(".dd")) document.querySelectorAll(".dd.open").forEach(d => d.classList.remove("open")); });
@@ -318,7 +320,8 @@ const LISTS = {
   "Demo Videos|By app": videos,
   "AI Agents|All agents": agents,
   "AI FAQ|By topic": faq,
-  "Hub Feedback|My feedback": feedbackTable
+  "Hub Feedback|My feedback": feedbackTable,
+  "Client AI Opt-Outs|All clients": () => `<table class="list"><thead><tr><th>Client</th><th>Client number</th><th>Restriction</th><th>Applies to</th><th>Effective</th><th>Responsible partner</th><th>Notes</th></tr></thead><tbody><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:22px">The list is being compiled.</td></tr></tbody></table>`
 };
 
 function renderPart(part) {

@@ -54,7 +54,7 @@
           [
             {
               "Type": "Text",
-              "Html": "<h3>Use AI Responsibly</h3><p>Five habits for using Copilot on client work: what it can see, how to check it, and where it shouldn't go.</p><p><a href=\"{{siteUrl}}/SitePages/Use-AI-Responsibly.aspx\">Read the guidelines →</a></p>"
+              "Html": "<h3>Use AI Responsibly</h3><p>The firm's AI Acceptable Use Policy, the client AI opt-out list, and five habits for using Copilot on client work.</p><p><a href=\"{{policyUrl}}\">Read the policy →</a><br><a href=\"{{siteUrl}}/SitePages/Client-AI-Opt-Outs.aspx\">Client AI opt-outs →</a></p>"
             }
           ],
           [
@@ -113,7 +113,7 @@
           [
             {
               "Type": "Text",
-              "Html": "<p><strong>Copilot can make mistakes.</strong> Give its answers a quick check before you rely on them or send them on, and follow the firm's policies for client and confidential information. Questions? Ask the AI Working Group or <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">send us feedback</a>.</p>"
+              "Html": "<p><strong>Copilot can make mistakes.</strong> Give its answers a quick check before you rely on them or send them on. Follow the firm's <a href=\"{{policyUrl}}\">AI Acceptable Use Policy</a>, and check the <a href=\"{{siteUrl}}/SitePages/Client-AI-Opt-Outs.aspx\">client AI opt-out list</a> before using AI on a client's matter. Questions? Ask the AI Working Group or <a href=\"{{siteUrl}}/SitePages/Feedback.aspx\">send us feedback</a>.</p>"
             }
           ]
         ]
@@ -295,18 +295,79 @@
     "Sections": [
       {
         "Template": "TwoColumnLeft",
+        "Emphasis": 1,
+        "Columns": [
+          [
+            {
+              "Type": "Text",
+              "Html": "<h2>The firm's AI policy</h2><p>The <strong>AI Acceptable Use Policy</strong> sets out how AI tools may be used at Cassin &amp; Cassin. Everyone who uses Copilot should read it.</p>"
+            },
+            {
+              "Type": "Button",
+              "Label": "Read the AI Acceptable Use Policy",
+              "Url": "{{policyUrl}}"
+            }
+          ],
+          [
+            {
+              "Type": "Text",
+              "Html": "<h3>Client AI opt-outs</h3><p>Clients who have asked that AI not be used on their matters, or only with conditions.</p><p><a href=\"{{siteUrl}}/SitePages/Client-AI-Opt-Outs.aspx\">See the opt-out list →</a></p>"
+            }
+          ]
+        ]
+      },
+      {
+        "Template": "TwoColumnLeft",
         "Emphasis": 0,
         "Columns": [
           [
             {
               "Type": "Text",
-              "Html": "<h2>Five habits</h2><ol><li><strong>Use the firm's Copilot for client work.</strong> Microsoft 365 Copilot runs inside the firm's Microsoft 365 environment and only sees what you can already see. Don't paste client or matter information into public AI tools such as free ChatGPT or Gemini.</li><li><strong>Check before you rely.</strong> Click the citations. Compare figures, dates, names and section numbers against the source. Copilot can be confidently wrong.</li><li><strong>A lawyer reviews it before it leaves the firm.</strong> Anything going to a client, a lender or the other side gets attorney review, the same as work from a junior colleague.</li><li><strong>Ask it to say when it doesn't know.</strong> Add \"write not found rather than guessing\" to prompts that pull facts from documents.</li><li><strong>Keep the firm's rules.</strong> Follow the firm's policies for client and confidential information, records and ethical walls. AI doesn't change them.</li></ol>"
+              "Html": "<h2>Six habits</h2><ol><li><strong>Use the firm's Copilot for client work.</strong> Microsoft 365 Copilot runs inside the firm's Microsoft 365 environment and only sees what you can already see. Don't paste client or matter information into public AI tools such as free ChatGPT or Gemini.</li><li><strong>Check before you rely.</strong> Click the citations. Compare figures, dates, names and section numbers against the source. Copilot can be confidently wrong.</li><li><strong>A lawyer reviews it before it leaves the firm.</strong> Anything going to a client, a lender or the other side gets attorney review, the same as work from a junior colleague.</li><li><strong>Ask it to say when it doesn't know.</strong> Add \"write not found rather than guessing\" to prompts that pull facts from documents.</li><li><strong>Keep the firm's rules.</strong> Follow the <a href=\"{{policyUrl}}\">AI Acceptable Use Policy</a> and the firm's policies for client and confidential information, records and ethical walls. AI doesn't change them.</li><li><strong>Check the client's instructions.</strong> Some clients have asked that AI not be used on their matters. Check the <a href=\"{{siteUrl}}/SitePages/Client-AI-Opt-Outs.aspx\">client AI opt-out list</a> before you start.</li></ol>"
             }
           ],
           [
             {
               "Type": "Text",
               "Html": "<h3>What Copilot can see</h3><p>Only email, chats, meetings and files that you already have permission to open. It doesn't give you access to anything new.</p><h3>Where your prompts go</h3><p>Microsoft doesn't use your prompts, responses or files to train its AI models.</p><h3>Not sure?</h3><p>Ask the AI Working Group before you try it on a live matter.</p>"
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Client-AI-Opt-Outs",
+    "Title": "Client AI Opt-Outs",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "TwoColumnLeft",
+        "Emphasis": 1,
+        "Columns": [
+          [
+            {
+              "Type": "Text",
+              "Html": "<p>Some clients have asked that AI tools not be used on their matters, or only with conditions. <strong>Check this list before you use Copilot or any AI tool on a client's matter.</strong> The firm's <a href=\"{{policyUrl}}\">AI Acceptable Use Policy</a> applies to every matter.</p>"
+            }
+          ],
+          [
+            {
+              "Type": "Text",
+              "Html": "<h3>The list is being compiled</h3><p>It will appear below shortly. Until then, check the engagement letter or ask the responsible partner before using AI on a client's matter.</p>"
+            }
+          ]
+        ]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [
+          [
+            {
+              "Type": "List",
+              "List": "Client AI Opt-Outs",
+              "View": "All clients"
             }
           ]
         ]

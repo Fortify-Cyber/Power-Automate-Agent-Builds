@@ -29,6 +29,10 @@
     Deletes and recreates the hub pages from content/pages.json. Overwrites any edits
     made to those pages in the browser.
 
+.PARAMETER RebuildPage
+    Like -RebuildPages, but only for the named pages, for example
+    -RebuildPage Hub-Home, Use-AI-Responsibly. Names are the "Name" values in pages.json.
+
 .EXAMPLE
     ./Deploy-CassinAIHub.ps1 -TenantName cassinllp -ClientId 00000000-0000-0000-0000-000000000000
 #>
@@ -41,6 +45,7 @@ param(
     [string] $SiteTitle = "Cassin AI Hub",
     [switch] $ShareWithEveryone,
     [switch] $RebuildPages,
+    [string[]] $RebuildPage = @(),
     [switch] $SkipTheme
 )
 
@@ -58,7 +63,13 @@ function Write-Step([string] $Text) { Write-Host "`n== $Text" -ForegroundColor C
 function Read-Content([string] $File) {
     Get-Content (Join-Path $contentDir $File) -Raw -Encoding utf8 | ConvertFrom-Json
 }
-function Expand-Tokens([string] $Text) { $Text.Replace("{{siteUrl}}", $siteUrl) }
+# Links kept in content/settings.json, such as the AI Acceptable Use Policy. In page HTML the
+# URL is HTML-encoded (it contains &); in button and menu links it's used as is.
+$settings = Read-Content "settings.json"
+function Expand-Tokens([string] $Text, [switch] $Html) {
+    $policy = if ($Html) { [System.Net.WebUtility]::HtmlEncode($settings.policyUrl) } else { $settings.policyUrl }
+    $Text.Replace("{{siteUrl}}", $siteUrl).Replace("{{policyUrl}}", $policy)
+}
 # Several PnP "get" cmdlets throw instead of returning nothing when the object is missing.
 function Find-Object([scriptblock] $Get) { try { & $Get } catch { $null } }
 
@@ -321,6 +332,25 @@ Set-HubView $L "My feedback" @("LinkTitle", "FeedbackType", "About", "FeedbackSt
     "<Where><Eq><FieldRef Name=`"Author`" /><Value Type=`"Integer`"><UserID /></Value></Eq></Where><OrderBy><FieldRef Name=`"Created`" Ascending=`"FALSE`" /></OrderBy>"
 Set-Formatter $L "FeedbackStatus" (New-Pill ([ordered]@{ "New" = "#efe7df"; "Reviewing" = "#d6e9f8"; "Planned" = "#e4dcf5"; "Done" = "#d7f0dd" }))
 
+# ---- Client AI opt-outs ---------------------------------------------------
+# Readable by everyone on the site; only owners and members can change it (it keeps the
+# site's permissions, unlike Prompt Library and Hub Feedback).
+Write-Step "Client AI Opt-Outs"
+$L = "Lists/ClientAIOptOuts"
+New-HubList "Client AI Opt-Outs" $L "Client" "Clients who have asked that AI not be used on their matters, or only with conditions. Check before using AI on a matter."
+Add-HubField    $L "ClientNumber" "Client number" "Text"
+Add-ChoiceField $L "OptOutScope" "Restriction" @("No AI on any matter", "No AI on client documents", "AI only with partner approval",
+    "AI only with client consent", "Other (see notes)") -Extra "Required=`"TRUE`""
+Add-HubField    $L "AppliesTo" "Applies to" "Text"
+Add-HubField    $L "EffectiveDate" "Effective" "DateTime" "Format=`"DateOnly`""
+Add-ChoiceField $L "OptOutSource" "Source" @("Engagement letter", "Outside counsel guidelines", "Client instruction", "Other") -Default "Client instruction"
+Add-HubField    $L "ResponsiblePartner" "Responsible partner" "Text"
+Add-NoteField   $L "OptOutNotes" "Notes"
+Set-HubView $L "All clients" @("LinkTitle", "ClientNumber", "OptOutScope", "AppliesTo", "EffectiveDate", "ResponsiblePartner", "OptOutNotes") `
+    "<OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -RowLimit 500 -Default
+Set-Formatter $L "OptOutScope" (New-Pill ([ordered]@{ "No AI on any matter" = "#f6d5d5"; "No AI on client documents" = "#f6d5d5";
+    "AI only with partner approval" = "#efe7df"; "AI only with client consent" = "#efe7df" }))
+
 # ---------------------------------------------------------------------------
 # 4. Permissions: Visitors read the site and can submit prompts and feedback
 # ---------------------------------------------------------------------------
@@ -342,7 +372,8 @@ if ($ShareWithEveryone) {
 # ---------------------------------------------------------------------------
 Write-Step "Pages"
 $listUrls = @{ "Prompt Library" = "Lists/PromptLibrary"; "Friday Tips" = "Lists/FridayTips"; "Demo Videos" = "Lists/DemoVideos"
-               "AI Agents" = "Lists/AIAgents"; "AI FAQ" = "Lists/AIFAQ"; "Hub Feedback" = "Lists/HubFeedback" }
+               "AI Agents" = "Lists/AIAgents"; "AI FAQ" = "Lists/AIFAQ"; "Hub Feedback" = "Lists/HubFeedback"
+               "Client AI Opt-Outs" = "Lists/ClientAIOptOuts" }
 
 # The Cassin AI Hub web part (webpart/, shipped as package/cassin-ai-hub-webpart.sppkg) draws
 # each list section in the hub design. Without it in the app catalog, "Hub" parts fall back
@@ -382,7 +413,7 @@ function Add-ListPart([string] $Page, [int] $Section, [int] $Column, [int] $Orde
 function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order, $Part) {
     switch ($Part.Type) {
         "Text" {
-            Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order -Text (Expand-Tokens $Part.Html) | Out-Null
+            Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order -Text (Expand-Tokens $Part.Html -Html) | Out-Null
         }
         "Hub" {
             $component = Get-HubComponent $Page
@@ -429,11 +460,13 @@ function Test-PageExists([string] $Name) {
 
 # SharePoint won't delete the site's home page, so point home at the default page while
 # the hub pages are rebuilt. The hub home page is set again below.
-if ($RebuildPages) { try { Set-PnPHomePage -RootFolderRelativeUrl "SitePages/Home.aspx" } catch { } }
+if ($RebuildPages -or $RebuildPage -contains "Hub-Home") { try { Set-PnPHomePage -RootFolderRelativeUrl "SitePages/Home.aspx" } catch { } }
 
 foreach ($pg in (Read-Content "pages.json")) {
     if (Test-PageExists $pg.Name) {
-        if (-not $RebuildPages) { Write-Host "  $($pg.Title): exists, skipped (use -RebuildPages to recreate)"; continue }
+        if (-not ($RebuildPages -or $RebuildPage -contains $pg.Name)) {
+            Write-Host "  $($pg.Title): exists, skipped (use -RebuildPage $($pg.Name) to recreate)"; continue
+        }
         if (-not (Remove-HubPage $pg.Name)) { continue }
     }
     $header = if ($pg.Layout -eq "Home") { @{} } else { @{ HeaderLayoutType = "ColorBlock" } }
@@ -458,7 +491,7 @@ foreach ($n in (Read-Content "news.json")) {
     if (Test-PageExists $n.Name) { Write-Host "  $($n.Title): exists, skipped"; continue }
     Add-PnPPage -Name $n.Name -Title $n.Title -LayoutType Article -PromoteAs NewsArticle -HeaderLayoutType ColorBlock | Out-Null
     Add-PnPPageSection -Page $n.Name -SectionTemplate OneColumn -Order 1 | Out-Null
-    Add-PnPPageTextPart -Page $n.Name -Section 1 -Column 1 -Text (Expand-Tokens $n.Html) | Out-Null
+    Add-PnPPageTextPart -Page $n.Name -Section 1 -Column 1 -Text (Expand-Tokens $n.Html -Html) | Out-Null
     Set-PnPPage -Identity $n.Name -Publish | Out-Null
     Write-Host "  $($n.Title)"
 }
@@ -470,17 +503,22 @@ Write-Step "Navigation"
 # A communication site's menu bar shows either the top navigation or the quick launch,
 # depending on the site's settings, so write the same menu to both.
 function Add-Nav([string] $Location, [string] $Title, [string] $Path, $Parent = $null) {
-    $url = if ($Path -match "^https?://") { $Path } else { "$siteRel/$Path" }
-    if ($Parent) { Add-PnPNavigationNode -Location $Location -Title $Title -Url $url -Parent $Parent }
-    else         { Add-PnPNavigationNode -Location $Location -Title $Title -Url $url }
+    $external = $Path -match "^https?://"   # e.g. the policy in OneDrive: outside this site
+    $url = if ($external) { $Path } else { "$siteRel/$Path" }
+    $nav = @{ Location = $Location; Title = $Title; Url = $url; External = $external }
+    if ($Parent) { $nav.Parent = $Parent }
+    Add-PnPNavigationNode @nav
 }
 foreach ($loc in "TopNavigationBar", "QuickLaunch") {
     Get-PnPNavigationNode -Location $loc | ForEach-Object { Remove-PnPNavigationNode -Identity $_ -Force }
     Add-Nav $loc "Home" "SitePages/Hub-Home.aspx" | Out-Null
     $start = Add-Nav $loc "Get Started" "SitePages/Get-Started.aspx"
     Add-Nav $loc "Get started with Copilot" "SitePages/Get-Started.aspx" $start | Out-Null
-    Add-Nav $loc "Use AI responsibly" "SitePages/Use-AI-Responsibly.aspx" $start | Out-Null
     Add-Nav $loc "FAQ" "SitePages/FAQ.aspx" $start | Out-Null
+    $policy = Add-Nav $loc "AI Policy" "SitePages/Use-AI-Responsibly.aspx"
+    Add-Nav $loc $settings.policyTitle $settings.policyUrl $policy | Out-Null
+    Add-Nav $loc "Client AI opt-outs" "SitePages/Client-AI-Opt-Outs.aspx" $policy | Out-Null
+    Add-Nav $loc "Use AI responsibly" "SitePages/Use-AI-Responsibly.aspx" $policy | Out-Null
     Add-Nav $loc "Prompt Library" "SitePages/Prompt-Library.aspx" | Out-Null
     Add-Nav $loc "Friday Tips" "SitePages/Friday-Tips.aspx" | Out-Null
     Add-Nav $loc "Demo Videos" "SitePages/Demo-Videos.aspx" | Out-Null

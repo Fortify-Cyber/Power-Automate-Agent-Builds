@@ -27,6 +27,7 @@ def main():
         "faq": load("faq.json"),
         "news": load("news.json"),
         "pages": load("pages.json"),
+        "settings": load("settings.json"),
         "siteUrl": SITE_URL,
     }
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")

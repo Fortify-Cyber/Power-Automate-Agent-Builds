@@ -15,7 +15,9 @@ A SharePoint communication site for Cassin & Cassin's Microsoft 365 Copilot prog
 | **Demo Videos** | Microsoft how-to videos plus anything recorded at Cassin | `Demo Videos` list + `Recordings` library |
 | **Agents & Tools** | Daily Digest (live), Email Filing Assistant (pilot), the next two builds | `AI Agents` list |
 | **News** | SharePoint news. Three starter posts | site news |
-| **Use AI Responsibly** | Five habits: what Copilot can see, checking its work, attorney review | page text |
+| **AI Policy** menu | Link to the firm's **AI Acceptable Use Policy** (a Word document, address in `content/settings.json`), the client opt-out list, and *Use AI Responsibly* | |
+| **Use AI Responsibly** | The policy link, six habits: what Copilot can see, checking its work, attorney review, client opt-outs | page text |
+| **Client AI Opt-Outs** | Clients who have asked that AI not be used on their matters, or only with conditions. Everyone can read it; only owners and members can edit | `Client AI Opt-Outs` list |
 | **FAQ** | 10 common questions | `AI FAQ` list |
 | **Feedback** | A form for ideas, problems and wins. People see only their own submissions; owners see all, and set Status and a response | `Hub Feedback` list |
 
@@ -64,7 +66,7 @@ You'll sign in once for the admin center and once for the new site. The script:
 4. sets permissions: site **Visitors** can read everything and can **add** to Prompt Library and Hub Feedback
 5. builds the pages (with the Cassin web part) and news posts, sets the home page, and builds the menu
 
-It's safe to run again. Lists and content aren't duplicated, and pages that already exist are skipped unless you add `-RebuildPages`, which **overwrites edits made in the browser**. If you installed the web part after a first run, re-run with `-RebuildPages` to switch the pages over.
+It's safe to run again. Lists and content aren't duplicated, and pages that already exist are skipped unless you add `-RebuildPages` (all pages) or `-RebuildPage <name>, <name>` (just those), which **overwrite edits made to those pages in the browser**. If you installed the web part after a first run, re-run with `-RebuildPages` to switch the pages over.
 
 If the footer menu doesn't exist yet, the script skips the footer links and says so. Add them in the browser (scroll to the footer, select **Edit**).
 
@@ -100,6 +102,8 @@ If a section says it couldn't load, or you see a plain list table instead of car
 | Add a Cassin video | Upload it to **Recordings**, copy its link, then add a row in Demo Videos with *From = Cassin* |
 | Update an agent's status or champion | AI Agents → edit the row |
 | Post news | **+ New → News post** on the home page |
+| Load or update the client opt-out list | Client AI Opt-Outs list → **Edit in grid view**, then paste rows from Excel (columns in this order: Client, Client number, Restriction, Applies to, Effective, Responsible partner, Notes). Restriction must match one of its choices. Then edit the page and remove the "being compiled" note |
+| Move or replace the AI policy document | Change `policyUrl` in `content/settings.json`, then run the script with `-RebuildPage Hub-Home, Use-AI-Responsibly, Client-AI-Opt-Outs` (the menu updates on every run) |
 
 **Friday Tip automation.** The weekly tip flow currently runs from Fortify's tenant (`fortifycyber.sharepoint.com/sites/AI`), so it can't write to Cassin's site directly. Either add each tip to the hub by hand (about 2 minutes), or later move the flow into Cassin's tenant and have it add a row to **Friday Tips** when it sends.
 

@@ -12,7 +12,7 @@
   {
     "Title": "Can I use Copilot with client and matter information?",
     "Topic": "Using AI responsibly",
-    "Answer": "Microsoft 365 Copilot works inside the firm's Microsoft 365 environment and only sees what you already have access to. Microsoft doesn't use your prompts or files to train its models. Follow the firm's policies for client and confidential information, and don't paste client information into public AI tools such as free ChatGPT or Gemini."
+    "Answer": "Microsoft 365 Copilot works inside the firm's Microsoft 365 environment and only sees what you already have access to. Microsoft doesn't use your prompts or files to train its models. Follow the firm's AI Acceptable Use Policy (linked on Use AI Responsibly) and check the client AI opt-out list, and don't paste client information into public AI tools such as free ChatGPT or Gemini."
   },
   {
     "Title": "Can I trust what Copilot tells me?",

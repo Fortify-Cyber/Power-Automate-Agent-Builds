@@ -1,0 +1,5 @@
+{
+  "_comment": "Links used across the site. Change a value here, then re-run the deploy script with -RebuildPage for the pages that use it (Hub-Home, Use-AI-Responsibly, Client-AI-Opt-Outs). The menu updates on every run.",
+  "policyUrl": "https://cassinllp-my.sharepoint.com/:w:/r/personal/aiadmin_cassinllp_com/_layouts/15/Doc.aspx?sourcedoc=%7B3A3F8570-CE16-4ADF-8A6D-61282A2BBD3B%7D&file=Cassin%20AI%20Acceptable%20Use%20Policy%20October%202026%20Draft%20-%20Artificial%20Intelligence%20Usage%20Policy.docx&action=default&mobileredirect=true&wdwpf=c",
+  "policyTitle": "AI Acceptable Use Policy"
+}
