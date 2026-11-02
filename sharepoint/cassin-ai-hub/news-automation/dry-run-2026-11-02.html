@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI News dry run</title>
+<style>
+  :root { --navy:#021D3C; --primary:#00426C; --sand:#F2ECE6; --line:#E4E1DD; --muted:#3B5068; --soft:#EFF3F6; --pub:#D7F0DD; --skip:#EEEEEE; --dup:#D6E9F8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#fff; color:var(--navy); font:16px/1.55 "Segoe UI", system-ui, sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:28px 16px 60px; }
+  h1 { font:400 32px/1.2 Georgia, serif; margin:0 0 6px; }
+  h2 { font:400 24px/1.25 Georgia, serif; margin:36px 0 10px; }
+  h3 { font:600 18px/1.3 "Segoe UI", sans-serif; margin:0 0 6px; }
+  .lede { color:var(--muted); margin:0 0 18px; }
+  .box { background:var(--sand); padding:16px 18px; margin:16px 0; }
+  table { width:100%; border-collapse:collapse; font-size:14.5px; }
+  th { text-align:left; color:var(--muted); font-weight:600; border-bottom:1px solid var(--line); padding:8px 6px; }
+  td { border-bottom:1px solid var(--line); padding:9px 6px; vertical-align:top; }
+  td.n { white-space:nowrap; }
+  .pill { display:inline-block; padding:1px 9px; border-radius:11px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .pub { background:var(--pub); } .skip { background:var(--skip); } .dup { background:var(--dup); }
+  .post { border:1px solid var(--line); margin:18px 0; }
+  .post .hd { background:var(--primary); color:#fff; padding:16px 20px; }
+  .post .hd .eyebrow { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:#C7D5DF; }
+  .post .hd h3 { color:#fff; font:400 22px/1.3 Georgia, serif; margin:6px 0 0; }
+  .post .bd { padding:16px 20px; }
+  .post .bd ul, .post .bd ol { padding-left:22px; }
+  .post .bd li { margin-bottom:6px; }
+  .post .ft { border-top:1px solid var(--line); padding:12px 20px; font-size:13.5px; color:var(--muted); }
+  .note { font-size:14px; color:var(--muted); }
+  a { color:#0077CE; }
+  @media (max-width:640px) { table, thead, tbody, tr, td, th { display:block; } thead { display:none; } td { border:0; padding:3px 0; } tr { border-bottom:1px solid var(--line); padding:8px 0; } }
+</style>
+</head>
+<body>
+<main>
+<h1>AI News: dry run</h1>
+<p class="lede">What the automatic news flow would have done on its last four weekly runs (Mondays, October 12 – November 2, 2026), applying <code>prompt.md</code> to every article in Microsoft's Copilot blog. Nothing here has been posted anywhere.</p>
+
+<div class="box">
+<strong>Result:</strong> 11 articles published in the window, <strong>2 would have published</strong>. One of them (Copilot for Legal) is already on the hub, so the flow's log would mark it as a duplicate and skip it. That leaves <strong>1 new post</strong> in four weeks, the October roundup below. Everything else was for admins, developers, other industries, or Frontier-only previews.
+</div>
+
+<h2>Every article, scored</h2>
+<table>
+<thead><tr><th>Run</th><th>Article (Microsoft)</th><th>Score</th><th>Decision and reason</th></tr></thead>
+<tbody>
+<tr><td class="n">Oct 12</td><td>Introducing Office in the new Microsoft Copilot app</td><td>3</td><td><span class="pill skip">Skip</span> Frontier customers only for now.</td></tr>
+<tr><td class="n">Oct 19</td><td>What's New in Notebooks | October 2026</td><td>2</td><td><span class="pill skip">Skip</span> Mostly Frontier-only changes; the rest are minor.</td></tr>
+<tr><td class="n">Oct 19</td><td>Building Trust-Aware Controls for AI</td><td>1</td><td><span class="pill skip">Skip</span> Security controls for IT admins.</td></tr>
+<tr><td class="n">Oct 19</td><td>Introducing Microsoft Copilot for legal</td><td>5</td><td><span class="pill dup">Already posted</span> Legal skills in Word, available now. Already on the hub (posted by hand), so the log skips it.</td></tr>
+<tr><td class="n">Oct 26</td><td>Transform your storytelling with interactive slides in PowerPoint</td><td>2</td><td><span class="pill skip">Skip</span> PowerPoint feature; the rules assume the firm rarely uses PowerPoint.</td></tr>
+<tr><td class="n">Oct 26</td><td>Copilot Code: Make the power of coding accessible to everyone</td><td>1</td><td><span class="pill skip">Skip</span> App-building tool, Frontier only.</td></tr>
+<tr><td class="n">Oct 26</td><td>What's New in Cowork: Expanded plugins and role-based skills</td><td>3</td><td><span class="pill skip">Skip</span> Includes a Legal plugin for Cowork, but it needs an admin to deploy it first. Worth a hand-written post once it's set up at Cassin.</td></tr>
+<tr><td class="n">Oct 26</td><td>Explore user feedback with Microsoft 365 Insights Agent</td><td>1</td><td><span class="pill skip">Skip</span> For agent owners and admins.</td></tr>
+<tr><td class="n">Oct 26</td><td>From Pilots to Programs: scaling AI and agents</td><td>1</td><td><span class="pill skip">Skip</span> Management guidance, not a product change.</td></tr>
+<tr><td class="n">Nov 2</td><td>Frontier expands to more Microsoft 365 public previews</td><td>1</td><td><span class="pill skip">Skip</span> Preview program for admins.</td></tr>
+<tr><td class="n">Nov 2</td><td>What's New in Microsoft Copilot | October 2026</td><td>4</td><td><span class="pill pub">Publish</span> Monthly roundup with several generally available changes in Word, Teams, OneDrive and Excel.</td></tr>
+<tr><td class="n">earlier</td><td>Introducing the plugin registry · Evolution of the Copilot pricing model · Change Management with Agent Builder · Measuring the value of Cowork</td><td>1</td><td><span class="pill skip">Skip</span> Admin, pricing and management topics (outside the four-week window, listed to show how they'd be treated).</td></tr>
+</tbody>
+</table>
+
+<h2>The post it would have published (November 2 run)</h2>
+<div class="post">
+  <div class="hd"><div class="eyebrow">Microsoft update · November 2, 2026</div><h3>What's new in Copilot for October: Word design help, Teams recaps and more</h3></div>
+  <div class="bd">
+    <p>Microsoft's October update brings several changes Copilot users at the firm can use now, plus two that arrive in November.</p>
+    <p><strong>What's new</strong></p>
+    <ul>
+      <li><strong>Word, legal skills:</strong> more than 20 legal skills for drafting from precedents, reviewing contracts against a playbook and redlining. Available now. <a href="#">See our earlier post</a>.</li>
+      <li><strong>Word, document design:</strong> when Copilot drafts a document, it now applies structure, layout and formatting suited to the type of document. Available now.</li>
+      <li><strong>Teams, meeting recaps without a transcript:</strong> organizers with Copilot can turn on an AI summary of decisions and action items without keeping a transcript after the meeting. Available now. Follow the firm's policies on recording and transcribing meetings.</li>
+      <li><strong>OneDrive, Prompt Gallery:</strong> ready-made prompts for common file tasks. Available now.</li>
+      <li><strong>Coming in November:</strong> saved, reusable skills and Projects (keeping related chats, files and instructions together) arrive in Copilot Chat.</li>
+    </ul>
+    <p><strong>Try it</strong></p>
+    <ol>
+      <li>In OneDrive, select the <strong>Copilot</strong> button in the bottom-right corner.</li>
+      <li>Choose <strong>Open Prompt Gallery</strong> and browse the Create, Analyze, Find and Collaborate categories.</li>
+    </ol>
+  </div>
+  <div class="ft">Source: <a href="https://techcommunity.microsoft.com/t5/microsoft-copilot-blog/what-s-new-in-microsoft-copilot-october-2026/ba-p/4568528">What's New in Microsoft Copilot | October 2026</a> (Microsoft, October 30, 2026).<br>Summarized automatically from Microsoft's announcement. Check the source before relying on the details, and follow the firm's AI Acceptable Use Policy.</div>
+</div>
+<p class="note">Left out on purpose, per the rules: Autopilot, Workspaces, Office in the Copilot app, the SharePoint knowledge base and Excel accounting skills (Frontier or Insiders only); PowerPoint brand kits; life sciences connectors; Government cloud; and the admin items (Insights Agent, Purview retention and DLP).</p>
+
+<h2>What to look at</h2>
+<ul>
+  <li><strong>Volume.</strong> About one post every two to four weeks from this source. Want more? Lower the bar to score 3, or add a second source (the Microsoft 365 Roadmap feed).</li>
+  <li><strong>The firm profile in the rules.</strong> The rules assume people work mostly in Outlook, Word, Teams and Copilot Chat, and rarely in PowerPoint. Correct that if it's wrong, because it drives the scores.</li>
+  <li><strong>Tone and length.</strong> Is the roundup post the right length for a busy lawyer?</li>
+  <li><strong>Teams recap item.</strong> Recaps without a transcript may raise records questions for the firm. Keep it in, or add "meeting recordings and transcripts" to the skip list?</li>
+  <li><strong>Cowork.</strong> Cowork items score 3 until the Legal plugin is deployed at Cassin. After that, tell the flow to treat Cowork like Word.</li>
+</ul>
+</main>
+</body>
+</html>
