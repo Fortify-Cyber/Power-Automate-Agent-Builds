@@ -35,6 +35,9 @@ Publish only scores of 4 and 5.
   about the generally available ones and leave the rest out.
 - **Skip** pricing, licensing and billing news. That's for the firm's management, not a
   firm-wide post.
+- **Skip** anything about recording, transcribing or recapping meetings or calls
+  (transcripts, recordings, intelligent recap, meeting notes). Those raise records questions
+  the firm handles separately. In a roundup, leave those items out.
 - **Never** invent features, dates, steps or menu names. Use only what the article says. If
   the article doesn't say when something arrives, don't guess.
 - **Never** promise that something is turned on at Cassin. Say "Microsoft is rolling out" or
@@ -42,15 +45,17 @@ Publish only scores of 4 and 5.
 - Don't repeat marketing language ("transform", "unlock", "seamless", "game-changer").
 
 ## Write the post (only if the score is 4 or 5)
-- **Headline:** plain and specific, under 80 characters, saying what changed. Not the
+Short and direct. Readers skim; anyone who wants more follows the links.
+- **Headline:** plain and specific, under 70 characters, saying what changed. Not the
   article's title.
-- **Summary:** one or two sentences: what it is and who it helps.
-- **What's new:** two to five bullets. For a monthly roundup, pick only the items relevant
-  to the firm (score 4+ on their own) and generally available. One sentence each, with when
-  it arrives if the article says.
-- **Try it:** if the article gives clear steps, include them as a numbered list. Otherwise
-  leave this out.
-- Plain English, short sentences, US spelling. Write for a busy lawyer, not an IT person.
+- **Summary:** one sentence, under 25 words.
+- **Items:** one to three bullets, each one sentence under 20 words, saying what it does and
+  when it arrives if the article says. For a monthly roundup, pick only the items relevant to
+  the firm (score 4+ on their own) and generally available. Give each item the most specific
+  Microsoft link the article provides for it ("Learn more" pages); otherwise leave the link
+  empty and the flow uses the article link.
+- No "how to" steps and no background paragraphs.
+- Plain English, US spelling. Write for a busy lawyer, not an IT person.
 
 ## Return exactly this JSON
 ```json
@@ -60,13 +65,11 @@ Publish only scores of 4 and 5.
   "publish": false,
   "headline": "",
   "summary": "",
-  "whats_new": [""],
-  "try_it": [""],
-  "available": "now | coming soon | mixed"
+  "items": [{ "text": "", "link": "" }]
 }
 ```
-Leave `headline`, `summary`, `whats_new` and `try_it` empty when `publish` is false.
+Leave `headline`, `summary` and `items` empty when `publish` is false.
 
-The flow adds the source link, the date, and this footer to every post: "Summarized
-automatically from Microsoft's announcement. Check the source before relying on the details,
-and follow the firm's AI Acceptable Use Policy."
+The flow adds a "Read Microsoft's announcement" link and this footer to every post:
+"Summarized automatically from Microsoft's announcement. Check the source before relying on
+it, and follow the firm's AI Acceptable Use Policy."

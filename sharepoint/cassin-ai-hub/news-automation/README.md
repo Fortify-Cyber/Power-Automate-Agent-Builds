@@ -35,11 +35,13 @@ created as unpublished drafts and Mike gets an email) and switches to **Publish*
 | Minimum score to post | 4 |
 
 ## What it needs at Cassin
-- Connections for **RSS**, **SharePoint** and **Office 365 Outlook**. All are standard
-  connectors, so no premium licence is needed.
-- **AI Builder prompt credits** for the AI step: about 3 to 5 articles a week. Check Cassin's
-  AI Builder capacity in the Power Platform admin center before switching it on. Without it,
-  the flow can fall back to Microsoft's own first paragraph and a keyword filter, which is
-  noticeably less selective.
+- Connections for **RSS**, **SharePoint** and **Office 365 Outlook**. These are standard
+  connectors.
+- **The AI step (open question, November 2).** AI Builder's "Run a prompt" may make the flow
+  premium, so the flow owner would need Power Automate Premium. Microsoft's own pages
+  disagree on this. It also uses AI Builder or Copilot Credits, about 3 to 5 articles a week.
+  AI prompts can't be packaged in a solution, so the prompt is created once by hand from
+  `prompt.md`. See the options in the November 2 discussion: AI Builder at Cassin, a
+  keyword-only flow, or a Fortify-curated feed.
 - Imported by Cassin's admin as a managed solution, like Daily Digest, into the same
   environment.
