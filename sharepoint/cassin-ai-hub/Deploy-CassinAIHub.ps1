@@ -351,6 +351,31 @@ Set-HubView $L "All clients" @("LinkTitle", "ClientNumber", "OptOutScope", "Appl
 Set-Formatter $L "OptOutScope" (New-Pill ([ordered]@{ "No AI on any matter" = "#f6d5d5"; "No AI on client documents" = "#f6d5d5";
     "AI only with partner approval" = "#efe7df"; "AI only with client consent" = "#efe7df" }))
 
+# ---- AI News Log ------------------------------------------------------------
+# Memory and audit trail for the weekly news flow (news-automation/): one row per Microsoft
+# article it has checked, so it never posts the same article twice. Owners and members only.
+Write-Step "AI News Log"
+$L = "Lists/AINewsLog"
+New-HubList "AI News Log" $L "Article" "Every Microsoft article the weekly news flow has checked, and what it decided."
+Add-HubField    $L "ArticleUrl" "Article link" "Text" "MaxLength=`"255`" Required=`"TRUE`""
+Add-HubField    $L "Score" "Score" "Number" "Decimals=`"0`""
+Add-ChoiceField $L "Decision" "Decision" @("Draft", "Published", "Skipped", "Not relevant", "Error")
+Add-NoteField   $L "Reason" "Why"
+Add-HubField    $L "NewsPage" "News post" "Text" "MaxLength=`"255`""
+Add-HubField    $L "ArticleDate" "Published by Microsoft" "DateTime" "Format=`"DateOnly`""
+if (Test-ListEmpty $L) {
+    # Already posted by hand (news.json: Copilot-for-Legal), so the flow mustn't post it again.
+    Add-PnPListItem -List $L -Values @{
+        Title = "Introducing Microsoft Copilot for legal"
+        ArticleUrl = "https://techcommunity.microsoft.com/t5/microsoft-copilot-blog/introducing-microsoft-copilot-for-legal/ba-p/4564246"
+        Decision = "Published"; Reason = "Posted by hand on the hub."
+        NewsPage = "$siteUrl/SitePages/Copilot-for-Legal.aspx"; ArticleDate = [datetime] "2026-10-15" } | Out-Null
+    Write-Host "  seeded with the Copilot for Legal post"
+}
+Set-HubView $L "All articles" @("LinkTitle", "Decision", "Score", "Reason", "ArticleDate", "NewsPage", "Created") `
+    "<OrderBy><FieldRef Name=`"Created`" Ascending=`"FALSE`" /></OrderBy>" -RowLimit 200 -Default
+Set-Formatter $L "Decision" (New-Pill ([ordered]@{ "Published" = "#d7f0dd"; "Draft" = "#d6e9f8"; "Error" = "#f6d5d5" }))
+
 # ---------------------------------------------------------------------------
 # 4. Permissions: Visitors read the site and can submit prompts and feedback
 # ---------------------------------------------------------------------------
@@ -361,6 +386,9 @@ foreach ($list in "Lists/PromptLibrary", "Lists/HubFeedback") {
     Set-PnPListPermission -Identity $list -Group $visitors.Title -AddRole "Contribute" | Out-Null
 }
 Write-Host "  '$($visitors.Title)' can add to Prompt Library and Hub Feedback"
+Set-PnPList -Identity "Lists/AINewsLog" -BreakRoleInheritance -CopyRoleAssignments | Out-Null
+Set-PnPListPermission -Identity "Lists/AINewsLog" -Group $visitors.Title -RemoveRole "Read" | Out-Null
+Write-Host "  AI News Log: owners and members only"
 if ($ShareWithEveryone) {
     $tenantId = Get-PnPTenantId
     Add-PnPGroupMember -Group $visitors.Title -LoginName "c:0-.f|rolemanager|spo-grid-all-users/$tenantId" | Out-Null

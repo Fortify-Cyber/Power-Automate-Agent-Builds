@@ -1,0 +1,7 @@
+{
+  "minScore": 2,
+  "skipTitle": ["frontier", "preview", "pricing", "price", "licens", "billing", "insider", "government", "gcc", "admin", "purview", "security", "sentinel", "copilot studio", "foundry", "azure", "developer", "partner", "dynamics", "sales", "education", "life sciences", "change management", "measuring", "adoption", "insights agent", "plugin registry", "copilot code", "powerpoint", "notebooks", "workspaces", "cowork", "autopilot", "recording", "transcript", "recap", "meeting notes", "model", "openai", "claude", "grok", "gpt", "from pilots", "trust"],
+  "skipBody": ["rolling out today for frontier", "rolling out today through the frontier program", "available in frontier", "available today in frontier"],
+  "strongWords": ["legal", "lawyer", "law firm", "contract", "what’s new in microsoft copilot", "what's new in microsoft copilot"],
+  "apps": ["Word", "Outlook", "Teams", "OneDrive", "Excel", "Copilot Chat"]
+}

@@ -1,47 +1,79 @@
-# AI News automation (design, in review)
+# AI Hub weekly news
 
-A weekly Power Automate flow that reads Microsoft's Copilot announcements, decides which ones
-matter to Cassin, and posts them to the AI Hub's News. It starts in **Review** mode (posts are
-created as unpublished drafts and Mike gets an email) and switches to **Publish** mode
-(posts go live on their own) once the output looks right.
+A Power Automate flow that, every Monday at 7:00 AM Eastern, reads the Microsoft Copilot
+blog, picks the articles that matter to Cassin using keyword rules, and posts them to the
+AI Hub's News.
 
-- `prompt.md`: the selection and writing rules the flow's AI step follows.
-- `dry-run-2026-11-02.html`: those rules applied to the last four weeks of real articles.
+- **Review mode** (how it starts): posts are saved as unpublished drafts, and the reviewer gets
+  an email listing every article, what the flow decided and why, with links to the drafts.
+- **Publish mode:** posts go live by themselves, and the email lists what was published.
 
-## How it works
-1. **Weekly trigger**, Monday 7:00 AM Eastern.
-2. **Read the feed:** the Microsoft Copilot Blog RSS feed
-   (`https://techcommunity.microsoft.com/t5/s/gxcuf89792/rss/board?board.id=microsoft-copilot-blog`),
-   which carries each article's full text. It keeps items published in the last 7 days.
-3. **Skip anything already seen** by checking the article link in the **AI News Log** list on
-   the hub. The log is seeded with Copilot for Legal, which is already posted by hand.
-4. **AI step** (AI Builder "Run a prompt", using `prompt.md`): returns a score, a reason and,
-   for scores 4 and 5, the post text as JSON.
-5. **Log every article** with its score, reason and decision, so you can see why something
-   was or wasn't posted.
-6. **Create the news post** for each article marked to publish: headline, summary, bullets,
-   "Try it" steps, then the Microsoft source link and the standard footer.
-   - **Review mode:** saved as a draft and not visible to staff. One email to the reviewer
-     lists the week's drafts with links to open, edit and publish them.
-   - **Publish mode:** published straight to News. The email becomes a weekly
-     "here's what was posted" note.
+Standard connectors only (RSS, SharePoint, Office 365 Outlook), so no premium licence or AI
+credits. It was chosen over an AI version (`prompt.md`, kept for reference) for that reason.
 
-## Settings (environment variables in the solution)
-| Setting | Starts as |
+## What a post looks like
+- **Title:** Microsoft's article title.
+- **Body:** one line, for example "Microsoft's announcement covers Word, Outlook, Teams.",
+  then **Read Microsoft's announcement →**, then a short footer reminding people to check the
+  source and follow the AI Acceptable Use Policy.
+
+## How it decides (`rules.json`)
+1. **Skip** if the title contains any `skipTitle` word, or the article contains a `skipBody`
+   phrase. These cover Frontier-only and preview features, pricing and licensing, admin and
+   security topics, other industries, developer tools, PowerPoint, Cowork, AI model
+   announcements, and meeting recordings, transcripts and recaps.
+2. **Score** the rest: each `strongWords` match (legal, contract, the monthly "What's New in
+   Microsoft Copilot" roundup) scores 2. Each app in `apps` scores 1; these are matched
+   case-sensitively, so "Word" means the app, not the word.
+3. **Post** if the score reaches `minScore` (2).
+4. Skip any article already in the **AI News Log** list, which is seeded with Copilot for Legal.
+
+Over the last six weeks of articles, these rules make the same picks as the reviewed dry run
+(`dry-run-2026-11-02.html`): the monthly roundups and Copilot for Legal, which is already
+posted. **Remove "cowork" from `skipTitle` once the Legal plugin for Cowork is deployed at Cassin.**
+
+## Set it up (about 15 minutes)
+1. **Create the AI News Log list.** In PowerShell (`pwsh-preview`), from the `cassin-ai-hub`
+   folder, run the deploy script as usual. Existing pages aren't touched:
+   ```powershell
+   ./Deploy-CassinAIHub.ps1 -TenantName cassinllp -ClientId <client-id>
+   ```
+2. **Import the solution.** Go to https://make.powerautomate.com and select Cassin's default
+   environment, the same one as Daily Digest. Then **Solutions → Import solution**, choose
+   `release/FortifyCassinAINews_1_0_0_0.zip`, then **Next**.
+   - **Connections:** for each of RSS, SharePoint and Office 365 Outlook, pick an existing
+     connection or select **+ New connection** and sign in. Use the account that should
+     appear as the author of the news posts and the sender of the weekly email (for example
+     aiadmin@cassinllp.com).
+   - **Environment variables:** the defaults are filled in. Check the reviewer email.
+   - Select **Import** and wait for the success message.
+3. **Turn it on and test.** Open the solution, then the **Cassin AI Hub - Weekly news** flow,
+   and select **Turn on**. Then select **Run → Run flow** to test it now rather than waiting
+   for Monday.
+   - The email arrives within a few minutes. This week it should list the October "What's
+     New in Microsoft Copilot" roundup as a **Draft**.
+   - Open the draft from the email, check it, then select **Post news** (or delete it).
+   - The AI News Log list on the hub shows the result.
+4. **Go fully automatic** when you're happy: in the solution, open **Environment
+   variables → AI News Mode** and set its **current value** to `Publish`.
+
+## Change the rules or settings
+Everything is an environment variable in the solution (Solutions → Cassin AI Hub News →
+Environment variables). Set a **current value**; the defaults stay as a fallback.
+
+| Variable | What it does |
 |---|---|
-| Mode | `Review` |
-| Reviewer email | mgalbo@fortifycyber.com |
-| Hub site | https://cassinllp.sharepoint.com/sites/AIHub |
-| Minimum score to post | 4 |
+| AI News Mode | `Review` (drafts + email) or `Publish` (automatic) |
+| AI News Reviewer Email | Who gets the weekly email |
+| AI Hub Site URL | The hub site |
+| AI News Feed URL | The Microsoft Copilot Blog RSS feed |
+| AI News Rules | The keyword lists and minimum score (JSON, as in `rules.json`) |
 
-## What it needs at Cassin
-- Connections for **RSS**, **SharePoint** and **Office 365 Outlook**. These are standard
-  connectors.
-- **The AI step (open question, November 2).** AI Builder's "Run a prompt" may make the flow
-  premium, so the flow owner would need Power Automate Premium. Microsoft's own pages
-  disagree on this. It also uses AI Builder or Copilot Credits, about 3 to 5 articles a week.
-  AI prompts can't be packaged in a solution, so the prompt is created once by hand from
-  `prompt.md`. See the options in the November 2 discussion: AI Builder at Cassin, a
-  keyword-only flow, or a Fortify-curated feed.
-- Imported by Cassin's admin as a managed solution, like Daily Digest, into the same
-  environment.
+To see why an article was or wasn't posted, check the **Why** column in the AI News Log list.
+
+## Rebuild the solution
+```bash
+python3 news-automation/build_news_solution.py --check   # needs the Power Platform CLI (pac) for --check
+```
+Bump `SOLUTION["version"]` in the script for each release so importing it upgrades the
+existing copy. Then copy `out/*.zip` to `release/`.
