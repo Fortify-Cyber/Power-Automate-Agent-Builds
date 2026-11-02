@@ -13,8 +13,11 @@ credits. It was chosen over an AI version (`prompt.md`, kept for reference) for 
 
 ## What a post looks like
 - **Title:** Microsoft's article title.
-- **Body:** one line, for example "Microsoft's announcement covers Word, Outlook, Teams.",
-  then **Read Microsoft's announcement →**, then a short footer reminding people to check the
+- **Body, monthly roundups:** "Highlights for the firm from Microsoft's monthly Copilot update",
+  then up to four linked lines from the roundup's table of contents. Only lines naming one of
+  the firm's apps and none of the skip words are used.
+- **Body, other articles:** Microsoft's first two paragraphs.
+- Then **Read Microsoft's announcement →** and a short footer reminding people to check the
   source and follow the AI Acceptable Use Policy.
 
 ## How it decides (`rules.json`)
@@ -40,7 +43,7 @@ posted. **Remove "cowork" from `skipTitle` once the Legal plugin for Cowork is d
    ```
 2. **Import the solution.** Go to https://make.powerautomate.com and select Cassin's default
    environment, the same one as Daily Digest. Then **Solutions → Import solution**, choose
-   `release/FortifyCassinAINews_1_0_0_0.zip`, then **Next**.
+   `release/FortifyCassinAINews_1_0_1_0.zip`, then **Next**.
    - **Connections:** for each of RSS, SharePoint and Office 365 Outlook, pick an existing
      connection or select **+ New connection** and sign in. Use the account that should
      appear as the author of the news posts and the sender of the weekly email (for example

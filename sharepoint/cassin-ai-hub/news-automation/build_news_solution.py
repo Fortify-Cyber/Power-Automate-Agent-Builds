@@ -28,7 +28,7 @@ OUT = HERE / "out"
 
 SOLUTION = {"uniqueName": "FortifyCassinAINews", "displayName": "Cassin AI Hub News",
             "description": "Weekly flow that posts relevant Microsoft Copilot announcements to the Cassin AI Hub news.",
-            "version": "1.0.0.0"}
+            "version": "1.0.1.0"}
 # Same publisher as the Daily Digest solution, so both sit together in the environment.
 PUBLISHER = {"uniqueName": "FortifyCyber", "displayName": "Fortify Cyber", "prefix": "fc", "optionValuePrefix": 83972}
 
@@ -109,9 +109,62 @@ def flow_definition():
     page_id = "body('Create_page')?['d']?['Id']"
     log_uri = "_api/web/lists/GetByTitle('AI%20News%20Log')/items"
 
+    heading = "items('For_each_heading')"
+    # Text between the link's '>' and the next '</'. split() never throws, unlike substring() with
+    # computed offsets: Power Automate evaluates both branches of if(), so it can't guard them.
+    heading_text = f"@{{trim(last(split(first(split({heading}, '</')), '>')))}}"
     post_branch = {
+        "Clear_highlights": {"type": "SetVariable", "inputs": {"name": "Highlights", "value": []}, "runAfter": {}},
+        # Monthly roundups open with a table of contents, one line per feature (<a href="#community--1-...">).
+        # Keep the lines that name one of the firm's apps and none of the skip words, up to four,
+        # each linked to its section of Microsoft's article.
+        "Is_roundup": {
+            "type": "If",
+            "expression": {"contains": ["@outputs('Article')?['html']", 'href="#community--1-']},
+            "runAfter": {"Clear_highlights": ["Succeeded"]},
+            "else": {"actions": {}},
+            "actions": {"For_each_heading": {
+                "type": "Foreach",
+                "foreach": "@skip(split(outputs('Article')?['html'], 'href=\"#community--1-'), 1)",
+                "runtimeConfiguration": {"concurrency": {"repetitions": 1}},
+                "runAfter": {},
+                "actions": {
+                    "Heading": compose({"anchor": f"@{{first(split({heading}, '\"'))}}",
+                                        "text": heading_text}),
+                    "Heading_app_hits": query("@outputs('Rules')?['apps']",
+                                              "@contains(outputs('Heading')?['text'], item())", "Heading"),
+                    "Heading_skip_hits": query("@outputs('Rules')?['skipTitle']",
+                                               "@contains(toLower(outputs('Heading')?['text']), toLower(item()))", "Heading"),
+                    "Keep_heading": {
+                        "type": "If",
+                        "expression": {"and": [{"greater": ["@length(body('Heading_app_hits'))", 0]},
+                                               {"equals": ["@length(body('Heading_skip_hits'))", 0]},
+                                               {"less": ["@length(variables('Highlights'))", 4]}]},
+                        "runAfter": {"Heading_app_hits": ["Succeeded"], "Heading_skip_hits": ["Succeeded"]},
+                        "else": {"actions": {}},
+                        "actions": {"Add_highlight": {
+                            "type": "AppendToArrayVariable",
+                            "inputs": {"name": "Highlights",
+                                       "value": f"<li><a href=\"@{{{link}}}#community--1-@{{outputs('Heading')?['anchor']}}\">"
+                                                "@{outputs('Heading')?['text']}</a></li>"},
+                            "runAfter": {}}}},
+                }}}},
+        # Other articles: Microsoft's first two paragraphs. Blocks with images, or a "paragraph"
+        # that is really the whole article (no </P> to split on), are dropped.
+        "Paragraph_candidates": {
+            "type": "Query",
+            "inputs": {"from": "@take(split(outputs('Article')?['html'], '</P>'), 2)",
+                       "where": "@and(contains(item(), '<P'), not(contains(toLower(item()), '<img')), less(length(item()), 3000))"},
+            "runAfter": {"Is_roundup": ["Succeeded"]}},
+        "Paragraph_blocks": {
+            "type": "Select",
+            "inputs": {"from": "@body('Paragraph_candidates')",
+                       "select": "@concat('<P', last(split(item(), '<P')), '</P>')"},
+            "runAfter": {"Paragraph_candidates": ["Succeeded"]}},
         "Post_html": compose(
-            "<p>@{outputs('Apps_line')}</p>"
+            "@{if(empty(variables('Highlights')), "
+            "if(empty(join(body('Paragraph_blocks'), '')), concat('<p>', outputs('Apps_line'), '</p>'), join(body('Paragraph_blocks'), '')), "
+            "concat('<p>Highlights for the firm from Microsoft''s monthly Copilot update:</p><ul>', join(variables('Highlights'), ''), '</ul>'))}"
             f"<p><a href=\"@{{{link}}}\"><strong>Read Microsoft's announcement →</strong></a></p>"
             "<p><em>Shared automatically from Microsoft's Copilot blog. Check the source before relying on it, "
             "and follow the firm's AI Acceptable Use Policy.</em></p>"),
@@ -141,6 +194,7 @@ def flow_definition():
                           "inputs": {"name": "PageUrl", "value": "@{body('Create_page')?['d']?['AbsoluteUrl']}"},
                           "runAfter": {"Publish_in_publish_mode": ["Succeeded"]}},
     }
+    post_branch["Post_html"]["runAfter"] = {"Paragraph_blocks": ["Succeeded"]}
     post_branch["Canvas"]["runAfter"] = {"Post_html": ["Succeeded"]}
     post_branch["Save_body"]["runAfter"] = {"Canvas": ["Succeeded"]}
 
@@ -239,6 +293,9 @@ def flow_definition():
         "Init_page_url": {"type": "InitializeVariable",
                           "inputs": {"variables": [{"name": "PageUrl", "type": "string", "value": ""}]},
                           "runAfter": {"Init_report": ["Succeeded"]}},
+        "Init_highlights": {"type": "InitializeVariable",
+                            "inputs": {"variables": [{"name": "Highlights", "type": "array", "value": []}]},
+                            "runAfter": {"Init_page_url": ["Succeeded"]}},
         "Get_new_articles": {
             "type": "OpenApiConnection",
             "inputs": {"host": {"connectionName": "shared_rss", "operationId": "ListFeedItems",
@@ -246,7 +303,7 @@ def flow_definition():
                        "parameters": {"feedUrl": f"@{P('fc_AINewsFeedUrl')}",
                                       "since": "@{addDays(utcNow(), -7)}"},
                        "authentication": "@parameters('$authentication')"},
-            "runAfter": {"Init_page_url": ["Succeeded"]}},
+            "runAfter": {"Init_highlights": ["Succeeded"]}},
         "For_each_article": {
             "type": "Foreach", "foreach": "@coalesce(body('Get_new_articles'), createArray())",
             "actions": article_actions,
