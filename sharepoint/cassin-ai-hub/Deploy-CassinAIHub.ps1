@@ -488,6 +488,14 @@ foreach ($pg in (Read-Content "pages.json")) {
 
 Write-Step "News posts"
 foreach ($n in (Read-Content "news.json")) {
+    # "Remove": true takes a post off the site (to the recycle bin, restorable for 93 days).
+    if ($n.Remove) {
+        if (Test-PageExists $n.Name) {
+            Remove-PnPPage -Identity "$($n.Name).aspx" -Recycle -Force
+            Write-Host "  $($n.Title): removed (it's in the site recycle bin)"
+        }
+        continue
+    }
     if (Test-PageExists $n.Name) { Write-Host "  $($n.Title): exists, skipped"; continue }
     Add-PnPPage -Name $n.Name -Title $n.Title -LayoutType Article -PromoteAs NewsArticle -HeaderLayoutType ColorBlock | Out-Null
     Add-PnPPageSection -Page $n.Name -SectionTemplate OneColumn -Order 1 | Out-Null

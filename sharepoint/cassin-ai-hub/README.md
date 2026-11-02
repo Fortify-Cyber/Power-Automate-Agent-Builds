@@ -14,7 +14,7 @@ A SharePoint communication site for Cassin & Cassin's Microsoft 365 Copilot prog
 | **Friday Tips** | Every tip sent so far (Oct 2–23), newest first, with steps, prompt and video | `Friday Tips` list |
 | **Demo Videos** | Microsoft how-to videos plus anything recorded at Cassin | `Demo Videos` list + `Recordings` library |
 | **Agents & Tools** | Daily Digest (live), Email Filing Assistant (pilot), the next two builds | `AI Agents` list |
-| **News** | SharePoint news. Three starter posts | site news |
+| **News** | SharePoint news for the whole firm: new agents, firm AI announcements and major Microsoft updates relevant to legal work. Pilot and AI Working Group updates belong in the Working Group's own channel | site news (pages in Site Pages) |
 | **AI Policy** menu | Link to the firm's **AI Acceptable Use Policy** (a Word document, address in `content/settings.json`), the client opt-out list, and *Use AI Responsibly* | |
 | **Use AI Responsibly** | The policy link, six habits: what Copilot can see, checking its work, attorney review, client opt-outs | page text |
 | **Client AI Opt-Outs** | Clients who have asked that AI not be used on their matters, or only with conditions. Everyone can read it; only owners and members can edit | `Client AI Opt-Outs` list |
@@ -101,7 +101,8 @@ If a section says it couldn't load, or you see a plain list table instead of car
 | Answer feedback | Hub Feedback → set **Status** and **Our response**. The submitter sees both |
 | Add a Cassin video | Upload it to **Recordings**, copy its link, then add a row in Demo Videos with *From = Cassin* |
 | Update an agent's status or champion | AI Agents → edit the row |
-| Post news | **+ New → News post** on the home page |
+| Post news | Home → News → **+ Add → News post**. For an outside article (for example a Microsoft announcement), **+ Add → News link** and paste the address: no writing needed |
+| Edit or remove a news post | Open the post → **Edit** → **Republish**. To remove one: **Settings → Site contents → Site Pages**, select it, **Delete** (it stays in the recycle bin for 93 days) |
 | Load or update the client opt-out list | Client AI Opt-Outs list → **Edit in grid view**, then paste rows from Excel (columns in this order: Client, Client number, Restriction, Applies to, Effective, Responsible partner, Notes). Restriction must match one of its choices. Then edit the page and remove the "being compiled" note |
 | Move or replace the AI policy document | Change `policyUrl` in `content/settings.json`, then run the script with `-RebuildPage Hub-Home, Use-AI-Responsibly, Client-AI-Opt-Outs` (the menu updates on every run) |
 

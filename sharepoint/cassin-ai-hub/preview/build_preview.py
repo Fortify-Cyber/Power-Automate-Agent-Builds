@@ -25,7 +25,7 @@ def main():
         "videos": load("videos.json"),
         "agents": load("agents.json"),
         "faq": load("faq.json"),
-        "news": load("news.json"),
+        "news": [n for n in load("news.json") if not n.get("Remove")],
         "pages": load("pages.json"),
         "settings": load("settings.json"),
         "siteUrl": SITE_URL,
