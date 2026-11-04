@@ -104,7 +104,8 @@ Connect-PnPOnline -Url $siteUrl -Interactive -ClientId $ClientId
 Write-Step "Applying theme, header and footer"
 if (-not $SkipTheme) { Set-PnPWebTheme -Theme $themeName }
 Set-PnPWebHeader -HeaderLayout Standard -HeaderEmphasis Strong -LogoAlignment Left
-$logo = Join-Path $root "assets/cassin-logo-white.png"
+# Navy background so the logo stays readable on white cards (SharePoint Discover, search).
+$logo = Join-Path $root "assets/cassin-logo-navy.png"
 if (Test-Path $logo) { Set-PnPSite -LogoFilePath $logo }
 Set-PnPFooter -Enabled:$true -Layout Simple -BackgroundTheme Strong -Title "Cassin & Cassin LLP $([char]0x00B7) AI Hub"
 
