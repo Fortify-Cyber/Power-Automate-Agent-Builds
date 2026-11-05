@@ -79,6 +79,7 @@ export const CSS = `
 .cah .restricted-nav a { font-weight:600; text-decoration:none; } .cah .restricted-nav a:hover { text-decoration:underline; }
 .cah .restricted-nav a::after { content:" →"; }
 .cah .restricted-nav .on { font-weight:600; color:var(--navy); border-bottom:2px solid var(--blue); }
+.cah .restricted-nav.top { margin:0; }
 /* Program status (working group page) */
 .cah .ps .ad-tile .v { font-size:30px; }
 .cah .ps-board { display:grid; grid-template-columns:repeat(var(--cols),minmax(220px,1fr)); gap:12px; overflow-x:auto; padding-bottom:6px; }

@@ -29,7 +29,7 @@ import { ensureStyles } from './styles';
  * from lists only site owners and members can open.
  */
 export type Section = 'latestTip' | 'featuredPrompts' | 'promptLibrary' | 'fridayTips' |
-  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption' | 'programStatus';
+  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption' | 'programStatus' | 'restrictedNav';
 
 export interface ICassinAiHubWebPartProps {
   section: Section;
@@ -46,7 +46,8 @@ const SECTIONS: Array<{ key: Section; text: string; list: string }> = [
   { key: 'faq', text: 'FAQ', list: LISTS.faq },
   { key: 'myFeedback', text: 'My feedback', list: LISTS.feedback },
   { key: 'adoption', text: 'Copilot adoption (admins only)', list: HISTORY_LIST },
-  { key: 'programStatus', text: 'Program status (working group)', list: LISTS.roadmap }
+  { key: 'programStatus', text: 'Program status (working group)', list: LISTS.roadmap },
+  { key: 'restrictedNav', text: 'Links to the restricted pages (top of Home)', list: LISTS.roadmap }
 ];
 
 const ADOPTION_PAGE = 'Copilot-Adoption';
@@ -72,6 +73,14 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   }
 
   public render(): void {
+    if (this.properties.section === 'restrictedNav') {
+      // Just the bar of links to the restricted pages, for the people who can open them; empty
+      // for everyone else. The marker tells the Friday tip section not to show its own copy.
+      this.domElement.innerHTML = '<div class="cah" data-restricted-host></div>';
+      const host = this.domElement.querySelector<HTMLElement>('.cah');
+      if (host) this._addRestrictedNav(host, 'restrictedNav');
+      return;
+    }
     this.domElement.innerHTML = '<div class="cah"><div class="loading">Loading…</div></div>';
     this._adoption?.dispose();
     this._adoption = undefined;
@@ -139,7 +148,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   // Site owners get a link to the underlying list, where content is added and edited.
   private _manageLink(): string {
     const section = SECTIONS.find(s => s.key === this.properties.section);
-    if (!section || section.key === 'adoption' || section.key === 'programStatus' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
+    if (!section || section.key === 'adoption' || section.key === 'programStatus' || section.key === 'restrictedNav' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
     return `<p class="manage"><a href="${R.esc(this._data.listUrl(section.list))}">Owners: add or edit items in the list →</a></p>`;
   }
 
@@ -153,6 +162,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     Promise.all([this._data.canRead(LISTS.roadmap).catch(() => false), this._data.canRead(HISTORY_LIST).catch(() => false)])
       .then(([wg, admin]) => {
         if (root.querySelector('.restricted-nav')) return;
+        // Home has the bar at the top (restrictedNav); older Home pages only have it here.
+        if (section === 'latestTip' && document.querySelector('[data-restricted-host]')) return;
         const pages: Array<[boolean, string, string, Section]> = [
           [wg, STATUS_PAGE, 'AI Program status', 'programStatus'],
           [admin, ADOPTION_PAGE, 'Copilot adoption', 'adoption']
@@ -160,9 +171,10 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         const links = pages.filter(([ok]) => ok).map(([, page, label, sec]) => sec === section
           ? `<span class="on" aria-current="page">${label}</span>`
           : `<a href="${R.esc(`${web}/SitePages/${page}.aspx`)}">${label}</a>`);
+        const onHome = section === 'latestTip' || section === 'restrictedNav';
         // On a restricted page, a bar with only that page in it adds nothing.
-        if (!links.length || (section !== 'latestTip' && links.length < 2)) return;
-        const bar = `<nav class="restricted-nav" aria-label="Restricted pages"><span class="lbl">🔒 ${section === 'latestTip' ? 'For the AI Working Group and admins' : 'Restricted pages'}</span>${links.join('')}</nav>`;
+        if (!links.length || (!onHome && links.length < 2)) return;
+        const bar = `<nav class="restricted-nav${section === 'restrictedNav' ? ' top' : ''}" aria-label="Restricted pages"><span class="lbl">🔒 ${onHome ? 'For the AI Working Group and admins' : 'Restricted pages'}</span>${links.join('')}</nav>`;
         root.insertAdjacentHTML(section === 'latestTip' ? 'beforeend' : 'afterbegin', bar);
       }).catch(() => undefined);
   }

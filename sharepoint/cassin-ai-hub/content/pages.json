@@ -7,6 +7,19 @@
     "Sections": [
       {
         "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [
+          [
+            {
+              "Type": "Hub",
+              "Section": "restrictedNav",
+              "Optional": true
+            }
+          ]
+        ]
+      },
+      {
+        "Template": "OneColumn",
         "Emphasis": 3,
         "Columns": [
           [

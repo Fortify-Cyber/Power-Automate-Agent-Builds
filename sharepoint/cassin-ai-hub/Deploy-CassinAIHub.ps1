@@ -582,6 +582,8 @@ function Add-ListPart([string] $Page, [int] $Section, [int] $Column, [int] $Orde
 
 function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order, $Part) {
     if ($Part.Type -eq "Hub" -and -not $Part.List -and -not (Get-HubComponent $Page)) {
+        # "Optional" parts (the restricted-pages bar on Home) are simply left out.
+        if ($Part.Optional) { return }
         # A section with no list behind it (the adoption page) needs the web part itself.
         Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order `
             -Text "<p>This page needs the Cassin AI Hub web part. Upload package/cassin-ai-hub-webpart.sppkg (README step 3), then run the deploy script again with -RebuildPage $Page.</p>" | Out-Null
