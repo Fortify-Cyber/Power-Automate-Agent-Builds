@@ -3,7 +3,7 @@
   "solution": {
     "name": "Cassin AI Hub web part",
     "id": "5516668a-203b-4fa3-8b4f-54dc26ac9db0",
-    "version": "1.0.1.0",
+    "version": "1.1.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "developer": {
@@ -18,7 +18,7 @@
         "default": "Cassin AI Hub sections drawn from the hub lists"
       },
       "longDescription": {
-        "default": "Shows the Cassin AI Hub prompt library, Friday tips, videos, agents, FAQ and feedback in the Cassin design, read live from the hub site lists."
+        "default": "Shows the Cassin AI Hub prompt library, Friday tips, videos, agents, FAQ and feedback in the Cassin design, read live from the hub site lists, and an admin-only Copilot adoption page built from Microsoft's Copilot usage reports."
       },
       "screenshotPaths": [],
       "videoUrl": "",
@@ -29,7 +29,17 @@
         "title": "Cassin AI Hub web part",
         "description": "Adds the Cassin AI Hub web part.",
         "id": "377228b5-9ba5-4eea-a89d-bcdd0dac0d4d",
-        "version": "1.0.1.0"
+        "version": "1.1.0.0"
+      }
+    ],
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Reports.Read.All"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "User.Read.All"
       }
     ]
   },

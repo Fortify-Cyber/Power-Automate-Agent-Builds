@@ -33,6 +33,11 @@
     Like -RebuildPages, but only for the named pages, for example
     -RebuildPage Hub-Home, Use-AI-Responsibly. Names are the "Name" values in pages.json.
 
+.PARAMETER AdoptionAdmins
+    Email addresses to add to the "AI Hub Admins" group, who can open the Copilot adoption
+    page as well as the site owners. They also need the Reports Reader role in Entra ID
+    (see README). Members can also be added later in Site settings, People and groups.
+
 .EXAMPLE
     ./Deploy-CassinAIHub.ps1 -TenantName cassinllp -ClientId 00000000-0000-0000-0000-000000000000
 #>
@@ -46,6 +51,7 @@ param(
     [switch] $ShareWithEveryone,
     [switch] $RebuildPages,
     [string[]] $RebuildPage = @(),
+    [string[]] $AdoptionAdmins = @(),
     [switch] $SkipTheme
 )
 
@@ -377,6 +383,18 @@ Set-HubView $L "All articles" @("LinkTitle", "Decision", "Score", "Reason", "Art
     "<OrderBy><FieldRef Name=`"Created`" Ascending=`"FALSE`" /></OrderBy>" -RowLimit 200 -Default
 Set-Formatter $L "Decision" (New-Pill ([ordered]@{ "Published" = "#d7f0dd"; "Draft" = "#d6e9f8"; "Error" = "#f6d5d5" }))
 
+# ---- Copilot adoption history (admins only) ----------------------------------
+# The adoption page reads Microsoft's Copilot usage reports live (web part, Microsoft Graph).
+# This list keeps one snapshot a month (active days and prompts per person, no content) so the
+# page can show habits over time. Only owners and AI Hub Admins can see it (section 4).
+Write-Step "Copilot Adoption History"
+$L = "Lists/CopilotAdoptionHistory"
+New-HubList "Copilot Adoption History" $L "Month" "One snapshot a month of Copilot use per person, saved by the Copilot adoption page. Admins only."
+Add-HubField  $L "RefreshDate" "Microsoft data up to" "Text" "MaxLength=`"10`""
+Add-NoteField $L "Snapshot" "Snapshot (JSON)"
+Set-HubView $L "All months" @("LinkTitle", "RefreshDate", "Modified") `
+    "<OrderBy><FieldRef Name=`"Title`" Ascending=`"FALSE`" /></OrderBy>" -RowLimit 60 -Default
+
 # ---------------------------------------------------------------------------
 # 4. Permissions: Visitors read the site and can submit prompts and feedback
 # ---------------------------------------------------------------------------
@@ -390,6 +408,27 @@ Write-Host "  '$($visitors.Title)' can add to Prompt Library and Hub Feedback"
 Set-PnPList -Identity "Lists/AINewsLog" -BreakRoleInheritance -CopyRoleAssignments | Out-Null
 Set-PnPListPermission -Identity "Lists/AINewsLog" -Group $visitors.Title -RemoveRole "Read" | Out-Null
 Write-Host "  AI News Log: owners and members only"
+
+# AI Hub Admins: who, besides the site owners, can open the Copilot adoption page.
+$adminGroup = "AI Hub Admins"
+if (-not (Find-Object { Get-PnPGroup -Identity $adminGroup })) {
+    New-PnPGroup -Title $adminGroup -Description "Can open the Copilot adoption page on the AI Hub." | Out-Null
+    Write-Host "  created the '$adminGroup' group"
+}
+foreach ($email in $AdoptionAdmins) {
+    Add-PnPGroupMember -Group $adminGroup -LoginName "i:0#.f|membership|$email" | Out-Null
+    Write-Host "  added $email to '$adminGroup'"
+}
+$owners  = Get-PnPGroup -AssociatedOwnerGroup
+$members = Get-PnPGroup -AssociatedMemberGroup
+$L = "Lists/CopilotAdoptionHistory"
+Set-PnPList -Identity $L -BreakRoleInheritance -CopyRoleAssignments | Out-Null
+# Take away the copied access for visitors and members; it's fine if one was never there.
+foreach ($g in @(@($visitors.Title, "Read"), @($members.Title, "Edit"))) {
+    try { Set-PnPListPermission -Identity $L -Group $g[0] -RemoveRole $g[1] | Out-Null } catch { }
+}
+Set-PnPListPermission -Identity $L -Group $adminGroup -AddRole "Contribute" | Out-Null
+Write-Host "  Copilot Adoption History: owners and '$adminGroup' only"
 if ($ShareWithEveryone) {
     $tenantId = Get-PnPTenantId
     Add-PnPGroupMember -Group $visitors.Title -LoginName "c:0-.f|rolemanager|spo-grid-all-users/$tenantId" | Out-Null
@@ -440,6 +479,12 @@ function Add-ListPart([string] $Page, [int] $Section, [int] $Column, [int] $Orde
 }
 
 function Add-HubPart([string] $Page, [int] $Section, [int] $Column, [int] $Order, $Part) {
+    if ($Part.Type -eq "Hub" -and -not $Part.List -and -not (Get-HubComponent $Page)) {
+        # A section with no list behind it (the adoption page) needs the web part itself.
+        Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order `
+            -Text "<p>This page needs the Cassin AI Hub web part. Upload package/cassin-ai-hub-webpart.sppkg (README step 3), then run the deploy script again with -RebuildPage $Page.</p>" | Out-Null
+        return
+    }
     switch ($Part.Type) {
         "Text" {
             Add-PnPPageTextPart -Page $Page -Section $Section -Column $Column -Order $Order -Text (Expand-Tokens $Part.Html -Html) | Out-Null
@@ -487,6 +532,17 @@ function Test-PageExists([string] $Name) {
     try { Get-PnPPage -Identity "$Name.aspx" | Out-Null; $true } catch { $false }
 }
 
+# Admin pages ("Admin": true in pages.json) are visible to site owners and AI Hub Admins only.
+# Applied on every run, so a page that was rebuilt or shared by mistake is locked down again.
+function Set-AdminOnly([string] $Name) {
+    $query = "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>$Name.aspx</Value></Eq></Where></Query></View>"
+    $item = Get-PnPListItem -List "SitePages" -Query $query | Select-Object -First 1
+    if (-not $item) { throw "Couldn't find $Name.aspx in Site Pages to restrict it." }
+    Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $owners.Title -AddRole "Full Control" -ClearExisting | Out-Null
+    Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $adminGroup -AddRole "Read" | Out-Null
+    Write-Host "    restricted to '$($owners.Title)' and '$adminGroup'"
+}
+
 # SharePoint won't delete the site's home page, so point home at the default page while
 # the hub pages are rebuilt. The hub home page is set again below.
 if ($RebuildPages -or $RebuildPage -contains "Hub-Home") { try { Set-PnPHomePage -RootFolderRelativeUrl "SitePages/Home.aspx" } catch { } }
@@ -494,12 +550,16 @@ if ($RebuildPages -or $RebuildPage -contains "Hub-Home") { try { Set-PnPHomePage
 foreach ($pg in (Read-Content "pages.json")) {
     if (Test-PageExists $pg.Name) {
         if (-not ($RebuildPages -or $RebuildPage -contains $pg.Name)) {
-            Write-Host "  $($pg.Title): exists, skipped (use -RebuildPage $($pg.Name) to recreate)"; continue
+            Write-Host "  $($pg.Title): exists, skipped (use -RebuildPage $($pg.Name) to recreate)"
+            if ($pg.Admin) { Set-AdminOnly $pg.Name }
+            continue
         }
         if (-not (Remove-HubPage $pg.Name)) { continue }
     }
     $header = if ($pg.Layout -eq "Home") { @{} } else { @{ HeaderLayoutType = "ColorBlock" } }
     Add-PnPPage -Name $pg.Name -Title $pg.Title -LayoutType $pg.Layout -CommentsEnabled:$false @header | Out-Null
+    # Lock an admin page down before anything is published on it.
+    if ($pg.Admin) { Set-AdminOnly $pg.Name }
     $s = 0
     foreach ($section in $pg.Sections) {
         $s++
@@ -581,6 +641,7 @@ try {
 
 Write-Step "Done"
 Write-Host "Open $siteUrl" -ForegroundColor Green
+Write-Host "Copilot adoption (owners and '$adminGroup' only): $siteUrl/SitePages/Copilot-Adoption.aspx"
 if (-not $ShareWithEveryone) {
     Write-Host "The site is not shared with the firm yet. Add pilot users to '$($visitors.Title)', or re-run with -ShareWithEveryone at launch."
 }

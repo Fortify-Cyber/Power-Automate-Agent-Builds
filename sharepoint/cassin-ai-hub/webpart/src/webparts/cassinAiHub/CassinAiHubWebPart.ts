@@ -8,6 +8,8 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { SPPermission } from '@microsoft/sp-page-context';
 
 import { HubData, LISTS, ListNotFoundError, type IPrompt } from './data';
+import { AdoptionData, AdoptionError, HISTORY_LIST } from './adoptionData';
+import { AdoptionView } from './adoptionView';
 import * as R from './render';
 import { ensureStyles } from './styles';
 
@@ -16,9 +18,14 @@ import { ensureStyles } from './styles';
  * picks what it shows; Deploy-CassinAIHub.ps1 places one per section with that property
  * set. All content is read live from the hub's lists, so adding a tip, prompt, video,
  * agent or FAQ in SharePoint shows up here with no code change.
+ *
+ * The "adoption" section is the admin-only Copilot adoption page. It reads Microsoft's
+ * Copilot usage reports and Entra ID through Microsoft Graph as the signed-in admin
+ * (adoptionData.ts); the page itself is restricted to owners and AI Hub Admins by the
+ * deploy script.
  */
 export type Section = 'latestTip' | 'featuredPrompts' | 'promptLibrary' | 'fridayTips' |
-  'videos' | 'agents' | 'faq' | 'myFeedback';
+  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption';
 
 export interface ICassinAiHubWebPartProps {
   section: Section;
@@ -33,14 +40,18 @@ const SECTIONS: Array<{ key: Section; text: string; list: string }> = [
   { key: 'videos', text: 'Demo videos', list: LISTS.videos },
   { key: 'agents', text: 'Agents & tools', list: LISTS.agents },
   { key: 'faq', text: 'FAQ', list: LISTS.faq },
-  { key: 'myFeedback', text: 'My feedback', list: LISTS.feedback }
+  { key: 'myFeedback', text: 'My feedback', list: LISTS.feedback },
+  { key: 'adoption', text: 'Copilot adoption (admins only)', list: HISTORY_LIST }
 ];
+
+const ADOPTION_PAGE = 'Copilot-Adoption';
 
 export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiHubWebPartProps> {
   private _data!: HubData;
   private _prompts: IPrompt[] = [];
   private _filter: R.IPromptFilter = { q: '', cat: 'All' };
   private _toastTimer: number | undefined;
+  private _adoption: AdoptionView | undefined;
 
   protected onInit(): Promise<void> {
     ensureStyles();
@@ -48,16 +59,26 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     this._data = new HubData(this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl);
     this.domElement.addEventListener('click', e => this._onClick(e));
     this.domElement.addEventListener('input', e => this._onInput(e));
+    this.domElement.addEventListener('change', e => this._onInput(e));
+    this.domElement.addEventListener('keydown', e => this._adoption?.onKey(e));
     return Promise.resolve();
   }
 
   public render(): void {
     this.domElement.innerHTML = '<div class="cah"><div class="loading">Loading…</div></div>';
+    this._adoption?.dispose();
+    this._adoption = undefined;
     this._load()
-      .then(html => { this.domElement.innerHTML = `<div class="cah">${html}${this._manageLink()}</div>`; })
+      .then(html => {
+        this.domElement.innerHTML = `<div class="cah">${html}${this._manageLink()}</div>`;
+        const root = this.domElement.querySelector<HTMLElement>('.cah');
+        if (this._adoption && root) this._adoption.mount(root);
+        if (this.properties.section === 'latestTip' && root) this._addAdminLink(root);
+      })
       .catch(err => {
         const section = SECTIONS.find(s => s.key === this.properties.section);
-        const msg = err instanceof ListNotFoundError
+        const msg = err instanceof AdoptionError ? this._adoptionMessage(err)
+          : err instanceof ListNotFoundError
           ? `Couldn't find the ${section?.list.replace('Lists/', '')} list on this site. This web part only works on the Cassin AI Hub site.`
           : "Couldn't load this section. Refresh the page; if it keeps happening, tell the AI Working Group.";
         this.domElement.innerHTML = `<div class="cah">${R.empty(msg)}</div>`;
@@ -85,6 +106,14 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         return this._data.faq().then(R.faq);
       case 'myFeedback':
         return this._data.myFeedback(Number(this.context.pageContext.legacyPageContext.userId)).then(R.myFeedback);
+      case 'adoption': {
+        const web = this.context.pageContext.web;
+        return new AdoptionData(this.context.msGraphClientFactory, this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl)
+          .load().then(({ model, saved }) => {
+            this._adoption = new AdoptionView(model, saved);
+            return this._adoption.html();
+          });
+      }
       default:
         return Promise.resolve(R.empty('Pick a section in this web part’s settings.'));
     }
@@ -93,11 +122,38 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   // Site owners get a link to the underlying list, where content is added and edited.
   private _manageLink(): string {
     const section = SECTIONS.find(s => s.key === this.properties.section);
-    if (!section || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
+    if (!section || section.key === 'adoption' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
     return `<p class="manage"><a href="${R.esc(this._data.listUrl(section.list))}">Owners: add or edit items in the list →</a></p>`;
   }
 
+  // People who can open the admin-only history list (owners and AI Hub Admins) get a link to
+  // the adoption page on the home page; everyone else sees nothing.
+  private _addAdminLink(root: HTMLElement): void {
+    this._data.canRead(HISTORY_LIST).then(ok => {
+      if (!ok || root.querySelector('.admin-link')) return;
+      const url = `${this.context.pageContext.web.absoluteUrl}/SitePages/${ADOPTION_PAGE}.aspx`;
+      root.insertAdjacentHTML('beforeend', `<p class="manage admin-link"><a href="${R.esc(url)}">Admins: Copilot adoption →</a></p>`);
+    }).catch(() => undefined);
+  }
+
+  private _adoptionMessage(err: AdoptionError): string {
+    console.error('Cassin AI Hub adoption', err.message);
+    if (err.kind === 'consent') {
+      return "This page can't read Microsoft's Copilot reports yet. A SharePoint admin needs to approve the web part's Microsoft Graph access: SharePoint admin center → Advanced → API access, then approve Reports.Read.All and User.Read.All for Cassin AI Hub web part.";
+    }
+    if (err.kind === 'role') {
+      return "Microsoft only shows Copilot usage reports to people with a reports role. Ask an IT admin to give your account the Reports Reader role in Microsoft Entra ID (it can take an hour to apply), then reload this page.";
+    }
+    return "Couldn't load Microsoft's Copilot usage reports. Refresh the page; if it keeps happening, tell Fortify Cyber.";
+  }
+
+  protected onDispose(): void {
+    this._adoption?.dispose();
+    super.onDispose();
+  }
+
   private _onClick(e: Event): void {
+    if (this._adoption?.onClick(e)) return;
     const target = e.target as HTMLElement;
     const copy = target.closest<HTMLElement>('[data-copy]');
     if (copy) { this._copy(copy.getAttribute('data-copy') || ''); return; }
@@ -114,6 +170,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   }
 
   private _onInput(e: Event): void {
+    if (this._adoption?.onInput(e)) return;
     const input = e.target as HTMLInputElement;
     if (!input.hasAttribute('data-search')) return;
     this._filter.q = input.value;

@@ -442,5 +442,25 @@
         ]
       }
     ]
+  },
+  {
+    "Name": "Copilot-Adoption",
+    "Title": "Copilot adoption",
+    "Layout": "Article",
+    "Admin": true,
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [
+          [
+            {
+              "Type": "Hub",
+              "Section": "adoption"
+            }
+          ]
+        ]
+      }
+    ]
   }
 ]

@@ -19,7 +19,7 @@
     "groupId": "5c03119e-3074-46fd-976b-c60198311f70", // Advanced
     "group": { "default": "Advanced" },
     "title": { "default": "Cassin AI Hub" },
-    "description": { "default": "Prompts, Friday tips, videos, agents, FAQ or feedback from the Cassin AI Hub lists." },
+    "description": { "default": "Prompts, Friday tips, videos, agents, FAQ or feedback from the Cassin AI Hub lists, or the admin Copilot adoption page." },
     "officeFabricIconFontName": "Lightbulb",
     "properties": {
       "section": "latestTip",

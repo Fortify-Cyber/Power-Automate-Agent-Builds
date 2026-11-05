@@ -77,6 +77,13 @@ export class HubData {
       'Id,Title,FeedbackType,About,FeedbackStatus,Response,Created', `AuthorId eq ${userId}`, 'Created desc');
   }
 
+  /** True when the signed-in person can open the list (used to show admin-only links). */
+  public canRead(list: string): Promise<boolean> {
+    const path = `${this._webRelUrl.replace(/\/$/, '')}/${list}`.replace(/'/g, "''");
+    return this._http.get(`${this._webUrl}/_api/web/GetList('${encodeURIComponent(path)}')?$select=Id`, SPHttpClient.configurations.v1,
+      { headers: { Accept: 'application/json;odata=nometadata' } }).then(res => res.ok);
+  }
+
   private _items<T>(list: string, select: string, filter: string, orderBy: string): Promise<T[]> {
     const path = `${this._webRelUrl.replace(/\/$/, '')}/${list}`.replace(/'/g, "''");
     let url = `${this._webUrl}/_api/web/GetList('${encodeURIComponent(path)}')/items?$select=${select}&$top=500&$orderby=${orderBy}`;

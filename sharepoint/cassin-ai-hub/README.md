@@ -20,6 +20,7 @@ A SharePoint communication site for Cassin & Cassin's Microsoft 365 Copilot prog
 | **Client AI Opt-Outs** | Clients who have asked that AI not be used on their matters, or only with conditions. Everyone can read it; only owners and members can edit | `Client AI Opt-Outs` list |
 | **FAQ** | 10 common questions | `AI FAQ` list |
 | **Feedback** | A form for ideas, problems and wins. People see only their own submissions; owners see all, and set Status and a response | `Hub Feedback` list |
+| **Copilot adoption** (admins only) | Who is using Copilot, how often and in which apps: habit stages, departments and roles, each person's history and a suggested next step. Only site owners and **AI Hub Admins** can open it; it isn't in the menu. See step 8 | Microsoft's Copilot usage reports and Entra ID (Microsoft Graph), plus the `Copilot Adoption History` list |
 
 All content lives in `content/*.json`. To change what the site says, edit those files rather than the script.
 
@@ -91,6 +92,22 @@ If a section says it couldn't load, or you see a plain list table instead of car
 3. Firm-wide: run the script again with `-ShareWithEveryone`, or share the site with *Everyone except external users* as **Read**.
 4. Optional: in the SharePoint admin center, make it a **home site** or add it to the **Viva Connections** app bar so it appears in Teams.
 
+### 8. Turn on the Copilot adoption page (15 min, once)
+The page reads Microsoft's own Copilot usage reports and Entra ID (department, job title) through Microsoft Graph, in the admin's browser, as that admin. Nothing leaves Cassin's Microsoft 365, and it never reads what anyone asks Copilot. Once a month it saves a snapshot (active days and prompt count per person) to the admin-only **Copilot Adoption History** list, so the month-by-month views grow from launch. "Who moved" works from day one, from Microsoft's 180-day report.
+
+1. **Update the web part.** In the app catalog (step 3), **Upload** `package/cassin-ai-hub-webpart.sppkg` (version 1.1) and replace the old one. Select **Enable app**. It notes that the app requests API access; that's expected.
+2. **Approve the API access.** **SharePoint admin center → Advanced → API access.** Approve both pending requests from *Cassin AI Hub web part*: **Microsoft Graph, Reports.Read.All** and **Microsoft Graph, User.Read.All**. Approval applies to SharePoint's shared app for custom web parts, so any web part in Cassin's app catalog could use these two permissions (only Fortify's is installed).
+3. **Run the script** with the people who should see the page (besides site owners):
+   ```powershell
+   ./Deploy-CassinAIHub.ps1 -TenantName cassinllp -ClientId <client-id> -AdoptionAdmins person1@cassinllp.com, person2@cassinllp.com
+   ```
+   It creates the **AI Hub Admins** group, the **Copilot Adoption History** list (owners and AI Hub Admins only) and the **Copilot adoption** page (owners and AI Hub Admins only). Existing pages aren't touched.
+4. **Give each admin the Reports Reader role.** Microsoft only shows Copilot usage reports to people with a reports role. **Entra admin center → Roles & admins → Reports Reader → Add assignments**, add each AI Hub Admin and any site owner who'll use the page. (Global Administrators and Global Readers already have access.) Reports Reader can also read the other Microsoft 365 usage reports in the admin center; it can't change anything.
+5. **Show names in the reports.** By default Microsoft 365 hides names in usage reports. **Microsoft 365 admin center → Settings → Org settings → Services → Reports**, clear **Display concealed user, group, and site names in all reports**, then **Save**. This affects every Microsoft 365 usage report, for people who can already see them. While names are hidden, the page says so and doesn't save history.
+6. **Open it:** `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Copilot-Adoption.aspx`. Owners and AI Hub Admins also see an **Admins: Copilot adoption →** link under this week's tip on Home. Bookmark it.
+
+Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn't published the exact field names for active days and prompts per person in its updated report, so the page finds them by name. If the Habits tab says active days aren't included yet, the rest of the page still works; open the page with `?adoptionDebug=1` at the end of the address and send Fortify the field list it writes to the browser console (F12 → Console).
+
 ## Keeping it current
 
 | Task | How |
@@ -104,12 +121,13 @@ If a section says it couldn't load, or you see a plain list table instead of car
 | Post news | Home → News → **+ Add → News post**. For an outside article (for example a Microsoft announcement), **+ Add → News link** and paste the address: no writing needed |
 | Edit or remove a news post | Open the post → **Edit** → **Republish**. To remove one: **Settings → Site contents → Site Pages**, select it, **Delete** (it stays in the recycle bin for 93 days) |
 | Load or update the client opt-out list | Client AI Opt-Outs list → **Edit in grid view**, then paste rows from Excel (columns in this order: Client, Client number, Restriction, Applies to, Effective, Responsible partner, Notes). Restriction must match one of its choices. Then edit the page and remove the "being compiled" note |
+| Add or remove an adoption admin | **Settings → Site permissions → Advanced permissions settings → AI Hub Admins**, then **New → Add users** (or remove). Give new admins the Reports Reader role too (step 8) |
 | Move or replace the AI policy document | Change `policyUrl` in `content/settings.json`, then run the script with `-RebuildPage Hub-Home, Use-AI-Responsibly, Client-AI-Opt-Outs` (the menu updates on every run) |
 
 **Friday Tip automation.** The weekly tip flow currently runs from Fortify's tenant (`fortifycyber.sharepoint.com/sites/AI`), so it can't write to Cassin's site directly. Either add each tip to the hub by hand (about 2 minutes), or later move the flow into Cassin's tenant and have it add a row to **Friday Tips** when it sends.
 
 ## Rolling back
-Delete the site in **SharePoint admin center → Active sites**. It stays restorable from *Deleted sites* for 93 days. To remove the theme as well: `Remove-PnPTenantTheme -Identity Cassin`. To remove the web part, delete *Cassin AI Hub web part* from the app catalog's **Manage apps**.
+Delete the site in **SharePoint admin center → Active sites**. It stays restorable from *Deleted sites* for 93 days. To remove the theme as well: `Remove-PnPTenantTheme -Identity Cassin`. To remove the web part, delete *Cassin AI Hub web part* from the app catalog's **Manage apps**, and remove its two Microsoft Graph permissions in **SharePoint admin center → Advanced → API access**.
 
 ## Files
 ```
