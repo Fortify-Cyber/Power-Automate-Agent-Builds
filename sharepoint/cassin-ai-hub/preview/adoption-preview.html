@@ -51,9 +51,6 @@
   .panel { border:1px solid var(--line); padding:18px 20px; background:#fff; margin-bottom:16px; }
   .panel h2 { font:400 21px var(--serif); margin:0 0 2px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
   .panel .hint { font-size:13.5px; color:var(--faint); margin:0 0 12px; }
-  .src { font:600 11px var(--sans); letter-spacing:.5px; text-transform:uppercase; padding:2px 7px; border-radius:3px; }
-  .src.ms { background:var(--soft); color:var(--primary); }
-  .src.fmi { background:var(--sand); color:#7A5B3A; }
   .grid2 { display:grid; grid-template-columns:2fr 1fr; gap:16px; }
   .grid2b { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .grid2 > .panel, .grid2b > .panel { margin-bottom:16px; }
@@ -138,7 +135,6 @@
     <button data-view="habits">Habits</button>
     <button data-view="departments">Departments</button>
     <button data-view="people">People</button>
-    <button data-view="usage">How it's used</button>
   </div>
 </div></section>
 
@@ -149,13 +145,13 @@
     <div class="tiles" id="tiles"></div>
     <div class="grid2">
       <div class="panel">
-        <h2>Active users over time <span class="src ms">Microsoft report</span></h2>
+        <h2>Active users over time</h2>
         <p class="hint">People who used Copilot in any app in the 28 days ending each week, against licensed people.</p>
         <div class="legend"><span><i style="background:var(--primary)"></i>Active (28 days)</span><span><i style="background:var(--soft-line)"></i>Licensed</span></div>
         <div id="trend"></div>
       </div>
       <div class="panel">
-        <h2>Where people use it <span class="src ms">Microsoft report</span></h2>
+        <h2>Where people use it</h2>
         <p class="hint">Active users by app, last 28 days.</p>
         <div class="bars" id="apps"></div>
       </div>
@@ -179,14 +175,14 @@
     <div class="tiles five" id="stage-tiles"></div>
     <div class="grid2">
       <div class="panel">
-        <h2>Habit formation by month <span class="src ms">Microsoft report</span></h2>
+        <h2>Habit formation by month</h2>
         <p class="hint">Licensed people by number of days they used Copilot each month.</p>
         <div class="legend" id="stage-legend"></div>
         <div id="monthly"></div>
       </div>
       <div class="panel">
-        <h2>Who moved <span class="src fmi">Managed Intelligence</span></h2>
-        <p class="hint">Each person's last 28 days against their first two months (June to July).</p>
+        <h2>Who moved</h2>
+        <p class="hint">Each person's last 28 days against their monthly average over the five months before, from Microsoft's 180-day report. Available from day one.</p>
         <div class="bars" id="movement"></div>
       </div>
     </div>
@@ -195,15 +191,15 @@
   <!-- ============ DEPARTMENTS ============ -->
   <section class="view" id="v-departments">
     <div class="panel">
-      <h2>By department <span class="src ms">Microsoft report</span> <span class="src fmi">Top use: Managed Intelligence</span></h2>
+      <h2>By department</h2>
       <p class="hint">Last 28 days. Departments come from Entra ID. Groups under 5 people are folded into "Other" so no one can be singled out.</p>
       <div class="scroll"><table>
-        <thead><tr><th>Department</th><th class="n">People</th><th class="n">Active</th><th>Habit mix</th><th class="n">Habitual or Power</th><th class="n">Median days</th><th class="n">Prompts / person</th><th>Top use</th><th class="n">vs July</th></tr></thead>
+        <thead><tr><th>Department</th><th class="n">People</th><th class="n">Active</th><th>Habit mix</th><th class="n">Habitual or Power</th><th class="n">Median days</th><th class="n">Prompts / person</th><th class="n">Apps / person</th><th class="n">Moved up</th><th class="n">Dropped</th></tr></thead>
         <tbody id="dept-rows"></tbody>
       </table></div>
     </div>
     <div class="panel">
-      <h2>By role <span class="src ms">Microsoft report</span></h2>
+      <h2>By role</h2>
       <p class="hint">Same view by job title, from Entra ID.</p>
       <div class="scroll"><table>
         <thead><tr><th>Role</th><th class="n">People</th><th class="n">Active</th><th>Habit mix</th><th class="n">Habitual or Power</th><th class="n">Median days</th></tr></thead>
@@ -215,7 +211,7 @@
   <!-- ============ PEOPLE ============ -->
   <section class="view" id="v-people">
     <div class="panel">
-      <h2>People <span class="count" id="ppl-count"></span> <span class="src ms">Microsoft report</span> <span class="src fmi">Change: Managed Intelligence</span></h2>
+      <h2>People <span class="count" id="ppl-count"></span></h2>
       <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.</p>
       <div class="filters">
         <input id="q" placeholder="Search by name">
@@ -235,24 +231,7 @@
     </div>
   </section>
 
-  <!-- ============ HOW IT'S USED ============ -->
-  <section class="view" id="v-usage">
-    <div class="callout">This tab is about <b>what</b> Copilot is used for. It comes from Fortify Managed Intelligence, which labels each prompt by task type as it reads it and then discards the text. No prompt text is stored or shown anywhere, and task types are reported for the firm and departments only, never for a named person.</div>
-    <div class="panel">
-      <h2>Depth of use <span class="src fmi">Managed Intelligence</span></h2>
-      <p class="hint">Fewer prompts can mean better use, so these track how people use Copilot, not just how much. July against the last 28 days.</p>
-      <div class="depth" id="depth"></div>
-    </div>
-    <div class="panel">
-      <h2>What people use it for <span class="src fmi">Managed Intelligence</span></h2>
-      <p class="hint">People who did each task in the last 28 days. The marker shows July.</p>
-      <div class="legend"><span><i style="background:var(--primary)"></i>Last 28 days</span><span><i style="background:var(--warn)"></i>July</span></div>
-      <div class="bars" id="tasks"></div>
-      <p class="note" style="margin-top:8px">For Cassin we would add legal task types to Fortify's labels, such as loan document review, closing checklists, and title and survey review.</p>
-    </div>
-  </section>
-
-  <p class="note" id="src-note">Sources: <b>Microsoft report</b> panels use Microsoft 365 Copilot usage reports (Microsoft Graph), read as the signed-in admin; monthly history comes from a snapshot the page saves each month to an admin-only list. <b>Managed Intelligence</b> panels need Fortify Managed Intelligence connected to Cassin's tenant. Microsoft's data runs 2 to 3 days behind. Sample data shown in this preview.</p>
+  <p class="note" id="src-note">Source: Microsoft 365 Copilot usage reports and Entra ID (department, job title) through Microsoft Graph, read in the browser as the signed-in admin. Monthly history is saved to an admin-only list on this site, so the month-by-month views fill in from launch. Everything stays in Cassin's Microsoft 365. Microsoft's data runs 2 to 3 days behind. Sample data shown in this preview.</p>
 </div></main>
 
 <div id="pd"><div class="scrim" data-close></div><aside class="drawer" aria-label="Person detail"><div id="pd-body"></div></aside></div>
@@ -277,7 +256,7 @@ const STAGES = [
 const stageOf = d => d === 0 ? 0 : d <= 5 ? 1 : d <= 10 ? 2 : d <= 15 ? 3 : 4;
 const MONTHS = ["Jun", "Jul", "Aug", "Sep", "Oct", "Now"];   // last = last 28 days
 const MOVES = { new: "New", ramped_up: "Ramped up", steady: "Steady", cooled: "Cooled", lapsed: "Lapsed" };
-const APPS = [["Chat", "Copilot Chat", .9], ["Outlook", "Outlook", .8], ["Word", "Word", .68], ["Teams", "Teams", .58], ["Excel", "Excel", .27], ["PPT", "PowerPoint", .1]];
+const APPS = [["Chat", "Copilot Chat", .9, "C"], ["Outlook", "Outlook", .8, "O"], ["Word", "Word", .68, "W"], ["Teams", "Teams", .58, "T"], ["Excel", "Excel", .27, "X"], ["PPT", "PowerPoint", .1, "P"], ["Agent", "Agents", .14, "A"]];
 const DEPTS = [["Agency Lending", 34, .35], ["Balance Sheet Lending", 30, .1], ["CMBS", 22, .25], ["Leasing", 18, 0], ["Private Client", 12, -.1], ["Firm Operations", 32, -.15]];
 const LEGAL_ROLES = [["Partner", 3, -.05], ["Associate", 8, .1], ["Paralegal", 5, .05], ["Legal assistant", 4, 0]];
 const OPS_ROLES = [["Operations", 1, 0]];
@@ -331,7 +310,7 @@ people.forEach(p => {
   p.days = p.monthly[5];
   p.prompts = p.prompts || 0;
   p.stage = stageOf(p.days);
-  const base = stageOf(Math.round((p.monthly[0] + p.monthly[1]) / 2)), now = p.stage;
+  const base = stageOf(Math.round(p.monthly.slice(0, 5).reduce((a, b) => a + b, 0) / 5)), now = p.stage;
   p.move = base === 0 && now === 0 ? null : base === 0 ? "new" : now === 0 ? "lapsed" : now > base ? "ramped_up" : now < base ? "cooled" : "steady";
 });
 const LICENSED = people.length;
@@ -343,7 +322,7 @@ const lapsedList = people.filter(p => p.kind === "lapsed").sort((a, b) => b.last
 const $ = id => document.getElementById(id);
 const stagePill = s => `<span class="stg" style="--c:${STAGES[s].c}"><i></i>${STAGES[s].label}</span>`;
 const movePill = m => m ? `<span class="mv ${m}">${MOVES[m]}</span>` : `<span class="mv steady">–</span>`;
-const appChips = p => `<span class="apps">${APPS.map(([s, full]) => `<b class="${p.apps[s] && p.days ? "on" : ""}" title="${full}">${s === "Outlook" ? "O" : s === "Chat" ? "C" : s === "Word" ? "W" : s === "Teams" ? "T" : s === "Excel" ? "X" : "P"}</b>`).join("")}</span>`;
+const appChips = p => `<span class="apps">${APPS.map(([s, full, , l]) => `<b class="${p.apps[s] && p.days ? "on" : ""}" title="${full}">${l}</b>`).join("")}</span>`;
 const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
 const stackBar = group => `<div class="stack" title="${STAGES.map((s, i) => `${s.label}: ${group.filter(p => p.stage === i).length}`).join(", ")}">${STAGES.map((s, i) => { const n = group.filter(p => p.stage === i).length; return n ? `<span style="width:${100 * n / group.length}%;background:${s.c}"></span>` : ""; }).join("")}</div>`;
 function spark(p) {
@@ -433,18 +412,17 @@ $("movement").innerHTML = moveCounts.map(([k, n]) => `<div class="row" style="gr
   + `<p class="hint" style="margin-top:14px">Select a group on the People tab to see who.</p>`;
 
 // ================= departments =================
-const TOP_USE = { "Agency Lending": "Client email draft", "Balance Sheet Lending": "Document summarization", "CMBS": "Table extraction", "Leasing": "Contract clause review", "Private Client": "Email summarization", "Firm Operations": "Rewrite / tone polish" };
 function groupRows(key, withExtras) {
   const groups = {};
   people.forEach(p => (groups[p[key]] = groups[p[key]] || []).push(p));
   return Object.entries(groups).sort((a, b) => pct(b[1].filter(p => p.stage >= 3).length, b[1].length) - pct(a[1].filter(p => p.stage >= 3).length, a[1].length)).map(([name, g]) => {
     const act = g.filter(p => p.days), hab = g.filter(p => p.stage >= 3);
-    const julAct = g.filter(p => p.monthly[1]).length;
-    const d = pct(act.length, g.length) - pct(julAct, g.length);
     const base = `<td>${name}</td><td class="n">${g.length}</td><td class="n">${pct(act.length, g.length)}%</td><td>${stackBar(g)}</td><td class="n">${pct(hab.length, g.length)}%</td><td class="n">${median(act.map(p => p.days))}</td>`;
     if (!withExtras) return `<tr>${base}</tr>`;
     const ppp = act.length ? Math.round(act.reduce((s, p) => s + p.prompts, 0) / act.length) : 0;
-    return `<tr>${base}<td class="n">${ppp}</td><td><span class="pill">${TOP_USE[name] || "–"}</span></td><td class="n"><span class="delta ${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : ""}${d} pts</span></td></tr>`;
+    const apps = act.length ? (act.reduce((s, p) => s + Object.keys(p.apps).length, 0) / act.length).toFixed(1) : "–";
+    const up = g.filter(p => p.move === "new" || p.move === "ramped_up").length, down = g.filter(p => p.move === "cooled" || p.move === "lapsed").length;
+    return `<tr>${base}<td class="n">${ppp}</td><td class="n">${apps}</td><td class="n"><span class="delta up">${up}</span></td><td class="n"><span class="delta ${down ? "down" : ""}">${down}</span></td></tr>`;
   }).join("");
 }
 $("dept-rows").innerHTML = groupRows("dept", true);
@@ -496,13 +474,13 @@ function openPerson(p) {
   const apps = APPS.filter(([s]) => p.apps[s]).map(([s, full]) => `<tr><td>${full}</td><td class="n">${fmtDate(p.apps[s])}</td></tr>`).join("") || `<tr><td colspan="2" style="color:#6E7C8C">No Copilot activity</td></tr>`;
   $("pd-body").innerHTML = `
     <div class="hd"><button class="x" data-close aria-label="Close">×</button><h3>${p.name}</h3><p>${p.role} · ${p.dept}</p>
-      <div class="hdtags"><span class="stg" style="--c:${STAGES[p.stage].c}"><i></i>${STAGES[p.stage].label}</span>${p.move ? `<span class="mv ${p.move}">${MOVES[p.move]} since summer</span>` : ""}</div></div>
+      <div class="hdtags"><span class="stg" style="--c:${STAGES[p.stage].c}"><i></i>${STAGES[p.stage].label}</span>${p.move ? `<span class="mv ${p.move}">${MOVES[p.move]}</span>` : ""}</div></div>
     <div class="bd">
       <div class="mini"><div><div class="v">${p.days}</div><div class="k">Active days (28)</div></div><div><div class="v">${p.prompts || 0}</div><div class="k">Prompts (28)</div></div><div><div class="v">${Object.keys(p.apps).length && p.days ? Object.keys(p.apps).length : 0}</div><div class="k">Apps used</div></div></div>
       <h4>Active days by month</h4>${chart}
       <h4>Last used, by app</h4><table>${apps}</table>
       <h4>Suggested next step</h4><div class="next">${nextStep(p)}</div>
-      <p class="private">What ${p.name} asks Copilot isn't shown here. Task types are reported for the firm and departments only.</p>
+      <p class="private">This page counts usage only. It never reads what anyone asks Copilot.</p>
     </div>`;
   $("pd").classList.add("open");
 }
@@ -511,18 +489,6 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-close]")) $("pd").classList.remove("open");
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") $("pd").classList.remove("open"); });
-
-// ================= how it's used =================
-const promptsNow = active.reduce((s, p) => s + p.prompts, 0);
-const hours = Math.round(promptsNow * .8 * 6 / 60);
-$("depth").innerHTML = [
-  ["Grounded prompts", "41%", "29%", "Prompts that point Copilot at a specific file, email or meeting"],
-  ["Apps per person", "2.7", "2.1", "Copilot apps each active person uses"],
-  ["Task types per person", "3.6", "2.4", "Different kinds of work each person uses it for"],
-  ["Time assisted", `${hours}<small> hrs</small>`, null, "Estimate: 6 minutes per substantive prompt, Microsoft's factor. Firm-wide only."],
-].map(([k, v, was, d]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="d">${was ? `<span class="delta up">▲ from ${was} in July</span><br>` : ""}${d}</div></div>`).join("");
-const TASKS = [["Email summarization", 78, 52], ["Client email draft", 64, 40], ["Document summarization", 61, 37], ["Rewrite / tone polish", 47, 33], ["Contract clause review", 39, 18], ["Meeting recap", 34, 29], ["Table extraction", 22, 11], ["Definitions and research", 20, 15], ["Scheduling", 14, 12]];
-$("tasks").innerHTML = TASKS.map(([t, n, was]) => `<div class="row" style="grid-template-columns:180px 1fr 90px"><span>${t}</span><div class="track"><div class="fill" style="width:${pct(n, active.length)}%"></div><div class="ghost" style="left:0;width:${pct(was, active.length)}%"></div></div><span class="num">${n} people</span></div>`).join("");
 
 // ================= tabs =================
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
