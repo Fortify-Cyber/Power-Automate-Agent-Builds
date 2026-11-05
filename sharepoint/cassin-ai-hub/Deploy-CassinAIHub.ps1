@@ -784,19 +784,17 @@ foreach ($loc in "TopNavigationBar", "QuickLaunch") {
     Add-Nav $loc "Agents & Tools" "SitePages/Agents-and-Tools.aspx" | Out-Null
     Add-Nav $loc "News" "_layouts/15/news.aspx" | Out-Null
     Add-Nav $loc "Feedback" "SitePages/Feedback.aspx" | Out-Null
-    # "AI Working Group" menu, shown only to the Entra ID groups given (SharePoint can't target
-    # menu links to the site's own groups). The pages stay restricted either way.
-    if ($WorkingGroupAudience -or $AdminAudience) {
-        $all = @($WorkingGroupAudience, $AdminAudience | Where-Object { $_ })
-        $first = if ($WorkingGroupAudience) { "Program-Status" } else { "Copilot-Adoption" }
-        $wg = Add-PnPNavigationNode -Location $loc -Title "AI Working Group" -Url "$siteRel/SitePages/$first.aspx" -AudienceIds $all
-        if ($WorkingGroupAudience) {
-            Add-PnPNavigationNode -Location $loc -Title "AI Program status" -Url "$siteRel/SitePages/Program-Status.aspx" -Parent $wg -AudienceIds @($WorkingGroupAudience) | Out-Null
-        }
-        if ($AdminAudience) {
-            Add-PnPNavigationNode -Location $loc -Title "Copilot adoption" -Url "$siteRel/SitePages/Copilot-Adoption.aspx" -Parent $wg -AudienceIds @($AdminAudience) | Out-Null
-        }
-    }
+    # "AI Working Group" menu. Everyone sees it; the pages themselves are restricted, so anyone
+    # else who opens one gets SharePoint's "You need access" page (with a request-access button
+    # that goes to the site owners). With -WorkingGroupAudience / -AdminAudience (Entra ID
+    # groups), the links are shown only to those groups instead.
+    $aud = { param([string[]] $Ids) $ids = @($Ids | Where-Object { $_ }); if ($ids.Count) { @{ AudienceIds = [guid[]] $ids } } else { @{} } }
+    $wgAud = & $aud @($WorkingGroupAudience, $AdminAudience)
+    $wg = Add-PnPNavigationNode -Location $loc -Title "AI Working Group" -Url "$siteRel/SitePages/Program-Status.aspx" @wgAud
+    $statusAud = & $aud @($WorkingGroupAudience)
+    $adoptAud  = & $aud @($AdminAudience)
+    Add-PnPNavigationNode -Location $loc -Title "AI Program status" -Url "$siteRel/SitePages/Program-Status.aspx" -Parent $wg @statusAud | Out-Null
+    Add-PnPNavigationNode -Location $loc -Title "Copilot adoption (admins)" -Url "$siteRel/SitePages/Copilot-Adoption.aspx" -Parent $wg @adoptAud | Out-Null
     $titles = (Get-PnPNavigationNode -Location $loc | ForEach-Object Title) -join " | "
     Write-Host "  $loc`: $titles"
 }
