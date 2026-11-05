@@ -4,12 +4,12 @@ import { esc } from './render';
 // The admin "Copilot adoption" page, laid out as in preview/adoption-preview.html. Every value
 // that comes from Graph or Entra ID goes through esc().
 
-type Tab = 'overview' | 'habits' | 'departments' | 'people';
-const TABS: Array<[Tab, string]> = [['overview', 'Overview'], ['habits', 'Habits'], ['departments', 'Departments'], ['people', 'People']];
+type Tab = 'overview' | 'habits' | 'roles' | 'people';
+const TABS: Array<[Tab, string]> = [['overview', 'Overview'], ['habits', 'Habits'], ['roles', 'Roles'], ['people', 'People']];
 const MOVE_COLOR: Record<Move, string> = { new: '#0077CE', ramped_up: '#2F8A5B', steady: '#C7D5DF', cooled: '#B87A1F', lapsed: '#B4463A' };
 const MOVE_RANK: Record<Move, number> = { ramped_up: 0, new: 1, steady: 2, cooled: 3, lapsed: 4 };
 const PAGE = 15;
-interface IFilter { q: string; dept: string; stage: string; move: string }
+interface IFilter { q: string; role: string; stage: string; move: string }
 
 const pct = (a: number, b: number): number => (b ? Math.round(100 * a / b) : 0);
 const monthName = (m: string): string => new Date(`${m}-15T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
@@ -19,7 +19,7 @@ const longDate = (d: string): string => new Date(`${d}T00:00:00Z`).toLocaleDateS
 export class AdoptionView {
   private _tab: Tab = 'overview';
   private _sort: { key: string; dir: number } = { key: 'days', dir: -1 };
-  private _filter: IFilter = { q: '', dept: '', stage: '', move: '' };
+  private _filter: IFilter = { q: '', role: '', stage: '', move: '' };
   private _showAll = false;
   private _root: HTMLElement | undefined;
   private readonly _onResize = (): void => this._drawCharts();
@@ -34,12 +34,12 @@ export class AdoptionView {
         <div class="ad-tabs" role="tablist">${TABS.map(([k, l]) =>
           `<button type="button" role="tab" data-ad-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('')}</div>
       </div>
-      ${m.namesHidden ? `<div class="ad-warn"><b>Names are hidden in Microsoft's reports.</b> Microsoft 365 is set to conceal user names in usage reports, so people can't be matched to names or departments. A Global Admin can change this in the Microsoft 365 admin center: <b>Settings → Org settings → Services → Reports</b>, then clear <b>Display concealed user, group, and site names in all reports</b>. Monthly history isn't saved while names are hidden.</div>` : ''}
+      ${m.namesHidden ? `<div class="ad-warn"><b>Names are hidden in Microsoft's reports.</b> Microsoft 365 is set to conceal user names in usage reports, so people can't be matched to names or job titles. A Global Admin can change this in the Microsoft 365 admin center: <b>Settings → Org settings → Services → Reports</b>, then clear <b>Display concealed user, group, and site names in all reports</b>. Monthly history isn't saved while names are hidden.</div>` : ''}
       <section data-ad-view="overview" ${this._tab === 'overview' ? '' : 'hidden'}>${this._overview()}</section>
       <section data-ad-view="habits" ${this._tab === 'habits' ? '' : 'hidden'}>${this._habits()}</section>
-      <section data-ad-view="departments" ${this._tab === 'departments' ? '' : 'hidden'}>${this._departments()}</section>
+      <section data-ad-view="roles" ${this._tab === 'roles' ? '' : 'hidden'}>${this._roles()}</section>
       <section data-ad-view="people" ${this._tab === 'people' ? '' : 'hidden'}>${this._peopleShell()}</section>
-      <p class="ad-note">Source: Microsoft 365 Copilot usage reports and Entra ID (department, job title) through Microsoft Graph, read as you.
+      <p class="ad-note">Source: Microsoft 365 Copilot usage reports and Entra ID (names and job titles) through Microsoft Graph, read as you.
         ${m.refresh ? `Microsoft's data is up to ${longDate(m.refresh)}.` : ''}
         Monthly history is saved to the admin-only Copilot Adoption History list on this site${this._saved ? ' (this month\'s was just saved)' : ''}.
         Everything stays in Cassin's Microsoft 365. This page counts usage only; it never reads what anyone asks Copilot.</p>
@@ -104,17 +104,26 @@ export class AdoptionView {
     const active = m.people.filter(p => p.status === 'active').length;
     const never = m.people.filter(p => p.status === 'never');
     const lapsed = m.people.filter(p => p.status === 'lapsed').sort((a, b) => (b.last || '').localeCompare(a.last || ''));
-    const tiles = [
-      { accent: true, label: 'Active last 28 days', value: `${pct(active, m.licensed)}%`, sub: `${active} of ${m.licensed} licensed people` },
-      { label: 'Licensed', value: String(m.licensed), sub: 'Microsoft 365 Copilot licenses assigned' },
-      { label: 'Not started', value: String(never.length), sub: 'Licensed, never used' },
-      { label: 'Recently lapsed', value: String(lapsed.length), sub: 'No activity in 28 days' }
+    const n = (v: number): string => v.toLocaleString('en-US');
+    let promptsTile = { accent: false, label: 'Licensed', value: String(m.licensed), sub: 'Microsoft 365 Copilot licenses assigned', delta: '' };
+    if (m.promptsNow !== null) {
+      const change = m.promptsBefore ? Math.round(100 * (m.promptsNow - m.promptsBefore) / m.promptsBefore) : null;
+      promptsTile = {
+        accent: false, label: 'Prompts, last 28 days', value: n(m.promptsNow), sub: `About ${active ? n(Math.round(m.promptsNow / active)) : 0} per active person`,
+        delta: change === null ? '' : `<div class="delta ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change)}% vs the monthly average before</div>`
+      };
+    }
+    const tiles: Array<{ accent: boolean; label: string; value: string; sub: string; delta: string }> = [
+      { accent: true, label: 'Active last 28 days', value: `${pct(active, m.licensed)}%`, sub: `${active} of ${m.licensed} licensed people`, delta: '' },
+      promptsTile,
+      { accent: false, label: 'Not started', value: String(never.length), sub: 'Licensed, never used', delta: '' },
+      { accent: false, label: 'Recently lapsed', value: String(lapsed.length), sub: 'No activity in 28 days', delta: '' }
     ];
     const rows = (list: IPerson[], cols: (p: IPerson) => string, span: number): string =>
       list.slice(0, 8).map(p => `<tr class="click" data-ad-person="${this._m.people.indexOf(p)}">${cols(p)}</tr>`).join('') +
       (list.length > 8 ? `<tr><td colspan="${span}" class="faint">+ ${list.length - 8} more on the People tab</td></tr>` : '') +
       (list.length ? '' : `<tr><td colspan="${span}" class="faint">No one.</td></tr>`);
-    return `<div class="ad-tiles">${tiles.map(t => `<div class="ad-tile${t.accent ? ' accent' : ''}"><div class="k">${t.label}</div><div class="v">${t.value}</div><div class="s">${t.sub}</div></div>`).join('')}</div>
+    return `<div class="ad-tiles">${tiles.map(t => `<div class="ad-tile${t.accent ? ' accent' : ''}"><div class="k">${t.label}</div><div class="v">${t.value}</div><div class="s">${t.sub}</div>${t.delta}</div>`).join('')}</div>
       <div class="ad-grid2">
         <div class="ad-panel"><h3>Copilot use over time</h3>
           <p class="hint">People using Copilot on an average day (7-day average), against licensed people.</p>
@@ -123,10 +132,14 @@ export class AdoptionView {
         <div class="ad-panel"><h3>Where people use it</h3><p class="hint">Active users by app, last 28 days.</p>
           <div class="ad-bars">${m.appCounts.map(a => `<div class="row"><span>${esc(a.app.label)}</span><div class="track"><div class="fill" style="width:${pct(a.users, m.licensed)}%"></div></div><span class="num">${a.users} · ${pct(a.users, m.licensed)}%</span></div>`).join('') || '<p class="faint">No app activity in the report.</p>'}</div></div>
       </div>
+      ${m.promptsNow !== null ? `<div class="ad-panel"><h3>Prompts over time</h3>
+          <p class="hint">${m.hasDailyPrompts ? 'Prompts people sent Copilot each day (7-day average). More prompts from the same people means Copilot is becoming part of the work.'
+            : 'Prompts people sent Copilot each month. The first bar is the monthly average over the five months before the last 28 days, from Microsoft\'s 180-day report; each month after launch is added as it\'s saved.'}</p>
+          <div data-ad-chart="prompts"></div></div>` : ''}
       <div class="ad-grid2b">
         <div class="ad-panel"><h3>Not started <span class="count">(${never.length})</span></h3>
           <p class="hint">Licensed, but no Copilot activity yet. A quick check-in or the Get Started page usually helps.</p>
-          <table><thead><tr><th>Name</th><th>Department</th></tr></thead><tbody>${rows(never, p => `<td>${esc(p.name)}</td><td>${p.department ? `<span class="pill">${esc(p.department)}</span>` : ''}</td>`, 2)}</tbody></table></div>
+          <table><thead><tr><th>Name</th><th>Role</th></tr></thead><tbody>${rows(never, p => `<td>${esc(p.name)}</td><td>${esc(p.role)}</td>`, 2)}</tbody></table></div>
         <div class="ad-panel"><h3>Recently lapsed <span class="count">(${lapsed.length})</span></h3>
           <p class="hint">Used Copilot before, but not in the last 28 days.</p>
           <table><thead><tr><th>Name</th><th>Last used</th><th>Where</th></tr></thead><tbody>${rows(lapsed, p => `<td>${esc(p.name)}</td><td>${p.last ? shortDate(p.last) : ''}</td><td>${esc(this._lastApp(p))}</td>`, 3)}</tbody></table></div>
@@ -173,7 +186,7 @@ export class AdoptionView {
       </div>`;
   }
 
-  // ---------------------------------------------------------------- departments
+  // ---------------------------------------------------------------- roles
   private _groupTable(rows: IGroupRow[], extras: boolean): string {
     const m = this._m;
     const head = `<th>Name</th><th class="n">People</th><th class="n">Active</th>${m.hasDays ? '<th>Habit mix</th><th class="n">Habitual or Power</th><th class="n">Median days</th>' : ''}` +
@@ -190,31 +203,29 @@ export class AdoptionView {
     return `<div class="scroll"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
   }
 
-  private _departments(): string {
+  private _roles(): string {
     const m = this._m;
-    const noDept = m.people.length > 0 && m.people.every(p => !p.department);
-    return `<div class="ad-panel"><h3>By department</h3>
-        <p class="hint">Last 28 days. Departments come from Entra ID. Departments with fewer than 5 people are combined into "Other".</p>
-        ${noDept ? '<p class="faint">No departments are set in Entra ID, or the web part can\'t read them yet (it needs the User.Read.All permission approved).</p>' : this._groupTable(m.departments, true).replace('<th>Name</th>', '<th>Department</th>')}</div>
-      <div class="ad-panel"><h3>By role</h3><p class="hint">Same view by job title, from Entra ID.</p>
-        ${noDept && m.people.every(p => !p.role) ? '<p class="faint">No job titles found.</p>' : this._groupTable(m.roles, false).replace('<th>Name</th>', '<th>Role</th>')}</div>`;
+    const none = m.people.length > 0 && m.people.every(p => !p.role);
+    return `<div class="ad-panel"><h3>By role</h3>
+        <p class="hint">Last 28 days, by job title in Entra ID. Titles held by fewer than 5 people are combined into "Other".</p>
+        ${none ? '<p class="faint">No job titles found in Entra ID, or the web part can\'t read them yet (it needs the User.Read.All permission approved).</p>' : this._groupTable(m.roles, true).replace('<th>Name</th>', '<th>Role</th>')}</div>`;
   }
 
   // ---------------------------------------------------------------- people
   private _peopleShell(): string {
     const m = this._m;
-    const depts = Array.from(new Set(m.people.map(p => p.department).filter(Boolean))).sort();
+    const roles = Array.from(new Set(m.people.map(p => p.role).filter(Boolean))).sort();
     const opt = (v: string, l: string): string => `<option value="${esc(v)}">${esc(l)}</option>`;
     return `<div class="ad-panel"><h3>People <span class="count" data-ad-count></span></h3>
       <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.</p>
       <div class="ad-filters">
         <input data-ad-f="q" placeholder="Search by name" aria-label="Search by name">
-        <select data-ad-f="dept" aria-label="Department">${opt('', 'All departments')}${depts.map(d => opt(d, d)).join('')}</select>
+        <select data-ad-f="role" aria-label="Role">${opt('', 'All roles')}${roles.map(r => opt(r, r)).join('')}</select>
         ${m.hasDays ? `<select data-ad-f="stage" aria-label="Stage">${opt('', 'All stages')}${STAGES.map((s, i) => opt(String(i), s.label)).join('')}</select>` : ''}
         <select data-ad-f="move" aria-label="Change">${opt('', 'Any change')}${(Object.keys(MOVES) as Move[]).map(k => opt(k, MOVES[k])).join('')}</select>
       </div>
       <div class="scroll"><table><thead><tr>
-        <th data-ad-sort="name" class="sort">Name</th><th>Department</th><th>Role</th>
+        <th data-ad-sort="name" class="sort">Name</th><th>Role</th>
         ${m.hasDays ? '<th data-ad-sort="stage" class="sort">Stage</th><th data-ad-sort="days" class="sort n">Active days</th>' : '<th data-ad-sort="last" class="sort">Last used</th>'}
         ${m.hasPrompts ? '<th data-ad-sort="prompts" class="sort n">Prompts</th>' : ''}
         ${m.months.length && m.hasDays ? `<th>${monthName(m.months[0])} → now</th>` : ''}
@@ -228,7 +239,7 @@ export class AdoptionView {
     if (!root) return;
     const m = this._m, f = this._filter, q = f.q.trim().toLowerCase();
     if (!m.hasDays && this._sort.key === 'days') this._sort = { key: 'last', dir: -1 };
-    const rows = m.people.filter(p => (!q || p.name.toLowerCase().includes(q)) && (!f.dept || p.department === f.dept) &&
+    const rows = m.people.filter(p => (!q || p.name.toLowerCase().includes(q)) && (!f.role || p.role === f.role) &&
       (f.stage === '' || p.stage === Number(f.stage)) && (!f.move || p.move === f.move));
     const val = (p: IPerson): string | number => {
       switch (this._sort.key) {
@@ -242,11 +253,11 @@ export class AdoptionView {
     };
     rows.sort((a, b) => { const x = val(a), y = val(b); return x > y ? this._sort.dir : x < y ? -this._sort.dir : a.name.localeCompare(b.name); });
     const shown = this._showAll ? rows : rows.slice(0, PAGE);
-    const cols = 5 + (m.hasPrompts ? 1 : 0) + (m.months.length && m.hasDays ? 1 : 0) + (m.hasDays ? 1 : 0);
+    const cols = 4 + (m.hasPrompts ? 1 : 0) + (m.months.length && m.hasDays ? 1 : 0) + (m.hasDays ? 1 : 0);
     const tbody = root.querySelector('[data-ad-rows]');
     if (tbody) {
       tbody.innerHTML = shown.map(p => `<tr class="click" data-ad-person="${m.people.indexOf(p)}">
-        <td>${esc(p.name)}</td><td>${p.department ? `<span class="pill">${esc(p.department)}</span>` : ''}</td><td>${esc(p.role)}</td>
+        <td>${esc(p.name)}</td><td>${esc(p.role)}</td>
         ${m.hasDays ? `<td>${this._stage(p.stage)}</td><td class="n">${p.days}</td>` : `<td>${p.last ? shortDate(p.last) : '–'}</td>`}
         ${m.hasPrompts ? `<td class="n">${p.prompts}</td>` : ''}
         ${m.months.length && m.hasDays ? `<td>${this._spark(p)}</td>` : ''}
@@ -312,7 +323,7 @@ export class AdoptionView {
     ].filter((x): x is string[] => !!x);
     pd.querySelector('aside')!.innerHTML = `
       <div class="hd"><button type="button" class="x" data-ad-close aria-label="Close">×</button>
-        <h3>${esc(p.name)}</h3><p>${esc([p.role, p.department].filter(Boolean).join(' · '))}</p>
+        <h3>${esc(p.name)}</h3><p>${esc(p.role)}</p>
         <div class="tags">${p.stage !== null ? `<span>${this._stage(p.stage)}</span>` : ''}${p.move ? `<span>${this._move(p.move)}</span>` : ''}</div></div>
       <div class="bd">
         <div class="mini">${mini.map(([v, k]) => `<div><div class="v">${v}</div><div class="k">${k}</div></div>`).join('')}</div>
@@ -344,6 +355,8 @@ export class AdoptionView {
   private _drawCharts(): void {
     const trend = this._root?.querySelector<HTMLElement>('[data-ad-chart="trend"]');
     if (trend && trend.offsetParent) trend.innerHTML = this._trendSvg(trend.clientWidth || 700);
+    const prompts = this._root?.querySelector<HTMLElement>('[data-ad-chart="prompts"]');
+    if (prompts && prompts.offsetParent) prompts.innerHTML = this._promptsSvg(prompts.clientWidth || 700);
     const monthly = this._root?.querySelector<HTMLElement>('[data-ad-chart="monthly"]');
     if (monthly && monthly.offsetParent) monthly.innerHTML = this._monthlySvg(monthly.clientWidth || 700);
   }
@@ -376,6 +389,52 @@ export class AdoptionView {
       <circle cx="${x(series.length - 1)}" cy="${y(last.active)}" r="4.5" fill="#00426C"/>
       <text x="${x(series.length - 1) - 8}" y="${y(last.active) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${Math.round(last.active)} a day</text>
       ${labels}</svg>`;
+  }
+
+  // Daily prompts (7-day average) when Microsoft's trend report has them; otherwise one bar
+  // per month: the average before (180-day report), each saved month, then the last 28 days.
+  private _promptsSvg(W: number): string {
+    const m = this._m;
+    const H = 240, P = { l: 48, r: 12, t: 18, b: 28 };
+    const n = (v: number): string => Math.round(v).toLocaleString('en-US');
+    if (m.hasDailyPrompts) {
+      const pts = m.trend.filter(t => t.prompts !== null) as Array<{ date: string; prompts: number }>;
+      if (pts.length < 2) return '<p class="faint">Not enough days yet.</p>';
+      const avg = pts.map((p, i) => { const w = pts.slice(Math.max(0, i - 6), i + 1); return { date: p.date, v: w.reduce((t, x) => t + x.prompts, 0) / w.length }; });
+      const series = avg.length > 8 ? avg.slice(6) : avg;
+      const top = Math.max(10, ...series.map(p => p.v)) * 1.1;
+      const x = (i: number): number => P.l + (W - P.l - P.r) * i / (series.length - 1);
+      const y = (v: number): number => P.t + (H - P.t - P.b) * (1 - v / top);
+      const line = series.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+      const ticks = [0, 0.5, 1].map(f => top / 1.1 * f);
+      const step = Math.max(1, Math.round(series.length / 6));
+      const last = series[series.length - 1];
+      return `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prompts per day">
+        ${ticks.map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#E4E1DD"/><text x="${P.l - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="#6E7C8C">${n(v)}</text>`).join('')}
+        <path d="${line}L${x(series.length - 1)},${y(0)}L${x(0)},${y(0)}Z" fill="#2A73B0" fill-opacity=".12"/>
+        <path d="${line}" fill="none" stroke="#2A73B0" stroke-width="2.5"/>
+        <circle cx="${x(series.length - 1)}" cy="${y(last.v)}" r="4.5" fill="#2A73B0"/>
+        <text x="${x(series.length - 1) - 8}" y="${y(last.v) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${n(last.v)} a day</text>
+        ${series.map((p, i) => (i % step === 0 && i < series.length - step / 2) || i === series.length - 1
+          ? `<text x="${x(i)}" y="${H - 8}" font-size="11" text-anchor="${i === series.length - 1 ? 'end' : 'middle'}" fill="#6E7C8C">${shortDate(p.date)}</text>` : '').join('')}
+      </svg>`;
+    }
+    const bars: Array<[string, number, boolean]> = [];
+    if (m.promptsBefore !== null) bars.push(['Monthly average before', m.promptsBefore, false]);
+    m.months.forEach((mo, i) => bars.push([monthName(mo), m.monthPrompts[i] || 0, false]));
+    bars.push(['Last 28 days', m.promptsNow || 0, true]);
+    const top = Math.max(1, ...bars.map(b => b[1])) * 1.15;
+    const slot = (W - P.l - P.r) / Math.max(bars.length, 3), bw = Math.min(90, slot * 0.6);
+    const y = (v: number): number => P.t + (H - P.t - P.b) * (1 - v / top);
+    return `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Prompts per month">
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" stroke="#C7D5DF"/>
+      ${bars.map(([label, v, now], i) => {
+        const x = P.l + slot * i + (slot - bw) / 2;
+        return `<rect x="${x}" y="${y(v)}" width="${bw}" height="${Math.max(0, y(0) - y(v))}" fill="${now ? '#00426C' : '#9FBFDB'}"/>
+          <text x="${x + bw / 2}" y="${y(v) - 6}" font-size="12" font-weight="600" text-anchor="middle" fill="#021D3C">${n(v)}</text>
+          <text x="${x + bw / 2}" y="${H - 8}" font-size="11.5" text-anchor="middle" fill="#3B5068" font-weight="${now ? 600 : 400}">${label}</text>`;
+      }).join('')}
+    </svg>`;
   }
 
   private _monthlySvg(W: number): string {

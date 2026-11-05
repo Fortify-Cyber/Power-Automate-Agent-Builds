@@ -25,7 +25,7 @@ export const MOVES: Record<Move, string> = {
 /** Habit stage from active days in a 28-day window (the bands in Microsoft's ValueLens). */
 export const stageOf = (days: number): number => days <= 0 ? 0 : days <= 5 ? 1 : days <= 10 ? 2 : days <= 15 ? 3 : 4;
 
-/** Departments and roles smaller than this are combined into "Other" to keep the tables readable. */
+/** Roles smaller than this are combined into "Other" to keep the table readable. */
 export const MIN_GROUP = 5;
 
 export interface IApp { key: string; label: string; letter: string }
@@ -162,7 +162,11 @@ export function parseCsv(text: string): Row[] {
   return body.map(r => { const o: Row = {}; head.forEach((h, i) => { o[h] = r[i] ?? ''; }); return o; });
 }
 
-export interface ITrendPoint { date: string; active: number; enabled: number }
+export interface ITrendPoint {
+  date: string; active: number; enabled: number;
+  /** Prompts submitted that day, when Microsoft's report carries them (its updated version does). */
+  prompts: number | null;
+}
 
 /** Parses the user count trend report: one point per day. */
 export function parseTrend(raw: Row[]): ITrendPoint[] {
@@ -171,16 +175,19 @@ export function parseTrend(raw: Row[]): ITrendPoint[] {
     const nested = Object.keys(r).map(k => r[k]).find(v => Array.isArray(v) && v.length && typeof v[0] === 'object');
     if (Array.isArray(nested)) points.push(...(nested as Row[])); else points.push(r);
   });
-  return points.map(p => {
-    const m = flatten(p, 0);
+  const flat = points.map(p => flatten(p, 0));
+  const keySet = new Set<string>();
+  flat.forEach(m => m.forEach((_, k) => keySet.add(k)));
+  const pk = promptsKey(Array.from(keySet));
+  return flat.map(m => {
     const date = asDate(m.get('reportdate'));
     const active = asNumber(m.get('anyappactiveusers'));
     const enabled = asNumber(m.get('anyappenabledusers'));
-    return date && active !== null ? { date, active, enabled: enabled ?? 0 } : null;
+    return date && active !== null ? { date, active, enabled: enabled ?? 0, prompts: pk ? asNumber(m.get(pk)) : null } : null;
   }).filter((p): p is ITrendPoint => !!p).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export interface IDirectoryUser { upn: string; name: string; department: string; title: string }
+export interface IDirectoryUser { upn: string; name: string; title: string }
 
 /** One saved month: active days and prompts per person over the 28 days ending `refresh`. */
 export interface ISnapshot {
@@ -199,7 +206,7 @@ export function makeSnapshot(rows: IUsage[], refresh: string, licensed: number):
 }
 
 export interface IPerson {
-  upn: string; name: string; department: string; role: string;
+  upn: string; name: string; role: string;
   days: number | null; prompts: number | null; last: string | null; apps: Record<string, string>;
   appsRecent: string[]; stage: number | null; move: Move | null;
   status: 'active' | 'never' | 'lapsed';
@@ -217,7 +224,11 @@ export interface IAdoption {
   hasDays: boolean; hasPrompts: boolean; hasMoves: boolean; namesHidden: boolean;
   trend: ITrendPoint[]; months: string[]; monthStages: number[][]; nowStages: number[];
   appCounts: Array<{ app: IApp; users: number }>;
-  departments: IGroupRow[]; roles: IGroupRow[]; moves: Record<Move, number>;
+  roles: IGroupRow[]; moves: Record<Move, number>;
+  /** Prompts in the last 28 days, the monthly average over the five months before (from the
+   * 180-day report), and each saved month's total. Null when the report has no prompt counts. */
+  promptsNow: number | null; promptsBefore: number | null; monthPrompts: number[];
+  hasDailyPrompts: boolean;
   fields: string[];
 }
 
@@ -284,6 +295,7 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
   const refresh = usage28.refresh;
   const dir = new Map(directory.map(d => [d.upn.toLowerCase(), d]));
   const d180 = new Map((usage180?.rows || []).map(r => [r.upn.toLowerCase(), r.days]));
+  const p180 = new Map((usage180?.rows || []).map(r => [r.upn.toLowerCase(), r.prompts]));
   const hasMoves = !!usage180?.hasDays && usage28.hasDays;
 
   // Months already complete, oldest first; the month the current window falls in is shown
@@ -302,7 +314,7 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
     const status: IPerson['status'] = !u.last ? 'never' : recent ? 'active' : 'lapsed';
     const days = usage28.hasDays ? (u.days ?? 0) : null;
     return {
-      upn: u.upn, name: d?.name || u.name || u.upn, department: d?.department || '', role: d?.title || '',
+      upn: u.upn, name: d?.name || u.name || u.upn, role: d?.title || '',
       days, prompts: usage28.hasPrompts ? (u.prompts ?? 0) : null, last: u.last, apps: u.apps, appsRecent,
       stage: days === null ? null : stageOf(days),
       move: hasMoves ? moveOf(days, d180.get(key) ?? 0) : (status === 'lapsed' ? 'lapsed' : null),
@@ -326,6 +338,15 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
   });
   const nowStages = STAGES.map((_, s) => people.filter(p => p.stage === s).length);
 
+  // Prompts: the 180-day figure includes the last 28 days, so the five months before are the
+  // difference, scaled to a 28-day month (as for active days).
+  const promptsNow = usage28.hasPrompts ? people.reduce((t, p) => t + (p.prompts ?? 0), 0) : null;
+  let promptsBefore: number | null = null;
+  if (promptsNow !== null && usage180?.hasPrompts) {
+    const before = usage28.rows.reduce((t, u) => t + Math.max(0, (p180.get(u.upn.toLowerCase()) ?? 0) - (u.prompts ?? 0)), 0);
+    promptsBefore = Math.round(before * 28 / 152);
+  }
+
   const moves = { new: 0, ramped_up: 0, steady: 0, cooled: 0, lapsed: 0 } as Record<Move, number>;
   people.forEach(p => { if (p.move) moves[p.move]++; });
 
@@ -335,8 +356,10 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
     trend, months: snaps.map(s => s.month), monthStages, nowStages,
     appCounts: usage28.apps.map(app => ({ app, users: people.filter(p => p.appsRecent.indexOf(app.key) >= 0).length }))
       .sort((a, b) => b.users - a.users),
-    departments: groupRows(people, p => p.department),
     roles: groupRows(people, p => p.role),
-    moves, fields: usage28.fields
+    moves, promptsNow, promptsBefore,
+    monthPrompts: snaps.map(sn => Object.keys(sn.people).reduce((t, k) => t + sn.people[k][1], 0)),
+    hasDailyPrompts: trend.some(t => t.prompts !== null),
+    fields: usage28.fields
   };
 }

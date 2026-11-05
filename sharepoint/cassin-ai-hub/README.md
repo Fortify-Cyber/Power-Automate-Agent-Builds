@@ -21,7 +21,7 @@ A SharePoint communication site for Cassin & Cassin's Microsoft 365 Copilot prog
 | **FAQ** | 10 common questions | `AI FAQ` list |
 | **Feedback** | A form for ideas, problems and wins. People see only their own submissions; owners see all, and set Status and a response | `Hub Feedback` list |
 | **AI Program status** (working group only) | The full pipeline moved from Notion: every agent, skill, flow and prompt by stage and by track, what Fortify is waiting on from Cassin, and feedback to triage. Only site owners and members can open it. See step 9 | `AI Roadmap` and `Waiting on Cassin` lists, plus `Hub Feedback` |
-| **Copilot adoption** (admins only) | Who is using Copilot, how often and in which apps: habit stages, departments and roles, each person's history and a suggested next step. Only site owners and **AI Hub Admins** can open it; it isn't in the menu. See step 8 | Microsoft's Copilot usage reports and Entra ID (Microsoft Graph), plus the `Copilot Adoption History` list |
+| **Copilot adoption** (admins only) | Who is using Copilot, how often and in which apps: active people and prompts over time, habit stages, roles, each person's history and a suggested next step. Only site owners and **AI Hub Admins** can open it. See step 8 | Microsoft's Copilot usage reports and Entra ID (Microsoft Graph), plus the `Copilot Adoption History` list |
 
 All content lives in `content/*.json`. To change what the site says, edit those files rather than the script.
 
@@ -94,7 +94,7 @@ If a section says it couldn't load, or you see a plain list table instead of car
 4. Optional: in the SharePoint admin center, make it a **home site** or add it to the **Viva Connections** app bar so it appears in Teams.
 
 ### 8. Turn on the Copilot adoption page (15 min, once)
-The page reads Microsoft's own Copilot usage reports and Entra ID (department, job title) through Microsoft Graph, in the admin's browser, as that admin. Nothing leaves Cassin's Microsoft 365, and it never reads what anyone asks Copilot. Once a month it saves a snapshot (active days and prompt count per person) to the admin-only **Copilot Adoption History** list, so the month-by-month views grow from launch. "Who moved" works from day one, from Microsoft's 180-day report.
+The page reads Microsoft's own Copilot usage reports and Entra ID (names and job titles) through Microsoft Graph, in the admin's browser, as that admin. Nothing leaves Cassin's Microsoft 365, and it never reads what anyone asks Copilot. Once a month it saves a snapshot (active days and prompt count per person) to the admin-only **Copilot Adoption History** list, so the month-by-month views grow from launch. "Who moved" works from day one, from Microsoft's 180-day report.
 
 1. **Update the web part.** In the app catalog (step 3), **Upload** `package/cassin-ai-hub-webpart.sppkg` (version 1.2 or later) and replace the old one. Select **Enable app**. It notes that the app requests API access; that's expected.
 2. **Approve the API access.** **SharePoint admin center → Advanced → API access.** Approve both pending requests from *Cassin AI Hub web part*: **Microsoft Graph, Reports.Read.All** and **Microsoft Graph, User.Read.All**. Approval applies to SharePoint's shared app for custom web parts, so any web part in Cassin's app catalog could use these two permissions (only Fortify's is installed).
@@ -105,7 +105,9 @@ The page reads Microsoft's own Copilot usage reports and Entra ID (department, j
    It creates the **AI Hub Admins** group, the **Copilot Adoption History** list (owners and AI Hub Admins only) and the **Copilot adoption** page (owners and AI Hub Admins only). Existing pages aren't touched.
 4. **Give each admin the Reports Reader role.** Microsoft only shows Copilot usage reports to people with a reports role. **Entra admin center → Roles & admins → Reports Reader → Add assignments**, add each AI Hub Admin and any site owner who'll use the page. (Global Administrators and Global Readers already have access.) Reports Reader can also read the other Microsoft 365 usage reports in the admin center; it can't change anything.
 5. **Show names in the reports.** By default Microsoft 365 hides names in usage reports. **Microsoft 365 admin center → Settings → Org settings → Services → Reports**, clear **Display concealed user, group, and site names in all reports**, then **Save**. This affects every Microsoft 365 usage report, for people who can already see them. While names are hidden, the page says so and doesn't save history.
-6. **Open it:** `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Copilot-Adoption.aspx`. Owners and AI Hub Admins also see an **Admins: Copilot adoption →** link under this week's tip on Home. Bookmark it.
+6. **Open it:** `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Copilot-Adoption.aspx`, or from the **For the AI Working Group and admins** bar under this week's tip on Home.
+
+**Finding the restricted pages.** They aren't in the site menu on purpose: SharePoint can only hide menu links from Microsoft 365 or security groups, not from the site's own Owners, Members and AI Hub Admins groups, so a menu link would show to everyone. Instead the web part shows a bar, only to people who can open them: on Home under this week's tip, and at the top of Program status and Copilot adoption to move between the two. (If the working group and admins are ever set up as Microsoft 365 or security groups in Entra ID, the links can move into an audience-targeted menu.)
 
 Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn't published the exact field names for active days and prompts per person in its updated report, so the page finds them by name. If the Habits tab says active days aren't included yet, the rest of the page still works; open the page with `?adoptionDebug=1` at the end of the address and send Fortify the field list it writes to the browser console (F12 → Console).
 
@@ -114,7 +116,7 @@ The roadmap that lived in Notion ("Cassin & Cassin × Fortify — AI Program Sta
 
 1. Upload the web part (version 1.2) to the app catalog as in step 8.1, and run the deploy script as usual. It creates the **AI Roadmap** and **Waiting on Cassin** lists, imports the 19 roadmap items, 11 open items and 3 feedback items from Notion (once), adds *How is it working?* and *Done on* to Hub Feedback and *Expected* to AI Agents, and builds the **AI Program status** page.
 2. Make sure the working group is in the site's **Owners** or **Members** group: they're the only people who can open the page and the two lists (members can edit list items, not the page).
-3. Open `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Program-Status.aspx`. Owners and members also see a **Working group: Program status →** link under this week's tip on Home.
+3. Open `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Program-Status.aspx`. Owners and members also see it in the **For the AI Working Group and admins** bar under this week's tip on Home.
 4. On **AI Agents**, fill in **Expected** (for example "Late November") for anything in pilot or up next; it appears under *Coming next*.
 
 How it fits together:

@@ -36,7 +36,7 @@ Copy the new `.sppkg` to `../package/` and bump `version` in `config/package-sol
 - `src/webparts/cassinAiHub/data.ts`: list reads. Field names must match `Deploy-CassinAIHub.ps1`
 - `src/webparts/cassinAiHub/render.ts`: HTML for each section (from the mockup in `../preview`)
 - `src/webparts/cassinAiHub/styles.ts`: the Cassin styles, scoped under `.cah`
-- `src/webparts/cassinAiHub/adoptionModel.ts`: parses the Copilot reports and works out stages, changes, departments (pure functions)
+- `src/webparts/cassinAiHub/adoptionModel.ts`: parses the Copilot reports and works out stages, changes, roles and prompt totals (pure functions)
 - `src/webparts/cassinAiHub/adoptionData.ts`: Microsoft Graph reads and the monthly snapshot
 - `src/webparts/cassinAiHub/adoptionView.ts`: the adoption page (from `../preview/adoption-preview.html`)
 - `src/webparts/cassinAiHub/programStatus.ts`: the working group's AI Program status page (roadmap boards, Waiting on Cassin, feedback)

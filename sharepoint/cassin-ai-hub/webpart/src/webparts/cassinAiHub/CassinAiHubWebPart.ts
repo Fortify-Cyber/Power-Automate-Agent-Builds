@@ -82,7 +82,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         const root = this.domElement.querySelector<HTMLElement>('.cah');
         if (this._adoption && root) this._adoption.mount(root);
         if (this._status && root) this._status.mount(root);
-        if (this.properties.section === 'latestTip' && root) this._addAdminLink(root);
+        const sec = this.properties.section;
+        if (root && (sec === 'latestTip' || sec === 'programStatus' || sec === 'adoption')) this._addRestrictedNav(root, sec);
       })
       .catch(err => {
         const section = SECTIONS.find(s => s.key === this.properties.section);
@@ -142,19 +143,27 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     return `<p class="manage"><a href="${R.esc(this._data.listUrl(section.list))}">Owners: add or edit items in the list →</a></p>`;
   }
 
-  // On the home page, people who can open the working group's roadmap list (owners, members)
-  // get a link to Program status, and people who can open the admin-only adoption history
-  // (owners, AI Hub Admins) get a link to Copilot adoption. Everyone else sees neither.
-  private _addAdminLink(root: HTMLElement): void {
+  // Links to the restricted pages, for the people who can open them. SharePoint's menu can only
+  // hide links from Microsoft 365 or security groups, not from the site's own groups, so the web
+  // part shows them instead: on Home under this week's tip, and at the top of each restricted
+  // page so you can move between them. Access is checked by reading each page's list:
+  // AI Roadmap (owners and members) and Copilot Adoption History (owners and AI Hub Admins).
+  private _addRestrictedNav(root: HTMLElement, section: Section): void {
     const web = this.context.pageContext.web.absoluteUrl;
     Promise.all([this._data.canRead(LISTS.roadmap).catch(() => false), this._data.canRead(HISTORY_LIST).catch(() => false)])
       .then(([wg, admin]) => {
-        if (root.querySelector('.admin-link')) return;
-        const links = [
-          wg ? `<a href="${R.esc(`${web}/SitePages/${STATUS_PAGE}.aspx`)}">Working group: Program status →</a>` : '',
-          admin ? `<a href="${R.esc(`${web}/SitePages/${ADOPTION_PAGE}.aspx`)}">Admins: Copilot adoption →</a>` : ''
-        ].filter(Boolean);
-        if (links.length) root.insertAdjacentHTML('beforeend', `<p class="manage admin-link">${links.join(' &nbsp;·&nbsp; ')}</p>`);
+        if (root.querySelector('.restricted-nav')) return;
+        const pages: Array<[boolean, string, string, Section]> = [
+          [wg, STATUS_PAGE, 'AI Program status', 'programStatus'],
+          [admin, ADOPTION_PAGE, 'Copilot adoption', 'adoption']
+        ];
+        const links = pages.filter(([ok]) => ok).map(([, page, label, sec]) => sec === section
+          ? `<span class="on" aria-current="page">${label}</span>`
+          : `<a href="${R.esc(`${web}/SitePages/${page}.aspx`)}">${label}</a>`);
+        // On a restricted page, a bar with only that page in it adds nothing.
+        if (!links.length || (section !== 'latestTip' && links.length < 2)) return;
+        const bar = `<nav class="restricted-nav" aria-label="Restricted pages"><span class="lbl">🔒 ${section === 'latestTip' ? 'For the AI Working Group and admins' : 'Restricted pages'}</span>${links.join('')}</nav>`;
+        root.insertAdjacentHTML(section === 'latestTip' ? 'beforeend' : 'afterbegin', bar);
       }).catch(() => undefined);
   }
 

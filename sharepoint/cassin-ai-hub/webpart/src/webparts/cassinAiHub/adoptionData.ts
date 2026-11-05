@@ -8,7 +8,7 @@ import {
 
 // Everything the adoption page reads, all inside Cassin's Microsoft 365:
 //  - Microsoft Graph, as the signed-in admin: the Copilot usage reports (Reports.Read.All)
-//    and names, departments and job titles from Entra ID (User.Read.All). Both permissions
+//    and names and job titles from Entra ID (User.Read.All). Both permissions
 //    are approved once by a SharePoint admin (SharePoint admin center → Advanced → API access).
 //  - The admin-only "Copilot Adoption History" list on this site, where one snapshot a month
 //    is saved so the month-by-month views fill in over time.
@@ -46,7 +46,7 @@ export class AdoptionData {
       });
     }
     if (/[?&]adoptionDebug=1/.test(window.location.search)) {
-      console.info('Cassin AI Hub adoption: report fields', model.fields, model);
+      console.info('Cassin AI Hub adoption: report fields', model.fields, 'daily prompts in trend:', model.hasDailyPrompts, model);
     }
     return { model, saved };
   }
@@ -87,11 +87,11 @@ export class AdoptionData {
   private async _directory(): Promise<IDirectoryUser[]> {
     const client = await this._client();
     const out: IDirectoryUser[] = [];
-    let next: string | undefined = '/users?$select=userPrincipalName,displayName,department,jobTitle&$top=999';
+    let next: string | undefined = '/users?$select=userPrincipalName,displayName,jobTitle&$top=999';
     while (next) {
       const page = await client.api(next).get() as { value: Array<Record<string, string | null>>; '@odata.nextLink'?: string };
       page.value.forEach(u => out.push({
-        upn: u.userPrincipalName || '', name: u.displayName || '', department: (u.department || '').trim(), title: (u.jobTitle || '').trim()
+        upn: u.userPrincipalName || '', name: u.displayName || '', title: (u.jobTitle || '').trim()
       }));
       next = page['@odata.nextLink'];
     }

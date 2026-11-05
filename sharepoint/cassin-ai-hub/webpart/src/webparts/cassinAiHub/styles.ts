@@ -73,6 +73,12 @@ export const CSS = `
 .cah .next-item p { margin:0 0 4px; font-size:14.5px; color:var(--muted); }
 .cah .next-item .when { font-size:13px; color:var(--faint); }
 .cah .next-item .pill { white-space:nowrap; flex-shrink:0; }
+.cah .restricted-nav { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; border:1px solid var(--soft-line); background:var(--soft);
+  padding:10px 14px; margin:16px 0; font-size:14px; }
+.cah .restricted-nav .lbl { font-weight:600; color:var(--muted); font-size:12.5px; letter-spacing:.5px; text-transform:uppercase; }
+.cah .restricted-nav a { font-weight:600; text-decoration:none; } .cah .restricted-nav a:hover { text-decoration:underline; }
+.cah .restricted-nav a::after { content:" →"; }
+.cah .restricted-nav .on { font-weight:600; color:var(--navy); border-bottom:2px solid var(--blue); }
 /* Program status (working group page) */
 .cah .ps .ad-tile .v { font-size:30px; }
 .cah .ps-board { display:grid; grid-template-columns:repeat(var(--cols),minmax(220px,1fr)); gap:12px; overflow-x:auto; padding-bottom:6px; }
