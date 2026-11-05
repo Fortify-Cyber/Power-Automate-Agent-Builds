@@ -107,7 +107,13 @@ The page reads Microsoft's own Copilot usage reports and Entra ID (names and job
 5. **Show names in the reports.** By default Microsoft 365 hides names in usage reports. **Microsoft 365 admin center → Settings → Org settings → Services → Reports**, clear **Display concealed user, group, and site names in all reports**, then **Save**. This affects every Microsoft 365 usage report, for people who can already see them. While names are hidden, the page says so and doesn't save history.
 6. **Open it:** `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Copilot-Adoption.aspx`, or from the **For the AI Working Group and admins** bar at the top of Home.
 
-**Finding the restricted pages.** They aren't in the site menu on purpose: SharePoint can only hide menu links from Microsoft 365 or security groups, not from the site's own Owners, Members and AI Hub Admins groups, so a menu link would show to everyone. Instead the web part shows a bar, only to people who can open them: at the top of Home, and at the top of Program status and Copilot adoption to move between the two. Everyone else sees nothing there. (If the working group and admins are ever set up as Microsoft 365 or security groups in Entra ID, the links can move into an audience-targeted menu.)
+**An "AI Working Group" menu (optional).** SharePoint can show a menu only to **Entra ID groups**, so this needs one group for the working group (a security group, or the Microsoft 365 group behind their Team) and one for the adoption admins. Copy each group's **Object ID** from its Overview page in the Entra admin center, then:
+```powershell
+./Deploy-CassinAIHub.ps1 -TenantName cassinllp -ClientId <client-id> -WorkingGroupAudience <working-group-object-id> -AdminAudience <admins-object-id>
+```
+The script turns on menu targeting for the site, adds an **AI Working Group** menu with *AI Program status* (working group) and *Copilot adoption* (admins), and adds each Entra group to the matching SharePoint group (AI Working Group, AI Hub Admins). From then on, manage who's in each in Entra ID or Teams. The Home bar hides itself once the menu is there. Menu targeting only hides links; the pages stay restricted by their permissions either way. Changes to the menu can take a few minutes to show.
+
+**Finding the restricted pages without the menu.** They aren't in the site menu by default: SharePoint can only hide menu links from Microsoft 365 or security groups, not from the site's own Owners, Members and AI Hub Admins groups, so a menu link would show to everyone. Instead the web part shows a bar, only to people who can open them: at the top of Home, and at the top of Program status and Copilot adoption to move between the two. Everyone else sees nothing there. (If the working group and admins are ever set up as Microsoft 365 or security groups in Entra ID, the links can move into an audience-targeted menu.)
 
 Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn't published the exact field names for active days and prompts per person in its updated report, so the page finds them by name. If the Habits tab says active days aren't included yet, the rest of the page still works; open the page with `?adoptionDebug=1` at the end of the address and send Fortify the field list it writes to the browser console (F12 → Console).
 
@@ -115,7 +121,7 @@ Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn
 The roadmap that lived in Notion ("Cassin & Cassin × Fortify — AI Program Status") is now on the hub, for the AI Working Group only. The firm keeps seeing only what's ready on Agents & Tools.
 
 1. Upload the web part (version 1.2) to the app catalog as in step 8.1, and run the deploy script as usual. It creates the **AI Roadmap** and **Waiting on Cassin** lists, imports the 19 roadmap items, 11 open items and 3 feedback items from Notion (once), adds *How is it working?* and *Done on* to Hub Feedback and *Expected* to AI Agents, and builds the **AI Program status** page.
-2. Make sure the working group is in the site's **Owners** or **Members** group: they're the only people who can open the page and the two lists (members can edit list items, not the page).
+2. Add the working group to the **AI Working Group** group: read-only access to the page and its two lists, with no edit rights on the site. Run the script with `-WorkingGroup person1@cassinllp.com, person2@cassinllp.com`, or add them in **Settings → Site permissions → Advanced permissions settings → AI Working Group → New → Add users**. Site owners and members can always open the page too; owners and members are also the only ones who can edit the roadmap lists and see the Feedback tab (feedback is private to the sender and the site owners).
 3. Open `https://cassinllp.sharepoint.com/sites/AIHub/SitePages/Program-Status.aspx`. Owners and members also see it in the **For the AI Working Group and admins** bar at the top of Home.
 4. On **AI Agents**, fill in **Expected** (for example "Late November") for anything in pilot or up next; it appears under *Coming next*.
 
@@ -141,6 +147,7 @@ How it fits together:
 | Update the roadmap | AI Roadmap list: edit the item's Stage, Target window, Confidence, Next up or Notes. **+ New** for a new idea. Program status updates as soon as you save |
 | Log something Fortify needs from Cassin | Waiting on Cassin list → **+ New**, with an Owner and Due date. Set Status to Done when it arrives |
 | Show an agent to the firm | Add or edit it in **AI Agents** (Status *Live*, *Pilot* or *Up next*, plus *Expected*), then paste the Agents & Tools link into the roadmap item's **Published on hub** |
+| Add or remove a working group member | **Settings → Site permissions → Advanced permissions settings → AI Working Group** (read only), or in the Entra group if you set up the menu |
 | Add or remove an adoption admin | **Settings → Site permissions → Advanced permissions settings → AI Hub Admins**, then **New → Add users** (or remove). Give new admins the Reports Reader role too (step 8) |
 | Move or replace the AI policy document | Change `policyUrl` in `content/settings.json`, then run the script with `-RebuildPage Hub-Home, Use-AI-Responsibly, Client-AI-Opt-Outs` (the menu updates on every run) |
 

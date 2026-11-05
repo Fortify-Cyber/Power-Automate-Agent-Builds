@@ -29,6 +29,9 @@ export class ProgramStatusView {
 
   public constructor(private readonly _items: IRoadmapItem[], private readonly _waiting: IWaiting[],
                      private readonly _feedback: IFeedbackItem[], private readonly _links: IListLinks,
+                     /** Owners and members, who can edit the lists and see every feedback item. The
+                      * read-only AI Working Group group sees the roadmap but not others' feedback. */
+                     private readonly _canManage: boolean = true,
                      private readonly _today: string = new Date().toISOString().slice(0, 10)) {}
 
   /** Open feedback for a roadmap item, matched on the Feedback form's "About" value. */
@@ -41,19 +44,22 @@ export class ProgramStatusView {
     const openWaiting = this._waiting.filter(w => w.WaitingStatus !== 'Done').length;
     const openFeedback = this._feedback.filter(isOpenFeedback).length;
     const tabs: Array<[Tab, string]> = [['stage', 'By stage'], ['track', 'By track'], ['all', 'All items'],
-      ['waiting', `Waiting on Cassin (${openWaiting})`], ['feedback', `Feedback (${openFeedback})`]];
+      ['waiting', `Waiting on Cassin (${openWaiting})`]];
+    // Feedback is private to the sender and the site owners (the Feedback page says so), so
+    // read-only working group members don't get the tab.
+    if (this._canManage) tabs.push(['feedback', `Feedback (${openFeedback})`]);
     const count = (s: string): number => this._items.filter(i => i.RoadmapStage === s).length;
     const unpublished = this._items.filter(i => (i.RoadmapStage === 'Firm rollout' || i.RoadmapStage === 'Live') && !i.PublishedLink?.Url);
     return `<div class="ad ps">
       <div class="ad-tiles five">${STAGES.map(s => `<div class="ad-tile stage" style="--c:${STAGE_COLOR[s]}"><div class="k">${s}</div><div class="v">${count(s)}</div></div>`).join('')}</div>
-      ${unpublished.length ? `<div class="ad-warn"><b>Ready for the hub?</b> ${unpublished.map(i => esc(i.Title)).join(', ')} ${unpublished.length === 1 ? 'is' : 'are'} at Firm rollout or Live with no <i>Published on hub</i> link. Add ${unpublished.length === 1 ? 'it' : 'them'} to Agents &amp; Tools, the Prompt Library or a tip, then paste that link into the roadmap item.</div>` : ''}
+      ${unpublished.length && this._canManage ? `<div class="ad-warn"><b>Ready for the hub?</b> ${unpublished.map(i => esc(i.Title)).join(', ')} ${unpublished.length === 1 ? 'is' : 'are'} at Firm rollout or Live with no <i>Published on hub</i> link. Add ${unpublished.length === 1 ? 'it' : 'them'} to Agents &amp; Tools, the Prompt Library or a tip, then paste that link into the roadmap item.</div>` : ''}
       <div class="ad-head"><div class="ad-lock">🔒 AI Working Group only</div>
         <div class="ad-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-ps-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('')}</div></div>
       <section data-ps-view="stage">${this._board('RoadmapStage', STAGES)}${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
       <section data-ps-view="track" hidden>${this._board('Track', TRACKS)}${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
       <section data-ps-view="all" hidden>${this._table()}${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
       <section data-ps-view="waiting" hidden><div data-ps-waiting></div>${this._edit(this._links.waiting, 'Add or update items')}</section>
-      <section data-ps-view="feedback" hidden><div data-ps-feedback></div>${this._edit(this._links.feedback, 'Open the feedback list')}</section>
+      ${this._canManage ? `<section data-ps-view="feedback" hidden><div data-ps-feedback></div>${this._edit(this._links.feedback, 'Open the feedback list')}</section>` : ''}
     </div>`;
   }
 
@@ -84,7 +90,7 @@ export class ProgramStatusView {
   }
 
   private _edit(url: string, label: string): string {
-    return `<p class="manage"><a href="${esc(url)}">${label} →</a></p>`;
+    return this._canManage ? `<p class="manage"><a href="${esc(url)}">${label} →</a></p>` : '';
   }
 
   private _pill(text: string, cls: string): string {
@@ -92,7 +98,7 @@ export class ProgramStatusView {
   }
 
   private _card(i: IRoadmapItem, by: 'RoadmapStage' | 'Track'): string {
-    const fb = this._openFeedback(i);
+    const fb = this._canManage ? this._openFeedback(i) : 0;
     const other = by === 'RoadmapStage' ? this._pill(i.Track, 'track') : this._pill(i.RoadmapStage, 'stage');
     const facts = [
       i.TargetWindow && i.TargetWindow !== 'n/a' ? `<div><dt>Target</dt><dd>${esc(i.TargetWindow)}</dd></div>` : '',
@@ -127,10 +133,10 @@ export class ProgramStatusView {
     const rows = [...this._items].sort((a, b) =>
       (TRACKS.indexOf(a.Track) + 10) % 10 - (TRACKS.indexOf(b.Track) + 10) % 10 || a.Title.localeCompare(b.Title));
     return `<div class="ad-panel"><div class="scroll"><table><thead><tr><th>Item</th><th>Type</th><th>Home</th><th>Track</th><th>Stage</th>
-      <th>Est. time saved</th><th>Target window</th><th>Confidence</th><th>Champion</th><th class="n">Open feedback</th><th>Next up</th><th>Notes</th></tr></thead><tbody>
+      <th>Est. time saved</th><th>Target window</th><th>Confidence</th><th>Champion</th>${this._canManage ? '<th class="n">Open feedback</th>' : ''}<th>Next up</th><th>Notes</th></tr></thead><tbody>
       ${rows.map(i => `<tr><td><b>${esc(i.Title)}</b></td><td>${esc(i.ItemType.join(', '))}</td><td>${esc(i.HomeArea.join(', '))}</td>
         <td>${esc(i.Track)}</td><td>${this._pill(i.RoadmapStage, 'stage')}</td><td>${esc(i.TimeSaved)}</td><td>${esc(i.TargetWindow)}</td>
-        <td>${this._pill(i.Confidence, CONFIDENCE[i.Confidence] || '')}</td><td>${esc(i.Champion)}</td><td class="n">${this._openFeedback(i) || ''}</td>
+        <td>${this._pill(i.Confidence, CONFIDENCE[i.Confidence] || '')}</td><td>${esc(i.Champion)}</td>${this._canManage ? `<td class="n">${this._openFeedback(i) || ''}</td>` : ''}
         <td class="wide">${esc(i.NextUp)}</td><td class="wide">${i.RoadmapNotes ? `<details><summary>Show</summary><p>${esc(i.RoadmapNotes)}</p></details>` : ''}</td></tr>`).join('')}
       </tbody></table></div></div>`;
   }

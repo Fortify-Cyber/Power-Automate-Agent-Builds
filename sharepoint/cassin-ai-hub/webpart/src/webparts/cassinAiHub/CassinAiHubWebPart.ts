@@ -125,13 +125,16 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         return this._data.faq().then(R.faq);
       case 'myFeedback':
         return this._data.myFeedback(Number(this.context.pageContext.legacyPageContext.userId)).then(R.myFeedback);
-      case 'programStatus':
-        return Promise.all([this._data.roadmap(), this._data.waiting(), this._data.allFeedback()]).then(([items, waiting, feedback]) => {
+      case 'programStatus': {
+        // Owners and members manage the lists; the AI Working Group group only reads them.
+        const canManage = this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists);
+        return Promise.all([this._data.roadmap(), this._data.waiting(), canManage ? this._data.allFeedback() : Promise.resolve([])]).then(([items, waiting, feedback]) => {
           this._status = new ProgramStatusView(items, waiting, feedback, {
             roadmap: this._data.listUrl(LISTS.roadmap), waiting: this._data.listUrl(LISTS.waiting), feedback: this._data.listUrl(LISTS.feedback)
-          });
+          }, canManage);
           return this._status.html();
         });
+      }
       case 'adoption': {
         const web = this.context.pageContext.web;
         return new AdoptionData(this.context.msGraphClientFactory, this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl)
@@ -172,6 +175,11 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
           ? `<span class="on" aria-current="page">${label}</span>`
           : `<a href="${R.esc(`${web}/SitePages/${page}.aspx`)}">${label}</a>`);
         const onHome = section === 'latestTip' || section === 'restrictedNav';
+        // With the audience-targeted "AI Working Group" menu in place (deploy script,
+        // -WorkingGroupAudience/-AdminAudience), Home doesn't need the bar as well.
+        const inMenu = Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href*="/SitePages/${STATUS_PAGE}.aspx"], a[href*="/SitePages/${ADOPTION_PAGE}.aspx"]`))
+          .some(a => !a.closest('.cah'));
+        if (onHome && inMenu) return;
         // On a restricted page, a bar with only that page in it adds nothing.
         if (!links.length || (!onHome && links.length < 2)) return;
         const bar = `<nav class="restricted-nav${section === 'restrictedNav' ? ' top' : ''}" aria-label="Restricted pages"><span class="lbl">🔒 ${onHome ? 'For the AI Working Group and admins' : 'Restricted pages'}</span>${links.join('')}</nav>`;

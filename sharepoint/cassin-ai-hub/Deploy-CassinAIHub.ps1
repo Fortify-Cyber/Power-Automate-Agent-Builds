@@ -33,6 +33,21 @@
     Like -RebuildPages, but only for the named pages, for example
     -RebuildPage Hub-Home, Use-AI-Responsibly. Names are the "Name" values in pages.json.
 
+.PARAMETER WorkingGroup
+    Email addresses to add to the "AI Working Group" group: read-only access to the AI Program
+    status page and its lists, without edit rights on the site. Site owners and members can
+    always open it too.
+
+.PARAMETER WorkingGroupAudience
+    Optional. The Object ID of an Entra ID group (a security group, or the Microsoft 365 group
+    behind the working group's Team) for the AI Working Group. It's added to the "AI Working
+    Group" group, so its members get the page, and it's the audience for an "AI Working Group"
+    menu that only they see. Manage membership in Entra ID (or Teams) from then on.
+
+.PARAMETER AdminAudience
+    Optional. Like -WorkingGroupAudience, for the people who see Copilot adoption: added to
+    "AI Hub Admins" and the audience for the menu's Copilot adoption link.
+
 .PARAMETER AdoptionAdmins
     Email addresses to add to the "AI Hub Admins" group, who can open the Copilot adoption
     page as well as the site owners. They also need the Reports Reader role in Entra ID
@@ -52,6 +67,9 @@ param(
     [switch] $RebuildPages,
     [string[]] $RebuildPage = @(),
     [string[]] $AdoptionAdmins = @(),
+    [string[]] $WorkingGroup = @(),
+    [string] $WorkingGroupAudience = "",
+    [string] $AdminAudience = "",
     [switch] $SkipTheme
 )
 
@@ -517,6 +535,30 @@ foreach ($email in $AdoptionAdmins) {
     Add-PnPGroupMember -Group $adminGroup -LoginName "i:0#.f|membership|$email" | Out-Null
     Write-Host "  added $email to '$adminGroup'"
 }
+# AI Working Group: read-only access to AI Program status and its lists, with no rights on the
+# rest of the site beyond what everyone has. (Owners and members can always open it.)
+$wgGroup = "AI Working Group"
+if (-not (Find-Object { Get-PnPGroup -Identity $wgGroup })) {
+    New-PnPGroup -Title $wgGroup -Description "Can view the AI Program status page (read only)." | Out-Null
+    Write-Host "  created the '$wgGroup' group"
+}
+foreach ($email in $WorkingGroup) {
+    Add-PnPGroupMember -Group $wgGroup -LoginName "i:0#.f|membership|$email" | Out-Null
+    Write-Host "  added $email to '$wgGroup'"
+}
+# An Entra ID group can stand in for a list of people: add it to the SharePoint group once, and
+# membership is managed in Entra ID (or the Team) from then on. Security groups and Microsoft 365
+# groups use different sign-in names, so try both.
+function Add-EntraGroupTo([string] $SpGroup, [string] $ObjectId) {
+    if (-not $ObjectId) { return }
+    if ($ObjectId -notmatch '^[0-9a-fA-F-]{36}$') { throw "'$ObjectId' isn't an Entra ID group Object ID (a GUID). Copy it from the group's Overview page in the Entra admin center." }
+    foreach ($claim in "c:0t.c|tenant|$ObjectId", "c:0o.c|federateddirectoryclaimprovider|$ObjectId") {
+        try { Add-PnPGroupMember -Group $SpGroup -LoginName $claim | Out-Null; Write-Host "  Entra ID group $ObjectId is in '$SpGroup'"; return } catch { }
+    }
+    throw "Couldn't add Entra ID group $ObjectId to '$SpGroup'. Check the Object ID, or add the group in Site permissions instead."
+}
+Add-EntraGroupTo $wgGroup $WorkingGroupAudience
+Add-EntraGroupTo $adminGroup $AdminAudience
 $L = "Lists/CopilotAdoptionHistory"
 # Start from no access (not a copy of the site's), then grant only owners and AI Hub Admins,
 # so it doesn't matter what level visitors or members have on the site.
@@ -531,6 +573,10 @@ foreach ($g in $visitors.Title, $members.Title) {
     }
 }
 Write-Host "  Copilot Adoption History: owners and '$adminGroup' only"
+foreach ($L in "Lists/AIRoadmap", "Lists/WaitingOnCassin") {
+    Set-PnPListPermission -Identity $L -Group $wgGroup -AddRole "Read" | Out-Null
+}
+Write-Host "  '$wgGroup' can read AI Roadmap and Waiting on Cassin"
 if ($ShareWithEveryone) {
     $tenantId = Get-PnPTenantId
     Add-PnPGroupMember -Group $visitors.Title -LoginName "c:0-.f|rolemanager|spo-grid-all-users/$tenantId" | Out-Null
@@ -637,16 +683,19 @@ function Test-PageExists([string] $Name) {
 }
 
 # Restricted pages ("Access" in pages.json): "admins" is site owners and AI Hub Admins (the
-# adoption page); "workinggroup" is site owners and members (Program status). Applied on every
-# run, so a page that was rebuilt or shared by mistake is locked down again.
+# adoption page); "workinggroup" is site owners, members and the read-only AI Working Group
+# (Program status). Applied on every run, so a page that was rebuilt or shared by mistake is
+# locked down again.
 function Set-PageAccess([string] $Name, [string] $Access) {
-    $group = switch ($Access) { "admins" { $adminGroup } "workinggroup" { $members.Title } default { throw "Unknown Access '$Access' for $Name in pages.json." } }
+    $groups = switch ($Access) { "admins" { @($adminGroup) } "workinggroup" { @($members.Title, $wgGroup) } default { throw "Unknown Access '$Access' for $Name in pages.json." } }
     $query = "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>$Name.aspx</Value></Eq></Where></Query></View>"
     $item = Get-PnPListItem -List "SitePages" -Query $query | Select-Object -First 1
     if (-not $item) { throw "Couldn't find $Name.aspx in Site Pages to restrict it." }
     Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $owners.Title -AddRole "Full Control" -ClearExisting | Out-Null
-    Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $group -AddRole "Read" | Out-Null
-    Write-Host "    restricted to '$($owners.Title)' and '$group'"
+    foreach ($group in $groups) {
+        Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $group -AddRole "Read" | Out-Null
+    }
+    Write-Host "    restricted to '$($owners.Title)', '$($groups -join "', '")'"
 }
 
 # SharePoint won't delete the site's home page, so point home at the default page while
@@ -715,6 +764,10 @@ function Add-Nav([string] $Location, [string] $Title, [string] $Path, $Parent = 
     if ($Parent) { $nav.Parent = $Parent }
     Add-PnPNavigationNode @nav
 }
+if ($WorkingGroupAudience -or $AdminAudience) {
+    Set-PnPWeb -NavAudienceTargetingEnabled:$true | Out-Null
+    Write-Host "  menu audience targeting is on"
+}
 foreach ($loc in "TopNavigationBar", "QuickLaunch") {
     Get-PnPNavigationNode -Location $loc | ForEach-Object { Remove-PnPNavigationNode -Identity $_ -Force }
     Add-Nav $loc "Home" "SitePages/Hub-Home.aspx" | Out-Null
@@ -731,6 +784,19 @@ foreach ($loc in "TopNavigationBar", "QuickLaunch") {
     Add-Nav $loc "Agents & Tools" "SitePages/Agents-and-Tools.aspx" | Out-Null
     Add-Nav $loc "News" "_layouts/15/news.aspx" | Out-Null
     Add-Nav $loc "Feedback" "SitePages/Feedback.aspx" | Out-Null
+    # "AI Working Group" menu, shown only to the Entra ID groups given (SharePoint can't target
+    # menu links to the site's own groups). The pages stay restricted either way.
+    if ($WorkingGroupAudience -or $AdminAudience) {
+        $all = @($WorkingGroupAudience, $AdminAudience | Where-Object { $_ })
+        $first = if ($WorkingGroupAudience) { "Program-Status" } else { "Copilot-Adoption" }
+        $wg = Add-PnPNavigationNode -Location $loc -Title "AI Working Group" -Url "$siteRel/SitePages/$first.aspx" -AudienceIds $all
+        if ($WorkingGroupAudience) {
+            Add-PnPNavigationNode -Location $loc -Title "AI Program status" -Url "$siteRel/SitePages/Program-Status.aspx" -Parent $wg -AudienceIds @($WorkingGroupAudience) | Out-Null
+        }
+        if ($AdminAudience) {
+            Add-PnPNavigationNode -Location $loc -Title "Copilot adoption" -Url "$siteRel/SitePages/Copilot-Adoption.aspx" -Parent $wg -AudienceIds @($AdminAudience) | Out-Null
+        }
+    }
     $titles = (Get-PnPNavigationNode -Location $loc | ForEach-Object Title) -join " | "
     Write-Host "  $loc`: $titles"
 }
