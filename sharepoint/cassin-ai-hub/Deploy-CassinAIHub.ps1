@@ -454,7 +454,7 @@ if (Test-ListEmpty $L) {
     foreach ($w in (Read-Content "waiting-on-cassin.json")) {
         $v = @{ Title = $w.Title; WaitingStatus = $w.Status; WaitingNotes = $w.Notes }
         $ids = @($w.Agents | Where-Object { $roadmapIds.ContainsKey($_) } | ForEach-Object { $roadmapIds[$_] })
-        if ($ids.Count) { $v.RoadmapItems = [int[]] $ids }
+        if ($ids.Count) { $v.RoadmapItems = [object[]] $ids }   # PnP needs object[], not int[]
         if ($w.Due) { $v.DueDate = [datetime] $w.Due }
         Add-PnPListItem -List $L -Values $v | Out-Null
     }
