@@ -387,7 +387,7 @@ export class AdoptionView {
       ${series.some(p => p.enabled) ? `<path d="${line('enabled')}" fill="none" stroke="#C7D5DF" stroke-width="2" stroke-dasharray="5 4"/>` : ''}
       <path d="${line('active')}" fill="none" stroke="#00426C" stroke-width="2.5"/>
       <circle cx="${x(series.length - 1)}" cy="${y(last.active)}" r="4.5" fill="#00426C"/>
-      <text x="${x(series.length - 1) - 8}" y="${y(last.active) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${Math.round(last.active)} a day</text>
+      <text x="${x(series.length - 1) - 10}" y="${y(last.active) - 12}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${Math.round(last.active)} a day</text>
       ${labels}</svg>`;
   }
 
@@ -414,7 +414,7 @@ export class AdoptionView {
         <path d="${line}L${x(series.length - 1)},${y(0)}L${x(0)},${y(0)}Z" fill="#2A73B0" fill-opacity=".12"/>
         <path d="${line}" fill="none" stroke="#2A73B0" stroke-width="2.5"/>
         <circle cx="${x(series.length - 1)}" cy="${y(last.v)}" r="4.5" fill="#2A73B0"/>
-        <text x="${x(series.length - 1) - 8}" y="${y(last.v) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${n(last.v)} a day</text>
+        <text x="${x(series.length - 1) - 10}" y="${Math.max(14, y(last.v) - 12)}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${n(last.v)} a day</text>
         ${series.map((p, i) => (i % step === 0 && i < series.length - step / 2) || i === series.length - 1
           ? `<text x="${x(i)}" y="${H - 8}" font-size="11" text-anchor="${i === series.length - 1 ? 'end' : 'middle'}" fill="#6E7C8C">${shortDate(p.date)}</text>` : '').join('')}
       </svg>`;

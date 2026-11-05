@@ -187,6 +187,17 @@ export function parseTrend(raw: Row[]): ITrendPoint[] {
   }).filter((p): p is ITrendPoint => !!p).sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/**
+ * Microsoft's daily "enabled users" count has gaps: days at 0 and weekend dips while licences
+ * are being assigned. Licences don't come and go daily, so a 0 carries the last count forward
+ * and each day takes the highest count of its week.
+ */
+export function steadyEnabled(trend: ITrendPoint[]): ITrendPoint[] {
+  let last = 0;
+  const carried = trend.map(t => { if (t.enabled > 0) last = t.enabled; return last; });
+  return trend.map((t, i) => ({ ...t, enabled: Math.max(...carried.slice(Math.max(0, i - 6), i + 1)) }));
+}
+
 export interface IDirectoryUser { upn: string; name: string; title: string }
 
 /** One saved month: active days and prompts per person over the 28 days ending `refresh`. */
@@ -291,7 +302,8 @@ export interface IAdoptionInput {
 }
 
 export function buildAdoption(input: IAdoptionInput): IAdoption {
-  const { usage28, usage180, trend, directory } = input;
+  const { usage28, usage180, directory } = input;
+  const trend = steadyEnabled(input.trend);
   const refresh = usage28.refresh;
   const dir = new Map(directory.map(d => [d.upn.toLowerCase(), d]));
   const d180 = new Map((usage180?.rows || []).map(r => [r.upn.toLowerCase(), r.days]));
@@ -354,8 +366,9 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
     refresh, licensed, people, apps: usage28.apps,
     hasDays: usage28.hasDays, hasPrompts: usage28.hasPrompts, hasMoves, namesHidden,
     trend, months: snaps.map(s => s.month), monthStages, nowStages,
+    // Apps nobody used in the window (Loop, Edge, ...) are left out.
     appCounts: usage28.apps.map(app => ({ app, users: people.filter(p => p.appsRecent.indexOf(app.key) >= 0).length }))
-      .sort((a, b) => b.users - a.users),
+      .filter(a => a.users > 0).sort((a, b) => b.users - a.users),
     roles: groupRows(people, p => p.role),
     moves, promptsNow, promptsBefore,
     monthPrompts: snaps.map(sn => Object.keys(sn.people).reduce((t, k) => t + sn.people[k][1], 0)),
