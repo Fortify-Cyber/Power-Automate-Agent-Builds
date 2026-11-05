@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copilot Adoption (preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Roboto+Serif:opsz,wght@8..144,300;8..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#021D3C; --primary:#00426C; --blue:#0077CE; --sky:#4DD8FF; --sand:#F2ECE6; --sand-line:#DDD3CA;
+    --soft:#EFF3F6; --soft-line:#C7D5DF; --muted:#3B5068; --faint:#6E7C8C; --line:#E4E1DD;
+    --good:#2F8A5B; --warn:#B87A1F; --bad:#B4463A;
+    --serif:"Roboto Serif", Georgia, serif; --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#fff; color:var(--navy); font:16px/1.5 var(--sans); }
+  .suite { height:44px; background:#1F1F1F; color:#fff; display:flex; align-items:center; gap:12px; padding:0 16px; font-size:14px; }
+  .tag { background:var(--sky); color:#1F1F1F; font-weight:600; font-size:12px; padding:2px 8px; }
+  header.site { background:var(--primary); color:#fff; padding:14px 24px 0; }
+  header.site .in, .wrap { max-width:1200px; margin:0 auto; }
+  header.site .name { font:300 24px var(--serif); }
+  header.site nav { display:flex; gap:18px; font-size:14px; padding:10px 0 12px; overflow-x:auto; white-space:nowrap; }
+  header.site nav span.on { border-bottom:3px solid var(--sky); padding-bottom:9px; }
+  .title { background:var(--navy); color:#fff; }
+  .title .wrap { padding:28px 24px 24px; }
+  .eyebrow { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#9FB6C9; font-weight:600; }
+  .title h1 { font:300 36px/1.15 var(--serif); margin:4px 0 6px; }
+  .title p { margin:0; color:#C7D5DF; font-size:15px; }
+  .lock { display:inline-flex; gap:6px; align-items:center; background:rgba(255,255,255,.1); padding:3px 10px; font-size:12.5px; margin-top:12px; }
+  main .wrap { padding:24px; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:22px; }
+  .tile { background:#fff; border:1px solid var(--line); padding:16px 18px; }
+  .tile.accent { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .tile .label { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--muted); }
+  .tile.accent .label { color:#C7D5DF; }
+  .tile .value { font:300 40px/1.1 var(--serif); margin:6px 0 4px; }
+  .tile .sub { font-size:13.5px; color:var(--faint); }
+  .tile.accent .sub { color:#E3ECF3; }
+  .delta { font-weight:600; font-size:13px; }
+  .delta.up { color:var(--good); } .tile.accent .delta.up { color:#9FE0B8; }
+  .panel { border:1px solid var(--line); padding:18px 20px; background:#fff; }
+  .panel h2 { font:400 21px var(--serif); margin:0 0 2px; }
+  .panel .hint { font-size:13.5px; color:var(--faint); margin:0 0 12px; }
+  .grid2 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid2b { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .legend { display:flex; gap:16px; font-size:13px; color:var(--muted); margin-bottom:6px; flex-wrap:wrap; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  svg text { font-family:var(--sans); }
+  .bars .row { display:grid; grid-template-columns:110px 1fr 70px; gap:10px; align-items:center; margin:9px 0; font-size:14px; }
+  .bars .track { background:var(--soft); height:14px; position:relative; }
+  .bars .fill { background:var(--primary); height:14px; }
+  .bars .num { text-align:right; color:var(--muted); font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:12.5px; border-bottom:1px solid var(--line); padding:6px 4px; }
+  td { border-bottom:1px solid var(--line); padding:8px 4px; }
+  td .pill { display:inline-block; font-size:12px; padding:1px 9px; border-radius:11px; background:var(--sand); }
+  .count { font-size:13px; color:var(--faint); font-weight:400; font-family:var(--sans); }
+  .links { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  .btn { display:inline-block; background:var(--primary); color:#fff; text-decoration:none; padding:8px 14px; font-weight:600; font-size:14px; }
+  .btn.ghost { background:#fff; color:var(--primary); border:1px solid var(--soft-line); }
+  .note { font-size:12.5px; color:var(--faint); margin-top:18px; }
+  @media (max-width:900px) {
+    .tiles { grid-template-columns:1fr 1fr; } .grid2, .grid2b { grid-template-columns:1fr; }
+    .title h1 { font-size:28px; } main .wrap, .title .wrap { padding-left:16px; padding-right:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="suite"><span>SharePoint</span><span class="tag">Design preview · sample data</span></div>
+<header class="site"><div class="in">
+  <div class="name">Cassin AI Hub</div>
+  <nav><span>Home</span><span>Get Started</span><span>AI Policy</span><span>Prompt Library</span><span>Friday Tips</span><span>Demo Videos</span><span>Agents &amp; Tools</span><span>News</span><span>Feedback</span><span class="on">Admin</span></nav>
+</div></header>
+
+<section class="title"><div class="wrap">
+  <div class="eyebrow">AI Hub · Admin</div>
+  <h1>Copilot adoption</h1>
+  <p>How many licensed people are using Microsoft 365 Copilot, and where. Microsoft's official usage numbers, refreshed daily.</p>
+  <div class="lock">🔒 Visible to AI Hub Admins only</div>
+</div></section>
+
+<main><div class="wrap">
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Active users over time</h2>
+      <p class="hint">People who used Copilot in any app in the 28 days ending each week, against licensed people.</p>
+      <div class="legend"><span><i style="background:var(--primary)"></i>Active (28 days)</span><span><i style="background:var(--soft-line)"></i>Licensed</span></div>
+      <div id="trend"></div>
+    </div>
+    <div class="panel">
+      <h2>Where people use it</h2>
+      <p class="hint">Active users by app, last 28 days.</p>
+      <div class="bars" id="apps"></div>
+    </div>
+  </div>
+
+  <div class="grid2b">
+    <div class="panel">
+      <h2>Not started <span class="count" id="ns-count"></span></h2>
+      <p class="hint">Licensed, but no Copilot activity yet. A quick check-in or the Get Started page usually helps.</p>
+      <table><thead><tr><th>Name</th><th>Department</th></tr></thead><tbody id="notstarted"></tbody></table>
+    </div>
+    <div class="panel">
+      <h2>Recently lapsed <span class="count" id="lp-count"></span></h2>
+      <p class="hint">Used Copilot before, but not in the last 28 days.</p>
+      <table><thead><tr><th>Name</th><th>Last used</th><th>Where</th></tr></thead><tbody id="lapsed"></tbody></table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Go deeper</h2>
+    <p class="hint">Engagement tiers, who ramped up or cooled off, and depth of use come from Fortify's monthly adoption deck. Microsoft's own view is in Viva Insights.</p>
+    <div class="links"><a class="btn" href="#">Latest adoption deck (Fortify)</a><a class="btn ghost" href="#">Viva Copilot Dashboard</a></div>
+  </div>
+
+  <p class="note">Source: Microsoft 365 Copilot usage reports (Microsoft Graph), read live as the signed-in admin. Microsoft's data runs 2 to 3 days behind. Nothing is copied or stored on this site. Sample data shown in this preview.</p>
+</div></main>
+
+<script>
+// ---- sample data shaped like Microsoft's Copilot usage reports ----
+const LICENSED = 148;
+const weeks = 26;
+const today = new Date('2026-11-02');
+const trend = Array.from({ length: weeks }, (_, i) => {
+  const d = new Date(today); d.setDate(d.getDate() - (weeks - 1 - i) * 7);
+  const t = i / (weeks - 1);
+  const active = Math.round(LICENSED * (0.38 + 0.38 * (1 - Math.pow(1 - t, 1.6))) + (i % 3 === 0 ? -3 : 2));
+  return { date: d, active: Math.min(active, LICENSED), licensed: i < 4 ? 120 + i * 7 : LICENSED };
+});
+const apps = [["Copilot Chat", 104], ["Outlook", 91], ["Word", 78], ["Teams", 66], ["Excel", 31], ["PowerPoint", 12]];
+const depts = ["Agency Lending", "Balance Sheet Lending", "CMBS", "Leasing", "Private Client", "Firm Operations"];
+const notStarted = Array.from({ length: 14 }, (_, i) => ({ name: `Sample person ${String(i + 1).padStart(2, "0")}`, dept: depts[i % depts.length] }));
+const lapsed = Array.from({ length: 8 }, (_, i) => {
+  const d = new Date(today); d.setDate(d.getDate() - 32 - i * 9);
+  return { name: `Sample person ${String(i + 21)}`, last: d, where: ["Outlook", "Copilot Chat", "Word", "Teams"][i % 4] };
+});
+
+// ---- tiles ----
+const now = trend[trend.length - 1], then = trend[trend.length - 13];
+const pct = (a, b) => Math.round(100 * a / b);
+const tiles = [
+  { accent: true, label: "Active last 28 days", value: `${pct(now.active, LICENSED)}%`, sub: `${now.active} of ${LICENSED} licensed people`, delta: `+${pct(now.active, LICENSED) - pct(then.active, then.licensed)} pts vs 3 months ago` },
+  { label: "Licensed", value: LICENSED, sub: "Microsoft 365 Copilot licenses assigned" },
+  { label: "Not started", value: notStarted.length, sub: "Licensed, never used" },
+  { label: "Recently lapsed", value: lapsed.length, sub: "No activity in 28 days" },
+];
+document.getElementById("tiles").innerHTML = tiles.map(t => `<div class="tile${t.accent ? " accent" : ""}"><div class="label">${t.label}</div><div class="value">${t.value}</div><div class="sub">${t.sub}</div>${t.delta ? `<div class="delta up">▲ ${t.delta}</div>` : ""}</div>`).join("");
+
+// ---- trend chart (inline SVG) ----
+function drawTrend() {
+  const el = document.getElementById("trend"); const W = el.clientWidth || 700, H = 260, P = { l: 36, r: 12, t: 10, b: 28 };
+  const x = i => P.l + (W - P.l - P.r) * i / (weeks - 1);
+  const y = v => P.t + (H - P.t - P.b) * (1 - v / 160);
+  const line = k => trend.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join("");
+  const area = line("active") + `L${x(weeks - 1)},${y(0)}L${x(0)},${y(0)}Z`;
+  const grid = [0, 40, 80, 120, 160].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#E4E1DD"/><text x="${P.l - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="#6E7C8C">${v}</text>`).join("");
+  const labels = trend.map((p, i) => (i % 4 === 0 && i < weeks - 3) || i === weeks - 1 ? `<text x="${x(i)}" y="${H - 8}" font-size="11" text-anchor="middle" fill="#6E7C8C">${p.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</text>` : "").join("");
+  const last = trend[weeks - 1];
+  el.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Active users trend">
+    ${grid}<path d="${area}" fill="#00426C" fill-opacity=".10"/>
+    <path d="${line("licensed")}" fill="none" stroke="#C7D5DF" stroke-width="2" stroke-dasharray="5 4"/>
+    <path d="${line("active")}" fill="none" stroke="#00426C" stroke-width="2.5"/>
+    <circle cx="${x(weeks - 1)}" cy="${y(last.active)}" r="4.5" fill="#00426C"/>
+    <text x="${x(weeks - 1) - 8}" y="${y(last.active) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${last.active} active</text>
+    ${labels}</svg>`;
+}
+drawTrend(); window.addEventListener("resize", drawTrend);
+
+// ---- app bars ----
+document.getElementById("apps").innerHTML = apps.map(([a, n]) => `<div class="row"><span>${a}</span><div class="track"><div class="fill" style="width:${pct(n, LICENSED)}%"></div></div><span class="num">${n} · ${pct(n, LICENSED)}%</span></div>`).join("");
+
+// ---- lists ----
+document.getElementById("ns-count").textContent = `(${notStarted.length})`;
+document.getElementById("lp-count").textContent = `(${lapsed.length})`;
+document.getElementById("notstarted").innerHTML = notStarted.slice(0, 8).map(p => `<tr><td>${p.name}</td><td><span class="pill">${p.dept}</span></td></tr>`).join("") + `<tr><td colspan="2" style="color:#6E7C8C">+ ${notStarted.length - 8} more</td></tr>`;
+document.getElementById("lapsed").innerHTML = lapsed.map(p => `<tr><td>${p.name}</td><td>${p.last.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td><td>${p.where}</td></tr>`).join("");
+</script>
+</body>
+</html>
