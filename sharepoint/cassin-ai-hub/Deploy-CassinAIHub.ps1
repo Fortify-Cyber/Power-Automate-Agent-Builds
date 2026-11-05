@@ -422,12 +422,18 @@ foreach ($email in $AdoptionAdmins) {
 $owners  = Get-PnPGroup -AssociatedOwnerGroup
 $members = Get-PnPGroup -AssociatedMemberGroup
 $L = "Lists/CopilotAdoptionHistory"
-Set-PnPList -Identity $L -BreakRoleInheritance -CopyRoleAssignments | Out-Null
-# Take away the copied access for visitors and members; it's fine if one was never there.
-foreach ($g in @(@($visitors.Title, "Read"), @($members.Title, "Edit"))) {
-    try { Set-PnPListPermission -Identity $L -Group $g[0] -RemoveRole $g[1] | Out-Null } catch { }
-}
+# Start from no access (not a copy of the site's), then grant only owners and AI Hub Admins,
+# so it doesn't matter what level visitors or members have on the site.
+Set-PnPList -Identity $L -BreakRoleInheritance | Out-Null
+Set-PnPListPermission -Identity $L -Group $owners.Title -AddRole "Full Control" | Out-Null
 Set-PnPListPermission -Identity $L -Group $adminGroup -AddRole "Contribute" | Out-Null
+# On a re-run the list already has its own permissions: take visitors and members off it if
+# someone added them by hand (it's fine if they were never there).
+foreach ($g in $visitors.Title, $members.Title) {
+    foreach ($role in "Read", "Contribute", "Edit", "Full Control") {
+        try { Set-PnPListPermission -Identity $L -Group $g -RemoveRole $role | Out-Null } catch { }
+    }
+}
 Write-Host "  Copilot Adoption History: owners and '$adminGroup' only"
 if ($ShareWithEveryone) {
     $tenantId = Get-PnPTenantId

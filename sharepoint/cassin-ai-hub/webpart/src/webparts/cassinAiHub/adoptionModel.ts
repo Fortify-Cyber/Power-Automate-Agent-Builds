@@ -263,6 +263,17 @@ function groupRows(people: IPerson[], key: (p: IPerson) => string): IGroupRow[] 
   }).sort((a, b) => b.habitualPct - a.habitualPct || b.activePct - a.activePct || a.name.localeCompare(b.name));
 }
 
+function cleanSnapshot(s: ISnapshot): ISnapshot | null {
+  if (!s || typeof s.month !== 'string' || !/^\d{4}-\d{2}$/.test(s.month) || !s.people || typeof s.people !== 'object') return null;
+  const num = (v: unknown): number => { const n = Math.round(Number(v)); return isFinite(n) && n > 0 ? Math.min(n, 100000) : 0; };
+  const people: Record<string, [number, number]> = {};
+  Object.keys(s.people).forEach(k => {
+    const v = s.people[k];
+    if (Array.isArray(v) && num(v[0])) people[k.toLowerCase()] = [Math.min(num(v[0]), 31), num(v[1])];
+  });
+  return { month: s.month, refresh: String(s.refresh || ''), licensed: num(s.licensed), people, id: s.id };
+}
+
 export interface IAdoptionInput {
   usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[];
   directory: IDirectoryUser[]; snapshots: ISnapshot[]; maxMonths?: number;
@@ -278,7 +289,9 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
   // Months already complete, oldest first; the month the current window falls in is shown
   // as "Last 28 days" instead.
   const current = refresh ? snapshotMonth(refresh) : '';
-  const snaps = input.snapshots.filter(s => s.month < current).sort((a, b) => a.month.localeCompare(b.month))
+  // Snapshots come back from a SharePoint list that admins can edit by hand, so keep only
+  // well-formed months and numbers: nothing from the list reaches the page as text.
+  const snaps = input.snapshots.map(cleanSnapshot).filter((s): s is ISnapshot => !!s && s.month < current).sort((a, b) => a.month.localeCompare(b.month))
     .slice(-(input.maxMonths ?? 6));
 
   const people: IPerson[] = usage28.rows.map(u => {
