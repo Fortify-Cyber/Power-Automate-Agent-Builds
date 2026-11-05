@@ -491,7 +491,8 @@ foreach ($list in "Lists/PromptLibrary", "Lists/HubFeedback") {
 }
 Write-Host "  '$($visitors.Title)' can add to Prompt Library and Hub Feedback"
 Set-PnPList -Identity "Lists/AINewsLog" -BreakRoleInheritance -CopyRoleAssignments | Out-Null
-Set-PnPListPermission -Identity "Lists/AINewsLog" -Group $visitors.Title -RemoveRole "Read" | Out-Null
+# Already gone on a re-run, which SharePoint reports as an error ("Can not find the principal").
+try { Set-PnPListPermission -Identity "Lists/AINewsLog" -Group $visitors.Title -RemoveRole "Read" | Out-Null } catch { }
 Write-Host "  AI News Log: owners and members only"
 
 # The working group's lists: owners and members (the AI Working Group) only. Start from no
