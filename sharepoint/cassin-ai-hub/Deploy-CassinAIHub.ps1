@@ -662,8 +662,6 @@ foreach ($pg in (Read-Content "pages.json")) {
     }
     $header = if ($pg.Layout -eq "Home") { @{} } else { @{ HeaderLayoutType = "ColorBlock" } }
     Add-PnPPage -Name $pg.Name -Title $pg.Title -LayoutType $pg.Layout -CommentsEnabled:$false @header | Out-Null
-    # Lock a restricted page down before anything is published on it.
-    if ($pg.Access) { Set-PageAccess $pg.Name $pg.Access }
     $s = 0
     foreach ($section in $pg.Sections) {
         $s++
@@ -675,6 +673,11 @@ foreach ($pg in (Read-Content "pages.json")) {
         }
     }
     Set-PnPPage -Identity $pg.Name -Publish | Out-Null
+    # Lock a restricted page down only once it's built: changing its permissions counts as an
+    # edit to the page file, and SharePoint then refuses further saves from this session ("has
+    # been modified by"). The page holds no data itself: its web part reads lists that are
+    # already restricted, and the adoption reports need a reports role.
+    if ($pg.Access) { Set-PageAccess $pg.Name $pg.Access }
     if ($pg.IsHomePage) { Set-PnPHomePage -RootFolderRelativeUrl "SitePages/$($pg.Name).aspx" }
     Write-Host "  $($pg.Title)"
 }
