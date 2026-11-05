@@ -531,10 +531,16 @@ if (-not (Find-Object { Get-PnPGroup -Identity $adminGroup })) {
     New-PnPGroup -Title $adminGroup -Description "Can open the Copilot adoption page on the AI Hub." | Out-Null
     Write-Host "  created the '$adminGroup' group"
 }
-foreach ($email in $AdoptionAdmins) {
-    Add-PnPGroupMember -Group $adminGroup -LoginName "i:0#.f|membership|$email" | Out-Null
-    Write-Host "  added $email to '$adminGroup'"
+# A mistyped or unknown address is reported and skipped, not a reason to stop the run.
+function Add-PersonTo([string] $SpGroup, [string] $Email) {
+    try {
+        Add-PnPGroupMember -Group $SpGroup -LoginName "i:0#.f|membership|$Email" | Out-Null
+        Write-Host "  added $Email to '$SpGroup'"
+    } catch {
+        Write-Host "  couldn't add $Email to '$SpGroup': no Cassin account with that address. Check the spelling, or add them in Site permissions." -ForegroundColor Yellow
+    }
 }
+foreach ($email in $AdoptionAdmins) { Add-PersonTo $adminGroup $email }
 # AI Working Group: read-only access to AI Program status and its lists, with no rights on the
 # rest of the site beyond what everyone has. (Owners and members can always open it.)
 $wgGroup = "AI Working Group"
@@ -542,10 +548,7 @@ if (-not (Find-Object { Get-PnPGroup -Identity $wgGroup })) {
     New-PnPGroup -Title $wgGroup -Description "Can view the AI Program status page (read only)." | Out-Null
     Write-Host "  created the '$wgGroup' group"
 }
-foreach ($email in $WorkingGroup) {
-    Add-PnPGroupMember -Group $wgGroup -LoginName "i:0#.f|membership|$email" | Out-Null
-    Write-Host "  added $email to '$wgGroup'"
-}
+foreach ($email in $WorkingGroup) { Add-PersonTo $wgGroup $email }
 # An Entra ID group can stand in for a list of people: add it to the SharePoint group once, and
 # membership is managed in Entra ID (or the Team) from then on. Security groups and Microsoft 365
 # groups use different sign-in names, so try both.
