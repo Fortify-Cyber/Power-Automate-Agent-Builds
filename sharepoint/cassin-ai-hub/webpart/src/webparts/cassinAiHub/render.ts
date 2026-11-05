@@ -117,13 +117,28 @@ export function videos(rows: IVideo[]): string {
     <div class="foot row">${watchBtn(v.VideoLink?.Url, '▶ Watch', false)}</div></article>`).join('')}</div>`).join('');
 }
 
+// Agents & Tools, for the whole firm: what they can use today, then a short "Coming next".
+// Proposed and Retired agents aren't shown; the full pipeline is on the working group's
+// Program status page.
 export function agents(rows: IAgent[]): string {
-  if (!rows.length) return empty('No agents listed yet.');
-  return `<div class="grid">${rows.map(a => `<article class="card">
-    <div class="meta"><span class="pill ${pillClass(a.AgentStatus)}">${esc(a.AgentStatus)}</span></div>
+  const now = rows.filter(a => a.AgentStatus === 'Live');
+  const next = rows.filter(a => a.AgentStatus === 'Pilot' || a.AgentStatus === 'Up next');
+  if (!now.length && !next.length) return empty('No agents listed yet.');
+  const card = (a: IAgent): string => `<article class="card">
     <h4>${esc(a.Title)}</h4>${a.WhatItDoes ? `<p style="font-size:15px">${esc(a.WhatItDoes)}</p>` : ''}
     ${a.HowToStart ? `<p style="font-size:15px;color:var(--muted)"><strong style="color:var(--navy)">How to start:</strong> ${esc(a.HowToStart)}</p>` : ''}
-    <p class="foot" style="font-size:13px;color:var(--faint);margin:0">Champion: ${esc(a.Champion || 'to be named')}</p></article>`).join('')}</div>`;
+    <p class="foot" style="font-size:13px;color:var(--faint);margin:0">Champion: ${esc(a.Champion || 'to be named')}</p></article>`;
+  // One plain line per upcoming agent: its first sentence.
+  const firstSentence = (t: string): string => { const m = (t || '').match(/^.*?[.!?](\s|$)/); return (m ? m[0] : t || '').trim(); };
+  const upcoming = (a: IAgent): string => `<li class="next-item">
+    <div class="next-name"><strong>${esc(a.Title)}</strong><span class="pill ${pillClass(a.AgentStatus)}">${a.AgentStatus === 'Pilot' ? 'In pilot' : 'Up next'}</span></div>
+    ${a.WhatItDoes ? `<p>${esc(firstSentence(a.WhatItDoes))}</p>` : ''}
+    ${a.Expected ? `<p class="when">Expected: ${esc(a.Expected)}</p>` : ''}</li>`;
+  return `<h3 class="group">Use these now</h3>
+    ${now.length ? `<div class="grid">${now.map(card).join('')}</div>` : empty('Nothing firm-wide yet. The first agents are in pilot; see below.')}
+    ${next.length ? `<h3 class="group" style="margin-top:28px">Coming next</h3>
+      <p style="color:var(--muted);font-size:15px">Being piloted or built now. Want to try one early? Say so in Feedback.</p>
+      <ul class="next-list">${next.map(upcoming).join('')}</ul>` : ''}`;
 }
 
 export function faq(rows: IFaq[]): string {

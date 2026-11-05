@@ -6,6 +6,10 @@ Copy buttons, all Friday tips, demo videos, agents, FAQ and "Your feedback". It 
 hub's lists live through SharePoint REST as the signed-in user, so content changes need no
 code change. Each instance shows one section, chosen in its **Section** setting.
 
+The **programStatus** section is the AI Working Group's roadmap page, read from the `AI Roadmap`,
+`Waiting on Cassin` and `Hub Feedback` lists (owners and members only). The **agents** section
+shows *Use these now* (Live) and *Coming next* (Pilot, Up next).
+
 The **adoption** section is the admin-only Copilot adoption page. It reads Microsoft's Copilot
 usage reports (`/copilot/reports/...`, beta for JSON) and Entra ID users through Microsoft
 Graph as the signed-in admin, so the package requests `Reports.Read.All` and `User.Read.All`
@@ -35,3 +39,4 @@ Copy the new `.sppkg` to `../package/` and bump `version` in `config/package-sol
 - `src/webparts/cassinAiHub/adoptionModel.ts`: parses the Copilot reports and works out stages, changes, departments (pure functions)
 - `src/webparts/cassinAiHub/adoptionData.ts`: Microsoft Graph reads and the monthly snapshot
 - `src/webparts/cassinAiHub/adoptionView.ts`: the adoption page (from `../preview/adoption-preview.html`)
+- `src/webparts/cassinAiHub/programStatus.ts`: the working group's AI Program status page (roadmap boards, Waiting on Cassin, feedback)

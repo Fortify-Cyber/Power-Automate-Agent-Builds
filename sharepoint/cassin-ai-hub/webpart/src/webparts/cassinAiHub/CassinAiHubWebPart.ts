@@ -10,6 +10,7 @@ import { SPPermission } from '@microsoft/sp-page-context';
 import { HubData, LISTS, ListNotFoundError, type IPrompt } from './data';
 import { AdoptionData, AdoptionError, HISTORY_LIST } from './adoptionData';
 import { AdoptionView } from './adoptionView';
+import { ProgramStatusView } from './programStatus';
 import * as R from './render';
 import { ensureStyles } from './styles';
 
@@ -23,9 +24,12 @@ import { ensureStyles } from './styles';
  * Copilot usage reports and Entra ID through Microsoft Graph as the signed-in admin
  * (adoptionData.ts); the page itself is restricted to owners and AI Hub Admins by the
  * deploy script.
+ *
+ * The "programStatus" section is the AI Working Group's roadmap page (programStatus.ts), read
+ * from lists only site owners and members can open.
  */
 export type Section = 'latestTip' | 'featuredPrompts' | 'promptLibrary' | 'fridayTips' |
-  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption';
+  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption' | 'programStatus';
 
 export interface ICassinAiHubWebPartProps {
   section: Section;
@@ -41,10 +45,12 @@ const SECTIONS: Array<{ key: Section; text: string; list: string }> = [
   { key: 'agents', text: 'Agents & tools', list: LISTS.agents },
   { key: 'faq', text: 'FAQ', list: LISTS.faq },
   { key: 'myFeedback', text: 'My feedback', list: LISTS.feedback },
-  { key: 'adoption', text: 'Copilot adoption (admins only)', list: HISTORY_LIST }
+  { key: 'adoption', text: 'Copilot adoption (admins only)', list: HISTORY_LIST },
+  { key: 'programStatus', text: 'Program status (working group)', list: LISTS.roadmap }
 ];
 
 const ADOPTION_PAGE = 'Copilot-Adoption';
+const STATUS_PAGE = 'Program-Status';
 
 export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiHubWebPartProps> {
   private _data!: HubData;
@@ -52,6 +58,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   private _filter: R.IPromptFilter = { q: '', cat: 'All' };
   private _toastTimer: number | undefined;
   private _adoption: AdoptionView | undefined;
+  private _status: ProgramStatusView | undefined;
 
   protected onInit(): Promise<void> {
     ensureStyles();
@@ -68,11 +75,13 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     this.domElement.innerHTML = '<div class="cah"><div class="loading">Loading…</div></div>';
     this._adoption?.dispose();
     this._adoption = undefined;
+    this._status = undefined;
     this._load()
       .then(html => {
         this.domElement.innerHTML = `<div class="cah">${html}${this._manageLink()}</div>`;
         const root = this.domElement.querySelector<HTMLElement>('.cah');
         if (this._adoption && root) this._adoption.mount(root);
+        if (this._status && root) this._status.mount(root);
         if (this.properties.section === 'latestTip' && root) this._addAdminLink(root);
       })
       .catch(err => {
@@ -106,6 +115,13 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         return this._data.faq().then(R.faq);
       case 'myFeedback':
         return this._data.myFeedback(Number(this.context.pageContext.legacyPageContext.userId)).then(R.myFeedback);
+      case 'programStatus':
+        return Promise.all([this._data.roadmap(), this._data.waiting(), this._data.allFeedback()]).then(([items, waiting, feedback]) => {
+          this._status = new ProgramStatusView(items, waiting, feedback, {
+            roadmap: this._data.listUrl(LISTS.roadmap), waiting: this._data.listUrl(LISTS.waiting), feedback: this._data.listUrl(LISTS.feedback)
+          });
+          return this._status.html();
+        });
       case 'adoption': {
         const web = this.context.pageContext.web;
         return new AdoptionData(this.context.msGraphClientFactory, this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl)
@@ -122,18 +138,24 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   // Site owners get a link to the underlying list, where content is added and edited.
   private _manageLink(): string {
     const section = SECTIONS.find(s => s.key === this.properties.section);
-    if (!section || section.key === 'adoption' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
+    if (!section || section.key === 'adoption' || section.key === 'programStatus' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
     return `<p class="manage"><a href="${R.esc(this._data.listUrl(section.list))}">Owners: add or edit items in the list →</a></p>`;
   }
 
-  // People who can open the admin-only history list (owners and AI Hub Admins) get a link to
-  // the adoption page on the home page; everyone else sees nothing.
+  // On the home page, people who can open the working group's roadmap list (owners, members)
+  // get a link to Program status, and people who can open the admin-only adoption history
+  // (owners, AI Hub Admins) get a link to Copilot adoption. Everyone else sees neither.
   private _addAdminLink(root: HTMLElement): void {
-    this._data.canRead(HISTORY_LIST).then(ok => {
-      if (!ok || root.querySelector('.admin-link')) return;
-      const url = `${this.context.pageContext.web.absoluteUrl}/SitePages/${ADOPTION_PAGE}.aspx`;
-      root.insertAdjacentHTML('beforeend', `<p class="manage admin-link"><a href="${R.esc(url)}">Admins: Copilot adoption →</a></p>`);
-    }).catch(() => undefined);
+    const web = this.context.pageContext.web.absoluteUrl;
+    Promise.all([this._data.canRead(LISTS.roadmap).catch(() => false), this._data.canRead(HISTORY_LIST).catch(() => false)])
+      .then(([wg, admin]) => {
+        if (root.querySelector('.admin-link')) return;
+        const links = [
+          wg ? `<a href="${R.esc(`${web}/SitePages/${STATUS_PAGE}.aspx`)}">Working group: Program status →</a>` : '',
+          admin ? `<a href="${R.esc(`${web}/SitePages/${ADOPTION_PAGE}.aspx`)}">Admins: Copilot adoption →</a>` : ''
+        ].filter(Boolean);
+        if (links.length) root.insertAdjacentHTML('beforeend', `<p class="manage admin-link">${links.join(' &nbsp;·&nbsp; ')}</p>`);
+      }).catch(() => undefined);
   }
 
   private _adoptionMessage(err: AdoptionError): string {
@@ -154,6 +176,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
 
   private _onClick(e: Event): void {
     if (this._adoption?.onClick(e)) return;
+    if (this._status?.onClick(e)) return;
     const target = e.target as HTMLElement;
     const copy = target.closest<HTMLElement>('[data-copy]');
     if (copy) { this._copy(copy.getAttribute('data-copy') || ''); return; }

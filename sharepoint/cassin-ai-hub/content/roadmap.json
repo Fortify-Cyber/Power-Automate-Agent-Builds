@@ -1,0 +1,380 @@
+[
+  {
+    "Title": "Cassin AI Hub (SharePoint)",
+    "Stage": "Pilot",
+    "Track": "Quick Wins",
+    "Type": [],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "",
+    "TimeSaved": "",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "One SharePoint page for all Cassin staff: Prompt Pack, demo videos, and the Friday Copilot Tip archive. Priority: P1.",
+    "DemoVideo": "",
+    "FeedbackAs": "This site",
+    "PublishedOn": "SitePages/Hub-Home.aspx"
+  },
+  {
+    "Title": "Daily Digest",
+    "Stage": "Firm rollout",
+    "Track": "Quick Wins",
+    "Type": [
+      "Flow"
+    ],
+    "Home": [
+      "Background"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~10 min per user per day",
+    "TargetWindow": "n/a",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "Updated version (Oct 14) shows every high-priority item, makes clear it reads only the Inbox, and is more personal. In WG test before firm-wide rollout.",
+    "DemoVideo": "https://www.loom.com/share/2c42310926504bd2bb944fca302b779e",
+    "FeedbackAs": "",
+    "PublishedOn": "SitePages/Agents-and-Tools.aspx"
+  },
+  {
+    "Title": "Diligence Summaries",
+    "Stage": "Scoping",
+    "Track": "Quick Wins",
+    "Type": [
+      "Native (Copilot for Legal)",
+      "Skill"
+    ],
+    "Home": [
+      "Copilot for Legal",
+      "Deal Assistant"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~30–45 min per diligence summary",
+    "TargetWindow": "Nov 13 – 20 (target)",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "Now a configure + train item: Microsoft Copilot for Legal does summaries, proofreading and redlines natively in Word. Depends on when it reaches Cassin's tenant (rolling out mid-Oct to mid-Dec). Fallback: our own Copilot agent with Cassin summary templates.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Email Filing Assistant",
+    "Stage": "Pilot",
+    "Track": "Quick Wins",
+    "Type": [
+      "Skill"
+    ],
+    "Home": [
+      "Inbox Assistant"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~15 min per user per day",
+    "TargetWindow": "n/a",
+    "Champion": "Cassia Schaeffer",
+    "NextUp": "Teams loading fix (stopgap: Copilot app), file Sent Items (target early–mid Nov)",
+    "Notes": "Subject + first-line preview added Oct 16. Works through the Copilot app (Oct 19) as a stopgap for the Teams issue: the Teams version shows only loading dots and \"Allow\" doesn't register, so we're fixing the Teams permission/consent step (target window TBD). Sent Items filing in build: adds Sent Items as a source, matching each sent email to the same deal folder as its thread (target early – mid Nov).",
+    "DemoVideo": "https://www.loom.com/share/2c736e245dd246efba31631380ad5f21",
+    "FeedbackAs": "",
+    "PublishedOn": "SitePages/Agents-and-Tools.aspx"
+  },
+  {
+    "Title": "Fannie & Freddie Guide Q&A",
+    "Stage": "Scoping",
+    "Track": "Quick Wins",
+    "Type": [
+      "Agent"
+    ],
+    "Home": [
+      "Agency Guide Q&A"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~15–20 min per guide question",
+    "TargetWindow": "Nov 6 – 13 (target)",
+    "Champion": "Will Hernandez",
+    "NextUp": "",
+    "Notes": "Copilot agent that answers plain-English questions from the agency guides and cites the section it used. Week 1: load the guides and test 20 real questions; Week 2: pilot with 2–3 users. Monthly guide refresh built in.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Friday Copilot Tip",
+    "Stage": "Live",
+    "Track": "Quick Wins",
+    "Type": [
+      "Flow"
+    ],
+    "Home": [
+      "Background"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~10 min per user per week (indirect, via Copilot habits)",
+    "TargetWindow": "Weekly",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "One practical Copilot tip every Friday. Upcoming topic: searching your Outlook archive with Copilot.",
+    "DemoVideo": "",
+    "FeedbackAs": "Friday Tips",
+    "PublishedOn": "SitePages/Friday-Tips.aspx"
+  },
+  {
+    "Title": "Closing Checklist Builder",
+    "Stage": "Scoping",
+    "Track": "Big Bets",
+    "Type": [
+      "Skill"
+    ],
+    "Home": [
+      "Deal Assistant"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~1–2 hrs per deal",
+    "TargetWindow": "Nov 20 – 27 (target)",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "Enter deal type, lender and program to get a deal-specific checklist in Word or Excel from Cassin's master checklists. Needs 2–3 master checklists. The first slice, a checklist generator, can still ship quickly.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Deal Intake",
+    "Stage": "Scoping",
+    "Track": "Big Bets",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~1–2 hrs per deal",
+    "TargetWindow": "M1 Nov 20 – 27 · M2 Dec 18 · M3 Jan 22 · M4 Feb 19 (targets)",
+    "Champion": "Mike & Tom",
+    "NextUp": "",
+    "Notes": "M1: intake form for one loan type fills the typing sheet. M2: fills core loan docs. M3: saves to NetDocs, hands off to the closing checklist, second loan type. M4: conflicts / client-matter number (CMMS), QuickBooks if wanted; depends on access we don't have yet. Signature pages and execution letters are now their own row (Sig Pages & Exec Letters).",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Issues List Builder",
+    "Stage": "Scoping",
+    "Track": "Big Bets",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~45–60 min per comment round",
+    "TargetWindow": "Nov 20 – 27 (target)",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "Turns borrower's counsel comments or a markup into a structured issues list (provision, comment, proposed response, owner). Built against 3–5 past comment sets. Drafting revisions comes later. The first slice, the issues list only, can still ship quickly.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Term Sheet vs. Loan Docs",
+    "Stage": "Scoping",
+    "Track": "Big Bets",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~1–2 hrs per deal",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Split out of Loan Document Review. Cassin-specific cross-document checks: term sheet vs. loan docs; names, addresses, amounts and dates across the set. First step: comparison report on 3 past deals, reviewed with the WG. Chart #7, 5 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "BD Content",
+    "Stage": "Scoping",
+    "Track": "Fill-ins",
+    "Type": [],
+    "Home": [],
+    "Confidence": "",
+    "TimeSaved": "~1 hr per BD piece",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Chart #15, 0 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Inbox Catch-up & Search",
+    "Stage": "Scoping",
+    "Track": "Fill-ins",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~10 min per user per day",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Chart #1, 1 WG vote point.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Sig Pages & Exec Letters",
+    "Stage": "Scoping",
+    "Track": "Fill-ins",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~30–60 min per deal",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Split out of Deal Intake: fills signature pages and execution letters. Chart #8, 2 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Standard Emails",
+    "Stage": "Scoping",
+    "Track": "Fill-ins",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~10 min per user per day",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Chart #2, 2 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Closing Dashboard",
+    "Stage": "Scoping",
+    "Track": "Not Now",
+    "Type": [
+      "Flow",
+      "Skill"
+    ],
+    "Home": [
+      "Background",
+      "Deal Assistant"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~1 hr per deal",
+    "TargetWindow": "M1 Nov 20 · M2 early Dec · M3 early Jan · M4 late Jan (targets)",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "Closing and post-closing tracker. M2: deal tracker with closing dates and a weekly \"what's due\" digest. M3: checklist items marked received automatically from NetDocs/email. M4: drafts post-closing follow-ups for one-click approval. The checklist itself is built in Closing Checklist Builder.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "First-Pass Word Redline",
+    "Stage": "Scoping",
+    "Track": "Not Now",
+    "Type": [
+      "Native (Copilot for Legal)"
+    ],
+    "Home": [
+      "Copilot for Legal"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~20–30 min per document",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Overlaps with Microsoft Copilot for Legal's redline skills. Chart #10, 0 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Loan Document Review",
+    "Stage": "Scoping",
+    "Track": "Not Now",
+    "Type": [
+      "Native (Copilot for Legal)"
+    ],
+    "Home": [
+      "Copilot for Legal"
+    ],
+    "Confidence": "On track",
+    "TimeSaved": "~30 min per deal",
+    "TargetWindow": "M1 Nov 20 – 27 · M2 Dec 18 · M3 Jan 22 · M4 Feb 19 (targets)",
+    "Champion": "TBD",
+    "NextUp": "",
+    "Notes": "General proofreading of loan documents. Mostly covered by Microsoft Copilot for Legal's proofreading in Word. Cross-document checks (term sheet vs. loan docs) are now their own row (Term Sheet vs. Loan Docs).",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Schedules & Charts",
+    "Stage": "Scoping",
+    "Track": "Not Now",
+    "Type": [
+      "Prompt"
+    ],
+    "Home": [
+      "Prompt Pack"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~30–60 min per deal",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Chart #13, 0 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  },
+  {
+    "Title": "Title & Survey Review",
+    "Stage": "Scoping",
+    "Track": "Not Now",
+    "Type": [
+      "Skill"
+    ],
+    "Home": [
+      "Deal Assistant"
+    ],
+    "Confidence": "",
+    "TimeSaved": "~45–60 min per deal",
+    "TargetWindow": "",
+    "Champion": "",
+    "NextUp": "",
+    "Notes": "Chart #12, 4 WG vote points.",
+    "DemoVideo": "",
+    "FeedbackAs": "",
+    "PublishedOn": ""
+  }
+]

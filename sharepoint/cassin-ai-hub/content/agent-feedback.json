@@ -1,0 +1,32 @@
+[
+  {
+    "Title": "It would be much better if in Outlook",
+    "FeedbackType": "Idea for an agent or workflow",
+    "About": "Email Filing Assistant",
+    "Rating": "Working well",
+    "Details": "What worked: the app worked to file\nWhat to change: having it available on outlook would be nice but it has been doing a good job identifying where to file. It is a little clunky in that i have to read through where it wants to file and say yes to file there, so that it is still a bit time consuming but i dont have a better idea of how to streamline that since we need to check and make sure it is doing it correct\nSubmitted by Elliot Tepfer through the Notion feedback form.",
+    "FeedbackStatus": "New",
+    "Response": "",
+    "DoneOn": ""
+  },
+  {
+    "Title": "Needed a preview of each email",
+    "FeedbackType": "Something isn't working",
+    "About": "Email Filing Assistant",
+    "Rating": "",
+    "Details": "Raised by the AI Working Group (moved from Notion).",
+    "FeedbackStatus": "Done",
+    "Response": "Added a subject and first-line preview to email filing, based on WG feedback",
+    "DoneOn": "2026-10-16"
+  },
+  {
+    "Title": "Didn't load in Teams",
+    "FeedbackType": "Something isn't working",
+    "About": "Email Filing Assistant",
+    "Rating": "",
+    "Details": "Raised by the AI Working Group (moved from Notion).",
+    "FeedbackStatus": "Done",
+    "Response": "Works through the Copilot app as a stopgap for the Teams loading issue",
+    "DoneOn": "2026-10-19"
+  }
+]

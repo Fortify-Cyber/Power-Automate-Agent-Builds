@@ -447,7 +447,6 @@
     "Name": "Copilot-Adoption",
     "Title": "Copilot adoption",
     "Layout": "Article",
-    "Admin": true,
     "Sections": [
       {
         "Template": "OneColumn",
@@ -457,6 +456,39 @@
             {
               "Type": "Hub",
               "Section": "adoption"
+            }
+          ]
+        ]
+      }
+    ],
+    "Access": "admins"
+  },
+  {
+    "Name": "Program-Status",
+    "Title": "AI Program status",
+    "Layout": "Article",
+    "Access": "workinggroup",
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 1,
+        "Columns": [
+          [
+            {
+              "Type": "Text",
+              "Html": "<p>Every agent, skill, flow and prompt Fortify is building for Cassin: what stage it's at, when we expect it, how confident we are, and what's next. Updated as work moves, and at least every Friday. The Friday update email and the monthly working group review come from this page.</p><p><strong>How to read it.</strong> Stages run Scoping → Building → Pilot (2–3 users) → Firm rollout → Live. An item only moves forward once its exit test is met. <em>Next up</em> lists the fixes and features coming for each item, and <em>Champion</em> is the person at Cassin who pilots it (TBD means still open).</p><p>Only the AI Working Group can see this page. The firm sees what's ready to use on <a href=\"{{siteUrl}}/SitePages/Agents-and-Tools.aspx\">Agents &amp; Tools</a>; when an item reaches Firm rollout, publish it there (or to the Prompt Library or a tip) and paste the link into its <em>Published on hub</em> column.</p>"
+            }
+          ]
+        ]
+      },
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [
+          [
+            {
+              "Type": "Hub",
+              "Section": "programStatus"
             }
           ]
         ]

@@ -18,11 +18,29 @@ export interface IVideo {
 }
 export interface IAgent {
   Id: number; Title: string; AgentStatus: string; WhatItDoes: string; HowToStart: string; Champion: string;
+  /** Rough timing for "Coming next", e.g. "Late November". */
+  Expected?: string;
 }
 export interface IFaq { Id: number; Title: string; Answer: string; Topic: string }
 export interface IFeedback {
   Id: number; Title: string; FeedbackType: string; About: string; FeedbackStatus: string;
   Response: string; Created: string;
+}
+
+// The working group's lists (Program status page). Readable by site owners and members only.
+export interface IRoadmapItem {
+  Id: number; Title: string; RoadmapStage: string; Track: string; ItemType: string[]; HomeArea: string[];
+  Confidence: string; TimeSaved: string; TargetWindow: string; Champion: string; NextUp: string; RoadmapNotes: string;
+  DemoVideo?: ILink; PublishedLink?: ILink;
+  /** The name this item goes by in the Feedback form's "About" choice, when it differs from Title. */
+  FeedbackAs: string;
+}
+export interface IWaiting {
+  Id: number; Title: string; WaitingStatus: string; WaitingNotes: string; DueDate: string | null;
+  WaitingOwner?: { Title: string } | null; RoadmapItems?: Array<{ Title: string }>;
+}
+export interface IFeedbackItem extends IFeedback {
+  Details: string; Rating: string; DoneOn: string | null; Author?: { Title: string };
 }
 
 export const LISTS = {
@@ -31,7 +49,9 @@ export const LISTS = {
   videos: 'Lists/DemoVideos',
   agents: 'Lists/AIAgents',
   faq: 'Lists/AIFAQ',
-  feedback: 'Lists/HubFeedback'
+  feedback: 'Lists/HubFeedback',
+  roadmap: 'Lists/AIRoadmap',
+  waiting: 'Lists/WaitingOnCassin'
 } as const;
 
 export class ListNotFoundError extends Error {}
@@ -64,8 +84,27 @@ export class HubData {
   }
 
   public agents(): Promise<IAgent[]> {
-    return this._items<IAgent>(LISTS.agents,
-      'Id,Title,AgentStatus,WhatItDoes,HowToStart,Champion', "AgentStatus ne 'Retired'", 'Id');
+    const read = (extra: string): Promise<IAgent[]> => this._items<IAgent>(LISTS.agents,
+      `Id,Title,AgentStatus,WhatItDoes,HowToStart,Champion${extra}`, "AgentStatus ne 'Retired'", 'Id');
+    // "Expected" arrives with the deploy script's next run; until then, read without it.
+    return read(',Expected').catch(err => (/HTTP 400/.test(String(err)) ? read('') : Promise.reject(err)));
+  }
+
+  public roadmap(): Promise<IRoadmapItem[]> {
+    return this._items<IRoadmapItem>(LISTS.roadmap,
+      'Id,Title,RoadmapStage,Track,ItemType,HomeArea,Confidence,TimeSaved,TargetWindow,Champion,NextUp,RoadmapNotes,DemoVideo,PublishedLink,FeedbackAs',
+      '', 'Title').then(rows => rows.map(r => ({ ...r, ItemType: asArray(r.ItemType), HomeArea: asArray(r.HomeArea) })));
+  }
+
+  public waiting(): Promise<IWaiting[]> {
+    return this._items<IWaiting>(LISTS.waiting,
+      'Id,Title,WaitingStatus,WaitingNotes,DueDate,WaitingOwner/Title,RoadmapItems/Title', '', 'Id', 'WaitingOwner,RoadmapItems');
+  }
+
+  /** Every feedback item; only people who can manage the list (owners, members) get them all. */
+  public allFeedback(): Promise<IFeedbackItem[]> {
+    return this._items<IFeedbackItem>(LISTS.feedback,
+      'Id,Title,FeedbackType,About,Details,Rating,FeedbackStatus,Response,DoneOn,Created,Author/Title', '', 'Created desc', 'Author');
   }
 
   public faq(): Promise<IFaq[]> {
@@ -84,10 +123,11 @@ export class HubData {
       { headers: { Accept: 'application/json;odata=nometadata' } }).then(res => res.ok);
   }
 
-  private _items<T>(list: string, select: string, filter: string, orderBy: string): Promise<T[]> {
+  private _items<T>(list: string, select: string, filter: string, orderBy: string, expand = ''): Promise<T[]> {
     const path = `${this._webRelUrl.replace(/\/$/, '')}/${list}`.replace(/'/g, "''");
     let url = `${this._webUrl}/_api/web/GetList('${encodeURIComponent(path)}')/items?$select=${select}&$top=500&$orderby=${orderBy}`;
     if (filter) url += `&$filter=${encodeURIComponent(filter)}`;
+    if (expand) url += `&$expand=${expand}`;
     return this._http.get(url, SPHttpClient.configurations.v1, { headers: { Accept: 'application/json;odata=nometadata' } })
       .then((res: SPHttpClientResponse) => {
         if (res.status === 404) throw new ListNotFoundError(list);

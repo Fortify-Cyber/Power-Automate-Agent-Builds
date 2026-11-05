@@ -290,16 +290,18 @@ Add-ChoiceField $L "AgentStatus" "Status" @("Live", "Pilot", "Up next", "Propose
 Add-NoteField   $L "WhatItDoes" "What it does"
 Add-NoteField   $L "HowToStart" "How to start"
 Add-HubField    $L "Champion" "Champion" "Text"
+# Rough timing shown under "Coming next" on Agents & Tools, e.g. "Late November".
+Add-HubField    $L "Expected" "Expected" "Text"
 
 if (Test-ListEmpty $L) {
     foreach ($a in (Read-Content "agents.json")) {
         Add-PnPListItem -List $L -Values @{
             Title = $a.Title; AgentStatus = $a.AgentStatus; WhatItDoes = $a.WhatItDoes
-            HowToStart = $a.HowToStart; Champion = $a.Champion } | Out-Null
+            HowToStart = $a.HowToStart; Champion = $a.Champion; Expected = $a.Expected } | Out-Null
     }
     Write-Host "  added agents"
 }
-Set-HubView $L "All agents" @("LinkTitle", "AgentStatus", "WhatItDoes", "HowToStart", "Champion") `
+Set-HubView $L "All agents" @("LinkTitle", "AgentStatus", "WhatItDoes", "HowToStart", "Expected", "Champion") `
     "<Where><Neq><FieldRef Name=`"AgentStatus`" /><Value Type=`"Choice`">Retired</Value></Neq></Where><OrderBy><FieldRef Name=`"ID`" /></OrderBy>" -Default
 Set-Formatter $L "AgentStatus" (New-Pill ([ordered]@{ "Live" = "#d7f0dd"; "Pilot" = "#d6e9f8"; "Up next" = "#efe7df" }))
 
@@ -331,9 +333,23 @@ Add-NoteField   $L "Details" "Details" "Required=`"TRUE`""
 Add-HubField    $L "FollowUp" "OK to contact me about this?" "Boolean" "" "<Default>1</Default>"
 Add-ChoiceField $L "FeedbackStatus" "Status" @("New", "Reviewing", "Planned", "Done", "Won't do") -Default "New" -Extra $noNewForm
 Add-NoteField   $L "Response" "Our response" $noNewForm
+$firstRating = -not (Find-Object { Get-PnPField -List $L -Identity "Rating" })
+Add-ChoiceField $L "Rating" "How is it working?" @("Working well", "Mixed", "Not working")
+Add-HubField    $L "DoneOn" "Done on" "DateTime" "Format=`"DateOnly`" $noNewForm"
+if ($firstRating) {
+    # Once, when these columns arrive: bring over the feedback collected in Notion.
+    foreach ($f in (Read-Content "agent-feedback.json")) {
+        $v = @{ Title = $f.Title; FeedbackType = $f.FeedbackType; About = $f.About; Details = $f.Details; FeedbackStatus = $f.FeedbackStatus }
+        if ($f.Rating) { $v.Rating = $f.Rating }
+        if ($f.Response) { $v.Response = $f.Response }
+        if ($f.DoneOn) { $v.DoneOn = [datetime] $f.DoneOn }
+        Add-PnPListItem -List $L -Values $v | Out-Null
+    }
+    Write-Host "  added the feedback from Notion"
+}
 
 Set-PnPList -Identity $L -ReadSecurity AllUsersReadAccessOnItemsTheyCreate -WriteSecurity WriteOnlyMyItems | Out-Null
-Set-HubView $L "All feedback" @("LinkTitle", "FeedbackType", "About", "Details", "FeedbackStatus", "Author", "Created") `
+Set-HubView $L "All feedback" @("LinkTitle", "FeedbackType", "About", "Rating", "Details", "FeedbackStatus", "Author", "Created") `
     "<OrderBy><FieldRef Name=`"Created`" Ascending=`"FALSE`" /></OrderBy>" -Default
 Set-HubView $L "My feedback" @("LinkTitle", "FeedbackType", "About", "FeedbackStatus", "Response", "Created") `
     "<Where><Eq><FieldRef Name=`"Author`" /><Value Type=`"Integer`"><UserID /></Value></Eq></Where><OrderBy><FieldRef Name=`"Created`" Ascending=`"FALSE`" /></OrderBy>"
@@ -383,6 +399,73 @@ Set-HubView $L "All articles" @("LinkTitle", "Decision", "Score", "Reason", "Art
     "<OrderBy><FieldRef Name=`"Created`" Ascending=`"FALSE`" /></OrderBy>" -RowLimit 200 -Default
 Set-Formatter $L "Decision" (New-Pill ([ordered]@{ "Published" = "#d7f0dd"; "Draft" = "#d6e9f8"; "Error" = "#f6d5d5" }))
 
+# ---- AI Roadmap and Waiting on Cassin (AI Working Group only) ---------------
+# The working group's pipeline, moved from Notion: every agent, skill, flow and prompt in
+# progress, and what Fortify needs from Cassin. Shown on the Program status page. The firm
+# sees only what's published to Agents & Tools, the Prompt Library or the tips.
+Write-Step "AI Roadmap"
+$L = "Lists/AIRoadmap"
+New-HubList "AI Roadmap" $L "Item" "Every agent, skill, flow and prompt in the AI program: stage, timing and what's next. AI Working Group only."
+Add-ChoiceField $L "RoadmapStage" "Stage" @("Scoping", "Building", "Pilot", "Firm rollout", "Live") -Default "Scoping"
+Add-ChoiceField $L "Track" "Track" @("Quick Wins", "Big Bets", "Fill-ins", "Not Now") -Default "Quick Wins"
+Add-ChoiceField $L "ItemType" "Type" @("Agent", "Skill", "Flow", "Prompt", "Native (Copilot for Legal)") -Multi
+Add-ChoiceField $L "HomeArea" "Home" @("Deal Assistant", "Inbox Assistant", "Agency Guide Q&A", "Copilot for Legal", "Prompt Pack", "Background") -Multi
+Add-ChoiceField $L "Confidence" "Confidence" @("On track", "At risk", "Slipped")
+Add-HubField    $L "TimeSaved" "Est. time saved" "Text"
+Add-HubField    $L "TargetWindow" "Target window" "Text"
+Add-HubField    $L "Champion" "Champion" "Text"
+Add-NoteField   $L "NextUp" "Next up"
+Add-NoteField   $L "RoadmapNotes" "Notes"
+Add-HubField    $L "DemoVideo" "Demo video" "URL" "Format=`"Hyperlink`""
+Add-HubField    $L "PublishedLink" "Published on hub" "URL" "Format=`"Hyperlink`""
+Add-HubField    $L "FeedbackAs" "Name in the feedback form" "Text"
+if (Test-ListEmpty $L) {
+    foreach ($r in (Read-Content "roadmap.json")) {
+        $v = @{ Title = $r.Title; RoadmapStage = $r.Stage; Track = $r.Track; TimeSaved = $r.TimeSaved; TargetWindow = $r.TargetWindow
+                Champion = $r.Champion; NextUp = $r.NextUp; RoadmapNotes = $r.Notes; FeedbackAs = $r.FeedbackAs }
+        if ($r.Type.Count) { $v.ItemType = [string[]] $r.Type }
+        if ($r.Home.Count) { $v.HomeArea = [string[]] $r.Home }
+        if ($r.Confidence) { $v.Confidence = $r.Confidence }
+        if ($r.DemoVideo) { $v.DemoVideo = "$($r.DemoVideo), Demo video" }
+        if ($r.PublishedOn) { $v.PublishedLink = "$siteUrl/$($r.PublishedOn), On the hub" }
+        Add-PnPListItem -List $L -Values $v | Out-Null
+    }
+    Write-Host "  added the roadmap from Notion"
+}
+Set-HubView $L "All items" @("LinkTitle", "RoadmapStage", "ItemType", "HomeArea", "TargetWindow", "Confidence", "Champion", "NextUp") `
+    "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"Track`" /></GroupBy><OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -RowLimit 300 -Default
+Set-HubView $L "By stage" @("LinkTitle", "Track", "ItemType", "TargetWindow", "Confidence", "Champion", "PublishedLink") `
+    "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"RoadmapStage`" /></GroupBy><OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -RowLimit 300
+Set-Formatter $L "RoadmapStage" (New-Pill ([ordered]@{ "Live" = "#d7f0dd"; "Firm rollout" = "#bfe3cb"; "Pilot" = "#d6e9f8"; "Building" = "#e4dcf5" }))
+Set-Formatter $L "Confidence" (New-Pill ([ordered]@{ "On track" = "#d7f0dd"; "At risk" = "#fbe7c6"; "Slipped" = "#f6d5d5" }))
+
+Write-Step "Waiting on Cassin"
+$L = "Lists/WaitingOnCassin"
+New-HubList "Waiting on Cassin" $L "Item" "What Fortify needs from Cassin to keep the roadmap moving. AI Working Group only."
+Add-HubField    $L "WaitingOwner" "Owner" "User" "UserSelectionMode=`"PeopleOnly`""
+$roadmapList = Get-PnPList -Identity "Lists/AIRoadmap"
+Add-HubField    $L "RoadmapItems" "Roadmap items" "LookupMulti" "Mult=`"TRUE`" List=`"{$($roadmapList.Id)}`" ShowField=`"Title`""
+Add-HubField    $L "DueDate" "Due" "DateTime" "Format=`"DateOnly`""
+Add-ChoiceField $L "WaitingStatus" "Status" @("Open", "In progress", "Done") -Default "Open"
+Add-NoteField   $L "WaitingNotes" "Notes"
+if (Test-ListEmpty $L) {
+    $roadmapIds = @{}
+    Get-PnPListItem -List "Lists/AIRoadmap" -PageSize 500 | ForEach-Object { $roadmapIds[[string] $_["Title"]] = $_.Id }
+    foreach ($w in (Read-Content "waiting-on-cassin.json")) {
+        $v = @{ Title = $w.Title; WaitingStatus = $w.Status; WaitingNotes = $w.Notes }
+        $ids = @($w.Agents | Where-Object { $roadmapIds.ContainsKey($_) } | ForEach-Object { $roadmapIds[$_] })
+        if ($ids.Count) { $v.RoadmapItems = [int[]] $ids }
+        if ($w.Due) { $v.DueDate = [datetime] $w.Due }
+        Add-PnPListItem -List $L -Values $v | Out-Null
+    }
+    Write-Host "  added the open items from Notion"
+}
+Set-HubView $L "Open items" @("LinkTitle", "WaitingOwner", "RoadmapItems", "DueDate", "WaitingStatus", "WaitingNotes") `
+    "<Where><Neq><FieldRef Name=`"WaitingStatus`" /><Value Type=`"Choice`">Done</Value></Neq></Where><OrderBy><FieldRef Name=`"DueDate`" /></OrderBy>" -Default
+Set-HubView $L "By owner" @("LinkTitle", "RoadmapItems", "DueDate", "WaitingStatus", "WaitingNotes") `
+    "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"WaitingOwner`" /></GroupBy><OrderBy><FieldRef Name=`"DueDate`" /></OrderBy>"
+Set-Formatter $L "WaitingStatus" (New-Pill ([ordered]@{ "Open" = "#efe7df"; "In progress" = "#d6e9f8"; "Done" = "#d7f0dd" }))
+
 # ---- Copilot adoption history (admins only) ----------------------------------
 # The adoption page reads Microsoft's Copilot usage reports live (web part, Microsoft Graph).
 # This list keeps one snapshot a month (active days and prompts per person, no content) so the
@@ -400,6 +483,8 @@ Set-HubView $L "All months" @("LinkTitle", "RefreshDate", "Modified") `
 # ---------------------------------------------------------------------------
 Write-Step "Permissions"
 $visitors = Get-PnPGroup -AssociatedVisitorGroup
+$owners   = Get-PnPGroup -AssociatedOwnerGroup
+$members  = Get-PnPGroup -AssociatedMemberGroup
 foreach ($list in "Lists/PromptLibrary", "Lists/HubFeedback") {
     Set-PnPList -Identity $list -BreakRoleInheritance -CopyRoleAssignments | Out-Null
     Set-PnPListPermission -Identity $list -Group $visitors.Title -AddRole "Contribute" | Out-Null
@@ -408,6 +493,18 @@ Write-Host "  '$($visitors.Title)' can add to Prompt Library and Hub Feedback"
 Set-PnPList -Identity "Lists/AINewsLog" -BreakRoleInheritance -CopyRoleAssignments | Out-Null
 Set-PnPListPermission -Identity "Lists/AINewsLog" -Group $visitors.Title -RemoveRole "Read" | Out-Null
 Write-Host "  AI News Log: owners and members only"
+
+# The working group's lists: owners and members (the AI Working Group) only. Start from no
+# access rather than a copy of the site's, so visitors can't end up with it.
+foreach ($L in "Lists/AIRoadmap", "Lists/WaitingOnCassin") {
+    Set-PnPList -Identity $L -BreakRoleInheritance | Out-Null
+    Set-PnPListPermission -Identity $L -Group $owners.Title -AddRole "Full Control" | Out-Null
+    Set-PnPListPermission -Identity $L -Group $members.Title -AddRole "Contribute" | Out-Null
+    foreach ($role in "Read", "Contribute", "Edit", "Full Control") {
+        try { Set-PnPListPermission -Identity $L -Group $visitors.Title -RemoveRole $role | Out-Null } catch { }
+    }
+}
+Write-Host "  AI Roadmap and Waiting on Cassin: owners and members (the AI Working Group) only"
 
 # AI Hub Admins: who, besides the site owners, can open the Copilot adoption page.
 $adminGroup = "AI Hub Admins"
@@ -419,8 +516,6 @@ foreach ($email in $AdoptionAdmins) {
     Add-PnPGroupMember -Group $adminGroup -LoginName "i:0#.f|membership|$email" | Out-Null
     Write-Host "  added $email to '$adminGroup'"
 }
-$owners  = Get-PnPGroup -AssociatedOwnerGroup
-$members = Get-PnPGroup -AssociatedMemberGroup
 $L = "Lists/CopilotAdoptionHistory"
 # Start from no access (not a copy of the site's), then grant only owners and AI Hub Admins,
 # so it doesn't matter what level visitors or members have on the site.
@@ -538,15 +633,17 @@ function Test-PageExists([string] $Name) {
     try { Get-PnPPage -Identity "$Name.aspx" | Out-Null; $true } catch { $false }
 }
 
-# Admin pages ("Admin": true in pages.json) are visible to site owners and AI Hub Admins only.
-# Applied on every run, so a page that was rebuilt or shared by mistake is locked down again.
-function Set-AdminOnly([string] $Name) {
+# Restricted pages ("Access" in pages.json): "admins" is site owners and AI Hub Admins (the
+# adoption page); "workinggroup" is site owners and members (Program status). Applied on every
+# run, so a page that was rebuilt or shared by mistake is locked down again.
+function Set-PageAccess([string] $Name, [string] $Access) {
+    $group = switch ($Access) { "admins" { $adminGroup } "workinggroup" { $members.Title } default { throw "Unknown Access '$Access' for $Name in pages.json." } }
     $query = "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>$Name.aspx</Value></Eq></Where></Query></View>"
     $item = Get-PnPListItem -List "SitePages" -Query $query | Select-Object -First 1
     if (-not $item) { throw "Couldn't find $Name.aspx in Site Pages to restrict it." }
     Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $owners.Title -AddRole "Full Control" -ClearExisting | Out-Null
-    Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $adminGroup -AddRole "Read" | Out-Null
-    Write-Host "    restricted to '$($owners.Title)' and '$adminGroup'"
+    Set-PnPListItemPermission -List "SitePages" -Identity $item.Id -Group $group -AddRole "Read" | Out-Null
+    Write-Host "    restricted to '$($owners.Title)' and '$group'"
 }
 
 # SharePoint won't delete the site's home page, so point home at the default page while
@@ -557,15 +654,15 @@ foreach ($pg in (Read-Content "pages.json")) {
     if (Test-PageExists $pg.Name) {
         if (-not ($RebuildPages -or $RebuildPage -contains $pg.Name)) {
             Write-Host "  $($pg.Title): exists, skipped (use -RebuildPage $($pg.Name) to recreate)"
-            if ($pg.Admin) { Set-AdminOnly $pg.Name }
+            if ($pg.Access) { Set-PageAccess $pg.Name $pg.Access }
             continue
         }
         if (-not (Remove-HubPage $pg.Name)) { continue }
     }
     $header = if ($pg.Layout -eq "Home") { @{} } else { @{ HeaderLayoutType = "ColorBlock" } }
     Add-PnPPage -Name $pg.Name -Title $pg.Title -LayoutType $pg.Layout -CommentsEnabled:$false @header | Out-Null
-    # Lock an admin page down before anything is published on it.
-    if ($pg.Admin) { Set-AdminOnly $pg.Name }
+    # Lock a restricted page down before anything is published on it.
+    if ($pg.Access) { Set-PageAccess $pg.Name $pg.Access }
     $s = 0
     foreach ($section in $pg.Sections) {
         $s++
@@ -647,6 +744,7 @@ try {
 
 Write-Step "Done"
 Write-Host "Open $siteUrl" -ForegroundColor Green
+Write-Host "Program status (owners and members only): $siteUrl/SitePages/Program-Status.aspx"
 Write-Host "Copilot adoption (owners and '$adminGroup' only): $siteUrl/SitePages/Copilot-Adoption.aspx"
 if (-not $ShareWithEveryone) {
     Write-Host "The site is not shared with the firm yet. Add pilot users to '$($visitors.Title)', or re-run with -ShareWithEveryone at launch."

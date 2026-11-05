@@ -67,6 +67,36 @@ export const CSS = `
 .cah .loading { color:var(--faint); padding:18px 0; }
 .cah .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--navy); color:#fff; padding:10px 18px;
   z-index:1000; font-size:15px; pointer-events:none; }
+.cah .next-list { list-style:none; margin:0; padding:0; display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+.cah .next-item { border:1px solid var(--line); border-left:4px solid var(--soft-line); padding:12px 16px; background:#fff; }
+.cah .next-item .next-name { display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.cah .next-item p { margin:0 0 4px; font-size:14.5px; color:var(--muted); }
+.cah .next-item .when { font-size:13px; color:var(--faint); }
+.cah .next-item .pill { white-space:nowrap; flex-shrink:0; }
+/* Program status (working group page) */
+.cah .ps .ad-tile .v { font-size:30px; }
+.cah .ps-board { display:grid; grid-template-columns:repeat(var(--cols),minmax(220px,1fr)); gap:12px; overflow-x:auto; padding-bottom:6px; }
+.cah .ps-col { background:var(--sand-2); padding:10px; min-width:220px; }
+.cah .ps-col-head { display:flex; justify-content:space-between; align-items:baseline; font-weight:600; font-size:14px; color:var(--navy); margin:2px 2px 10px; }
+.cah .ps-card { background:#fff; border:1px solid var(--line); padding:12px 14px; margin-bottom:10px; font-size:13.5px; }
+.cah .ps-card h4 { font-size:16px; margin:0 0 6px; }
+.cah .ps-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
+.cah .ps-tags .chip { margin:0; font-size:11px; padding:1px 7px; }
+.cah .ps-pill { display:inline-block; font-size:11.5px; font-weight:600; padding:1px 8px; border-radius:10px; background:var(--soft); color:var(--navy); white-space:nowrap; }
+.cah .ps-pill.ok { background:#D7F0DD; } .cah .ps-pill.risk { background:#FBE7C6; } .cah .ps-pill.slip { background:#F6D5D5; }
+.cah .ps-pill.track { background:var(--sand); }
+.cah .ps-pill.w-Open, .cah .ps-pill.f-New { background:var(--sand); } .cah .ps-pill.w-Inprogress, .cah .ps-pill.f-Reviewing { background:#D6E9F8; }
+.cah .ps-pill.w-Done, .cah .ps-pill.f-Done { background:#D7F0DD; } .cah .ps-pill.f-Planned { background:#E4DCF5; } .cah .ps-pill.f-Wontdo { background:#E1E5EA; }
+.cah .ps-card dl { margin:0 0 6px; display:grid; gap:2px; }
+.cah .ps-card dl div { display:flex; gap:6px; } .cah .ps-card dt { color:var(--faint); min-width:62px; } .cah .ps-card dd { margin:0; }
+.cah .ps-next { margin:4px 0; color:var(--muted); }
+.cah .ps-fb { margin:4px 0; color:#B4463A; font-weight:600; font-size:12.5px; }
+.cah .ps-card details summary, .cah .ps td details summary { cursor:pointer; color:var(--primary); font-size:12.5px; }
+.cah .ps-card details p, .cah .ps td details p { margin:6px 0 0; white-space:pre-wrap; color:var(--muted); }
+.cah .ps-links { display:flex; gap:12px; margin:6px 0 0; font-size:13px; }
+.cah .ps td.wide { min-width:220px; }
+.cah .ps td.overdue { color:#B4463A; font-weight:600; }
+.cah .ps .ad-head { margin-top:4px; }
 /* Copilot adoption (admin page) */
 .cah .ad { --good:#2F8A5B; --warn:#B87A1F; --bad:#B4463A; }
 .cah .ad .faint { color:var(--faint); font-size:13.5px; }

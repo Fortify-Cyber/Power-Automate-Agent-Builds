@@ -1,0 +1,107 @@
+[
+  {
+    "Title": "2–3 master closing checklists, by lender or program",
+    "Agents": [
+      "Closing Checklist Builder",
+      "Closing Dashboard"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": ""
+  },
+  {
+    "Title": "Starting loan type or lender program, plus the current typing sheet and template set",
+    "Agents": [
+      "Deal Intake"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": ""
+  },
+  {
+    "Title": "Remaining 3 WG votes",
+    "Agents": [],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": "Roadmap"
+  },
+  {
+    "Title": "3–5 past borrower comment sets",
+    "Agents": [
+      "Issues List Builder"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": ""
+  },
+  {
+    "Title": "Success measure for each agent",
+    "Agents": [],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": "Applies to all agents"
+  },
+  {
+    "Title": "Title and survey review: pull it forward, or keep it in Not Now?",
+    "Agents": [],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": "Roadmap"
+  },
+  {
+    "Title": "Which agency guides and versions matter most, and who checks answers during the pilot",
+    "Agents": [
+      "Fannie & Freddie Guide Q&A"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": ""
+  },
+  {
+    "Title": "Name a champion for each agent wherever the roadmap's Champion column says TBD, and confirm the program sponsor",
+    "Agents": [],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": "Applies to all agents"
+  },
+  {
+    "Title": "Confirm agents can read and write NetDocs deal workspaces",
+    "Agents": [
+      "Deal Intake",
+      "Closing Dashboard",
+      "Loan Document Review"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": ""
+  },
+  {
+    "Title": "Owners for CMMS, the conflicts process and QuickBooks, and whether connecting them is in scope now",
+    "Agents": [
+      "Deal Intake"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": "Needed for Deal Intake milestone 4"
+  },
+  {
+    "Title": "Is the Copilot app an acceptable stopgap for email filing while we fix Teams?",
+    "Agents": [
+      "Email Filing Assistant"
+    ],
+    "Owner": "",
+    "Due": null,
+    "Status": "Open",
+    "Notes": ""
+  }
+]
