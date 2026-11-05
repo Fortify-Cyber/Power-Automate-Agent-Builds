@@ -12,6 +12,7 @@
     --navy:#021D3C; --primary:#00426C; --blue:#0077CE; --sky:#4DD8FF; --sand:#F2ECE6; --sand-line:#DDD3CA;
     --soft:#EFF3F6; --soft-line:#C7D5DF; --muted:#3B5068; --faint:#6E7C8C; --line:#E4E1DD;
     --good:#2F8A5B; --warn:#B87A1F; --bad:#B4463A;
+    --s0:#E1E5EA; --s1:#B9D7EE; --s2:#6FA9D6; --s3:#2A73B0; --s4:#00426C;
     --serif:"Roboto Serif", Georgia, serif; --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing:border-box; }
@@ -24,13 +25,19 @@
   header.site nav { display:flex; gap:18px; font-size:14px; padding:10px 0 12px; overflow-x:auto; white-space:nowrap; }
   header.site nav span.on { border-bottom:3px solid var(--sky); padding-bottom:9px; }
   .title { background:var(--navy); color:#fff; }
-  .title .wrap { padding:28px 24px 24px; }
+  .title .wrap { padding:28px 24px 0; }
   .eyebrow { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#9FB6C9; font-weight:600; }
   .title h1 { font:300 36px/1.15 var(--serif); margin:4px 0 6px; }
-  .title p { margin:0; color:#C7D5DF; font-size:15px; }
+  .title p { margin:0; color:#C7D5DF; font-size:15px; max-width:760px; }
   .lock { display:inline-flex; gap:6px; align-items:center; background:rgba(255,255,255,.1); padding:3px 10px; font-size:12.5px; margin-top:12px; }
+  .tabs { display:flex; gap:4px; margin-top:20px; overflow-x:auto; }
+  .tabs button { background:none; border:0; color:#C7D5DF; font:500 15px var(--sans); padding:10px 14px 12px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  .tabs button:hover { color:#fff; }
+  .tabs button.on { color:#fff; border-bottom-color:var(--sky); }
   main .wrap { padding:24px; }
+  .view { display:none; } .view.on { display:block; }
   .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:22px; }
+  .tiles.five { grid-template-columns:repeat(5,1fr); }
   .tile { background:#fff; border:1px solid var(--line); padding:16px 18px; }
   .tile.accent { background:var(--primary); color:#fff; border-color:var(--primary); }
   .tile .label { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--muted); }
@@ -38,32 +45,79 @@
   .tile .value { font:300 40px/1.1 var(--serif); margin:6px 0 4px; }
   .tile .sub { font-size:13.5px; color:var(--faint); }
   .tile.accent .sub { color:#E3ECF3; }
+  .tile.stage { border-top:6px solid var(--c); }
   .delta { font-weight:600; font-size:13px; }
-  .delta.up { color:var(--good); } .tile.accent .delta.up { color:#9FE0B8; }
-  .panel { border:1px solid var(--line); padding:18px 20px; background:#fff; }
-  .panel h2 { font:400 21px var(--serif); margin:0 0 2px; }
+  .delta.up { color:var(--good); } .tile.accent .delta.up { color:#9FE0B8; } .delta.down { color:var(--bad); }
+  .panel { border:1px solid var(--line); padding:18px 20px; background:#fff; margin-bottom:16px; }
+  .panel h2 { font:400 21px var(--serif); margin:0 0 2px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
   .panel .hint { font-size:13.5px; color:var(--faint); margin:0 0 12px; }
-  .grid2 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
-  .grid2b { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .src { font:600 11px var(--sans); letter-spacing:.5px; text-transform:uppercase; padding:2px 7px; border-radius:3px; }
+  .src.ms { background:var(--soft); color:var(--primary); }
+  .src.fmi { background:var(--sand); color:#7A5B3A; }
+  .grid2 { display:grid; grid-template-columns:2fr 1fr; gap:16px; }
+  .grid2b { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid2 > .panel, .grid2b > .panel { margin-bottom:16px; }
   .legend { display:flex; gap:16px; font-size:13px; color:var(--muted); margin-bottom:6px; flex-wrap:wrap; }
   .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle; }
   svg text { font-family:var(--sans); }
-  .bars .row { display:grid; grid-template-columns:110px 1fr 70px; gap:10px; align-items:center; margin:9px 0; font-size:14px; }
+  .bars .row { display:grid; grid-template-columns:150px 1fr 90px; gap:10px; align-items:center; margin:9px 0; font-size:14px; }
   .bars .track { background:var(--soft); height:14px; position:relative; }
   .bars .fill { background:var(--primary); height:14px; }
+  .bars .ghost { position:absolute; top:-3px; height:20px; border-right:2px solid var(--warn); }
   .bars .num { text-align:right; color:var(--muted); font-size:13px; }
+  .scroll { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; font-size:14px; }
-  th { text-align:left; color:var(--muted); font-weight:600; font-size:12.5px; border-bottom:1px solid var(--line); padding:6px 4px; }
-  td { border-bottom:1px solid var(--line); padding:8px 4px; }
-  td .pill { display:inline-block; font-size:12px; padding:1px 9px; border-radius:11px; background:var(--sand); }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:12.5px; border-bottom:1px solid var(--line); padding:6px 6px; white-space:nowrap; }
+  th.sort { cursor:pointer; } th.sort:hover { color:var(--navy); }
+  td { border-bottom:1px solid var(--line); padding:8px 6px; vertical-align:middle; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.click { cursor:pointer; } tr.click:hover td { background:#F7F9FB; }
+  .pill { display:inline-block; font-size:12px; padding:1px 9px; border-radius:11px; background:var(--sand); white-space:nowrap; }
+  .stg { display:inline-flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
+  .stg i { width:10px; height:10px; border-radius:2px; background:var(--c); }
+  .mv { font-size:12.5px; font-weight:600; white-space:nowrap; }
+  .mv.new { color:var(--blue); } .mv.ramped_up { color:var(--good); } .mv.steady { color:var(--faint); font-weight:500; }
+  .mv.cooled { color:var(--warn); } .mv.lapsed { color:var(--bad); }
+  .apps { display:flex; gap:3px; }
+  .apps b { font:600 10.5px var(--sans); width:22px; height:20px; display:inline-flex; align-items:center; justify-content:center; border-radius:3px; background:var(--soft); color:var(--soft-line); }
+  .apps b.on { background:var(--primary); color:#fff; }
   .count { font-size:13px; color:var(--faint); font-weight:400; font-family:var(--sans); }
-  .links { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .filters input, .filters select { font:14px var(--sans); padding:7px 10px; border:1px solid var(--soft-line); background:#fff; color:var(--navy); }
+  .filters input { flex:1; min-width:180px; }
+  .stack { display:flex; height:16px; min-width:120px; }
+  .stack span { height:16px; }
   .btn { display:inline-block; background:var(--primary); color:#fff; text-decoration:none; padding:8px 14px; font-weight:600; font-size:14px; }
   .btn.ghost { background:#fff; color:var(--primary); border:1px solid var(--soft-line); }
+  .links { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
   .note { font-size:12.5px; color:var(--faint); margin-top:18px; }
+  .callout { background:var(--sand); border-left:4px solid var(--sand-line); padding:12px 16px; font-size:14px; margin-bottom:16px; }
+  .depth { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .depth .k { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; font-weight:600; color:var(--muted); }
+  .depth .v { font:300 30px/1.2 var(--serif); margin:4px 0; }
+  .depth .v small { font:400 15px var(--sans); color:var(--faint); }
+  .depth .d { font-size:13px; color:var(--faint); }
+  /* person drawer */
+  .scrim { position:fixed; inset:0; background:rgba(2,29,60,.35); display:none; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(460px,100%); background:#fff; box-shadow:-8px 0 24px rgba(2,29,60,.18); transform:translateX(100%); transition:transform .2s; overflow-y:auto; }
+  .open .scrim { display:block; } .open .drawer { transform:none; }
+  .drawer .hd { background:var(--navy); color:#fff; padding:20px 22px; position:relative; }
+  .drawer .hd h3 { font:300 26px var(--serif); margin:0; }
+  .drawer .hd p { margin:2px 0 0; color:#C7D5DF; font-size:14px; }
+  .hdtags { display:flex; gap:8px; margin-top:12px; }
+  .hdtags > span { background:#fff; color:var(--navy); padding:2px 10px; border-radius:11px; }
+  .drawer .x { position:absolute; right:14px; top:12px; background:none; border:0; color:#fff; font-size:24px; cursor:pointer; }
+  .drawer .bd { padding:18px 22px; }
+  .drawer h4 { font:600 12px var(--sans); letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin:18px 0 8px; }
+  .mini { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .mini > div { border:1px solid var(--line); padding:10px 12px; }
+  .mini .v { font:300 26px var(--serif); } .mini .k { font-size:12px; color:var(--faint); }
+  .next { background:var(--soft); border-left:4px solid var(--primary); padding:12px 14px; font-size:14px; }
+  .private { font-size:12.5px; color:var(--faint); margin-top:16px; }
   @media (max-width:900px) {
-    .tiles { grid-template-columns:1fr 1fr; } .grid2, .grid2b { grid-template-columns:1fr; }
+    .tiles, .tiles.five, .depth { grid-template-columns:1fr 1fr; } .grid2, .grid2b { grid-template-columns:1fr; }
     .title h1 { font-size:28px; } main .wrap, .title .wrap { padding-left:16px; padding-right:16px; }
+    .bars .row { grid-template-columns:110px 1fr 80px; }
   }
 </style>
 </head>
@@ -77,107 +131,408 @@
 <section class="title"><div class="wrap">
   <div class="eyebrow">AI Hub · Admin</div>
   <h1>Copilot adoption</h1>
-  <p>How many licensed people are using Microsoft 365 Copilot, and where. Microsoft's official usage numbers, refreshed daily.</p>
+  <p>Who is using Microsoft 365 Copilot, how often, and whether it's becoming a habit, firm-wide, by department and by person.</p>
   <div class="lock">🔒 Visible to AI Hub Admins only</div>
+  <div class="tabs" role="tablist">
+    <button class="on" data-view="overview">Overview</button>
+    <button data-view="habits">Habits</button>
+    <button data-view="departments">Departments</button>
+    <button data-view="people">People</button>
+    <button data-view="usage">How it's used</button>
+  </div>
 </div></section>
 
 <main><div class="wrap">
-  <div class="tiles" id="tiles"></div>
 
-  <div class="grid2">
+  <!-- ============ OVERVIEW ============ -->
+  <section class="view on" id="v-overview">
+    <div class="tiles" id="tiles"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h2>Active users over time <span class="src ms">Microsoft report</span></h2>
+        <p class="hint">People who used Copilot in any app in the 28 days ending each week, against licensed people.</p>
+        <div class="legend"><span><i style="background:var(--primary)"></i>Active (28 days)</span><span><i style="background:var(--soft-line)"></i>Licensed</span></div>
+        <div id="trend"></div>
+      </div>
+      <div class="panel">
+        <h2>Where people use it <span class="src ms">Microsoft report</span></h2>
+        <p class="hint">Active users by app, last 28 days.</p>
+        <div class="bars" id="apps"></div>
+      </div>
+    </div>
+    <div class="grid2b">
+      <div class="panel">
+        <h2>Not started <span class="count" id="ns-count"></span></h2>
+        <p class="hint">Licensed, but no Copilot activity yet. A quick check-in or the Get Started page usually helps.</p>
+        <table><thead><tr><th>Name</th><th>Department</th></tr></thead><tbody id="notstarted"></tbody></table>
+      </div>
+      <div class="panel">
+        <h2>Recently lapsed <span class="count" id="lp-count"></span></h2>
+        <p class="hint">Used Copilot before, but not in the last 28 days.</p>
+        <table><thead><tr><th>Name</th><th>Last used</th><th>Where</th></tr></thead><tbody id="lapsed"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HABITS ============ -->
+  <section class="view" id="v-habits">
+    <div class="tiles five" id="stage-tiles"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h2>Habit formation by month <span class="src ms">Microsoft report</span></h2>
+        <p class="hint">Licensed people by number of days they used Copilot each month.</p>
+        <div class="legend" id="stage-legend"></div>
+        <div id="monthly"></div>
+      </div>
+      <div class="panel">
+        <h2>Who moved <span class="src fmi">Managed Intelligence</span></h2>
+        <p class="hint">Each person's last 28 days against their first two months (June to July).</p>
+        <div class="bars" id="movement"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DEPARTMENTS ============ -->
+  <section class="view" id="v-departments">
     <div class="panel">
-      <h2>Active users over time</h2>
-      <p class="hint">People who used Copilot in any app in the 28 days ending each week, against licensed people.</p>
-      <div class="legend"><span><i style="background:var(--primary)"></i>Active (28 days)</span><span><i style="background:var(--soft-line)"></i>Licensed</span></div>
-      <div id="trend"></div>
+      <h2>By department <span class="src ms">Microsoft report</span> <span class="src fmi">Top use: Managed Intelligence</span></h2>
+      <p class="hint">Last 28 days. Departments come from Entra ID. Groups under 5 people are folded into "Other" so no one can be singled out.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Department</th><th class="n">People</th><th class="n">Active</th><th>Habit mix</th><th class="n">Habitual or Power</th><th class="n">Median days</th><th class="n">Prompts / person</th><th>Top use</th><th class="n">vs July</th></tr></thead>
+        <tbody id="dept-rows"></tbody>
+      </table></div>
     </div>
     <div class="panel">
-      <h2>Where people use it</h2>
-      <p class="hint">Active users by app, last 28 days.</p>
-      <div class="bars" id="apps"></div>
+      <h2>By role <span class="src ms">Microsoft report</span></h2>
+      <p class="hint">Same view by job title, from Entra ID.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Role</th><th class="n">People</th><th class="n">Active</th><th>Habit mix</th><th class="n">Habitual or Power</th><th class="n">Median days</th></tr></thead>
+        <tbody id="role-rows"></tbody>
+      </table></div>
     </div>
-  </div>
+  </section>
 
-  <div class="grid2b">
+  <!-- ============ PEOPLE ============ -->
+  <section class="view" id="v-people">
     <div class="panel">
-      <h2>Not started <span class="count" id="ns-count"></span></h2>
-      <p class="hint">Licensed, but no Copilot activity yet. A quick check-in or the Get Started page usually helps.</p>
-      <table><thead><tr><th>Name</th><th>Department</th></tr></thead><tbody id="notstarted"></tbody></table>
+      <h2>People <span class="count" id="ppl-count"></span> <span class="src ms">Microsoft report</span> <span class="src fmi">Change: Managed Intelligence</span></h2>
+      <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.</p>
+      <div class="filters">
+        <input id="q" placeholder="Search by name">
+        <select id="f-dept"><option value="">All departments</option></select>
+        <select id="f-stage"><option value="">All stages</option></select>
+        <select id="f-move"><option value="">Any change</option></select>
+      </div>
+      <div class="scroll"><table>
+        <thead><tr>
+          <th class="sort" data-k="name">Name</th><th>Department</th><th>Role</th><th class="sort" data-k="stage">Stage</th>
+          <th class="sort n" data-k="days">Active days</th><th class="sort n" data-k="prompts">Prompts</th>
+          <th>Jun → now</th><th>Apps</th><th class="sort" data-k="move">Change</th>
+        </tr></thead>
+        <tbody id="ppl-rows"></tbody>
+      </table></div>
+      <div class="links" style="margin-top:12px"><a class="btn ghost" href="#" id="more" style="display:none">Show all</a></div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT'S USED ============ -->
+  <section class="view" id="v-usage">
+    <div class="callout">This tab is about <b>what</b> Copilot is used for. It comes from Fortify Managed Intelligence, which labels each prompt by task type as it reads it and then discards the text. No prompt text is stored or shown anywhere, and task types are reported for the firm and departments only, never for a named person.</div>
+    <div class="panel">
+      <h2>Depth of use <span class="src fmi">Managed Intelligence</span></h2>
+      <p class="hint">Fewer prompts can mean better use, so these track how people use Copilot, not just how much. July against the last 28 days.</p>
+      <div class="depth" id="depth"></div>
     </div>
     <div class="panel">
-      <h2>Recently lapsed <span class="count" id="lp-count"></span></h2>
-      <p class="hint">Used Copilot before, but not in the last 28 days.</p>
-      <table><thead><tr><th>Name</th><th>Last used</th><th>Where</th></tr></thead><tbody id="lapsed"></tbody></table>
+      <h2>What people use it for <span class="src fmi">Managed Intelligence</span></h2>
+      <p class="hint">People who did each task in the last 28 days. The marker shows July.</p>
+      <div class="legend"><span><i style="background:var(--primary)"></i>Last 28 days</span><span><i style="background:var(--warn)"></i>July</span></div>
+      <div class="bars" id="tasks"></div>
+      <p class="note" style="margin-top:8px">For Cassin we would add legal task types to Fortify's labels, such as loan document review, closing checklists, and title and survey review.</p>
     </div>
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>Go deeper</h2>
-    <p class="hint">Engagement tiers, who ramped up or cooled off, and depth of use come from Fortify's monthly adoption deck. Microsoft's own view is in Viva Insights.</p>
-    <div class="links"><a class="btn" href="#">Latest adoption deck (Fortify)</a><a class="btn ghost" href="#">Viva Copilot Dashboard</a></div>
-  </div>
-
-  <p class="note">Source: Microsoft 365 Copilot usage reports (Microsoft Graph), read live as the signed-in admin. Microsoft's data runs 2 to 3 days behind. Nothing is copied or stored on this site. Sample data shown in this preview.</p>
+  <p class="note" id="src-note">Sources: <b>Microsoft report</b> panels use Microsoft 365 Copilot usage reports (Microsoft Graph), read as the signed-in admin; monthly history comes from a snapshot the page saves each month to an admin-only list. <b>Managed Intelligence</b> panels need Fortify Managed Intelligence connected to Cassin's tenant. Microsoft's data runs 2 to 3 days behind. Sample data shown in this preview.</p>
 </div></main>
 
-<script>
-// ---- sample data shaped like Microsoft's Copilot usage reports ----
-const LICENSED = 148;
-const weeks = 26;
-const today = new Date('2026-11-02');
-const trend = Array.from({ length: weeks }, (_, i) => {
-  const d = new Date(today); d.setDate(d.getDate() - (weeks - 1 - i) * 7);
-  const t = i / (weeks - 1);
-  const active = Math.round(LICENSED * (0.38 + 0.38 * (1 - Math.pow(1 - t, 1.6))) + (i % 3 === 0 ? -3 : 2));
-  return { date: d, active: Math.min(active, LICENSED), licensed: i < 4 ? 120 + i * 7 : LICENSED };
-});
-const apps = [["Copilot Chat", 104], ["Outlook", 91], ["Word", 78], ["Teams", 66], ["Excel", 31], ["PowerPoint", 12]];
-const depts = ["Agency Lending", "Balance Sheet Lending", "CMBS", "Leasing", "Private Client", "Firm Operations"];
-const notStarted = Array.from({ length: 14 }, (_, i) => ({ name: `Sample person ${String(i + 1).padStart(2, "0")}`, dept: depts[i % depts.length] }));
-const lapsed = Array.from({ length: 8 }, (_, i) => {
-  const d = new Date(today); d.setDate(d.getDate() - 32 - i * 9);
-  return { name: `Sample person ${String(i + 21)}`, last: d, where: ["Outlook", "Copilot Chat", "Word", "Teams"][i % 4] };
-});
+<div id="pd"><div class="scrim" data-close></div><aside class="drawer" aria-label="Person detail"><div id="pd-body"></div></aside></div>
 
-// ---- tiles ----
-const now = trend[trend.length - 1], then = trend[trend.length - 13];
-const pct = (a, b) => Math.round(100 * a / b);
-const tiles = [
-  { accent: true, label: "Active last 28 days", value: `${pct(now.active, LICENSED)}%`, sub: `${now.active} of ${LICENSED} licensed people`, delta: `+${pct(now.active, LICENSED) - pct(then.active, then.licensed)} pts vs 3 months ago` },
+<script>
+// ================= sample data =================
+let seed = 20261105;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const today = new Date("2026-11-02");
+const fmtDate = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+
+const STAGES = [
+  { key: "inactive",   label: "Inactive",   range: "0 days",     c: "var(--s0)" },
+  { key: "beginner",   label: "Beginner",   range: "1–5 days",   c: "var(--s1)" },
+  { key: "developing", label: "Developing", range: "6–10 days",  c: "var(--s2)" },
+  { key: "habitual",   label: "Habitual",   range: "11–15 days", c: "var(--s3)" },
+  { key: "power",      label: "Power",      range: "16+ days",   c: "var(--s4)" },
+];
+const stageOf = d => d === 0 ? 0 : d <= 5 ? 1 : d <= 10 ? 2 : d <= 15 ? 3 : 4;
+const MONTHS = ["Jun", "Jul", "Aug", "Sep", "Oct", "Now"];   // last = last 28 days
+const MOVES = { new: "New", ramped_up: "Ramped up", steady: "Steady", cooled: "Cooled", lapsed: "Lapsed" };
+const APPS = [["Chat", "Copilot Chat", .9], ["Outlook", "Outlook", .8], ["Word", "Word", .68], ["Teams", "Teams", .58], ["Excel", "Excel", .27], ["PPT", "PowerPoint", .1]];
+const DEPTS = [["Agency Lending", 34, .35], ["Balance Sheet Lending", 30, .1], ["CMBS", 22, .25], ["Leasing", 18, 0], ["Private Client", 12, -.1], ["Firm Operations", 32, -.15]];
+const LEGAL_ROLES = [["Partner", 3, -.05], ["Associate", 8, .1], ["Paralegal", 5, .05], ["Legal assistant", 4, 0]];
+const OPS_ROLES = [["Operations", 1, 0]];
+
+// people with department and role
+const people = [];
+DEPTS.forEach(([dept, n, bias]) => {
+  const roles = dept === "Firm Operations" ? OPS_ROLES : LEGAL_ROLES;
+  const pool = roles.flatMap(([r, w, b]) => Array(w).fill([r, b]));
+  for (let i = 0; i < n; i++) {
+    const [role, rb] = pool[Math.floor(rnd() * pool.length)];
+    people.push({ dept, role, score: rnd() + bias + rb });
+  }
+});
+// assign what each person looks like now: strongest scores get the highest stages
+people.sort((a, b) => b.score - a.score);
+const plan = [[4, 18], [3, 24], [2, 34], [1, 38], ["lapsed", 20], ["never", 14]].flatMap(([k, n]) => Array(n).fill(k));
+people.forEach((p, i) => {
+  p.kind = plan[i];
+  p.name = `Sample person ${String(i + 1).padStart(3, "0")}`;
+});
+people.sort(() => rnd() - .5).forEach((p, i) => p.name = `Sample person ${String(i + 1).padStart(3, "0")}`);
+
+people.forEach(p => {
+  p.monthly = [0, 0, 0, 0, 0, 0];
+  p.apps = {};
+  if (p.kind === "never") return;
+  if (p.kind === "lapsed") {
+    const st = ri(0, 2), end = ri(st, 3);
+    for (let m = st; m <= end; m++) p.monthly[m] = ri(1, 6);
+    p.lastUsed = new Date(2026, 5 + end, ri(3, 27));
+    APPS.forEach(([s, , pr]) => { if (rnd() < pr * .7) p.apps[s] = new Date(p.lastUsed.getTime() - ri(0, 20) * 864e5); });
+    if (!Object.keys(p.apps).length) p.apps.Outlook = p.lastUsed;
+    return;
+  }
+  const cur = [0, ri(1, 5), ri(6, 10), ri(11, 15), ri(16, 21)][p.kind];
+  const st = p.kind >= 3 ? ri(0, 2) : ri(0, 4);
+  const shape = rnd() < .14 ? "cooled" : rnd() < .62 ? "ramp" : "flat";
+  for (let m = 0; m < 5; m++) {
+    if (m < st) continue;
+    const f = shape === "ramp" ? .3 + .7 * (m - st + 1) / (6 - st) : shape === "flat" ? .85 + rnd() * .3 : 1.7 - .12 * m;
+    p.monthly[m] = clamp(Math.round(cur * f + ri(-1, 1)), 1, 22);
+  }
+  p.monthly[5] = cur;
+  p.prompts = cur * (p.kind === 4 ? ri(6, 12) : ri(3, 8));
+  APPS.forEach(([s, , pr]) => { if (rnd() < clamp(pr + (p.kind - 2) * .12, .03, .98)) p.apps[s] = new Date(today.getTime() - ri(2, Math.max(3, 30 - cur)) * 864e5); });
+  if (!Object.keys(p.apps).length) p.apps.Chat = new Date(today.getTime() - 5 * 864e5);
+  p.lastUsed = new Date(Math.max(...Object.values(p.apps)));
+});
+people.forEach(p => {
+  p.days = p.monthly[5];
+  p.prompts = p.prompts || 0;
+  p.stage = stageOf(p.days);
+  const base = stageOf(Math.round((p.monthly[0] + p.monthly[1]) / 2)), now = p.stage;
+  p.move = base === 0 && now === 0 ? null : base === 0 ? "new" : now === 0 ? "lapsed" : now > base ? "ramped_up" : now < base ? "cooled" : "steady";
+});
+const LICENSED = people.length;
+const active = people.filter(p => p.days > 0);
+const notStarted = people.filter(p => p.kind === "never");
+const lapsedList = people.filter(p => p.kind === "lapsed").sort((a, b) => b.lastUsed - a.lastUsed);
+
+// ================= helpers =================
+const $ = id => document.getElementById(id);
+const stagePill = s => `<span class="stg" style="--c:${STAGES[s].c}"><i></i>${STAGES[s].label}</span>`;
+const movePill = m => m ? `<span class="mv ${m}">${MOVES[m]}</span>` : `<span class="mv steady">–</span>`;
+const appChips = p => `<span class="apps">${APPS.map(([s, full]) => `<b class="${p.apps[s] && p.days ? "on" : ""}" title="${full}">${s === "Outlook" ? "O" : s === "Chat" ? "C" : s === "Word" ? "W" : s === "Teams" ? "T" : s === "Excel" ? "X" : "P"}</b>`).join("")}</span>`;
+const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
+const stackBar = group => `<div class="stack" title="${STAGES.map((s, i) => `${s.label}: ${group.filter(p => p.stage === i).length}`).join(", ")}">${STAGES.map((s, i) => { const n = group.filter(p => p.stage === i).length; return n ? `<span style="width:${100 * n / group.length}%;background:${s.c}"></span>` : ""; }).join("")}</div>`;
+function spark(p) {
+  const W = 84, H = 22, bw = 11, gap = 3;
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-label="Active days by month">${p.monthly.map((d, i) => {
+    const h = d ? Math.max(2, Math.round(H * Math.min(d, 21) / 21)) : 1;
+    return `<rect x="${i * (bw + gap)}" y="${H - h}" width="${bw}" height="${h}" fill="${d ? STAGES[stageOf(d)].c : "#E1E5EA"}"/>`;
+  }).join("")}</svg>`;
+}
+
+// ================= overview =================
+const trendWeeks = 26;
+const trend = Array.from({ length: trendWeeks }, (_, i) => {
+  const d = new Date(today); d.setDate(d.getDate() - (trendWeeks - 1 - i) * 7);
+  const t = i / (trendWeeks - 1);
+  const a = i === trendWeeks - 1 ? active.length : Math.round(LICENSED * (0.38 + 0.38 * (1 - Math.pow(1 - t, 1.6))) + (i % 3 === 0 ? -3 : 2));
+  return { date: d, active: Math.min(a, LICENSED), licensed: i < 4 ? 120 + i * 7 : LICENSED };
+});
+const now = trend[trendWeeks - 1], then = trend[trendWeeks - 13];
+$("tiles").innerHTML = [
+  { accent: true, label: "Active last 28 days", value: `${pct(active.length, LICENSED)}%`, sub: `${active.length} of ${LICENSED} licensed people`, delta: `+${pct(now.active, LICENSED) - pct(then.active, then.licensed)} pts vs 3 months ago` },
   { label: "Licensed", value: LICENSED, sub: "Microsoft 365 Copilot licenses assigned" },
   { label: "Not started", value: notStarted.length, sub: "Licensed, never used" },
-  { label: "Recently lapsed", value: lapsed.length, sub: "No activity in 28 days" },
-];
-document.getElementById("tiles").innerHTML = tiles.map(t => `<div class="tile${t.accent ? " accent" : ""}"><div class="label">${t.label}</div><div class="value">${t.value}</div><div class="sub">${t.sub}</div>${t.delta ? `<div class="delta up">▲ ${t.delta}</div>` : ""}</div>`).join("");
+  { label: "Recently lapsed", value: lapsedList.length, sub: "No activity in 28 days" },
+].map(t => `<div class="tile${t.accent ? " accent" : ""}"><div class="label">${t.label}</div><div class="value">${t.value}</div><div class="sub">${t.sub}</div>${t.delta ? `<div class="delta up">▲ ${t.delta}</div>` : ""}</div>`).join("");
 
-// ---- trend chart (inline SVG) ----
 function drawTrend() {
-  const el = document.getElementById("trend"); const W = el.clientWidth || 700, H = 260, P = { l: 36, r: 12, t: 10, b: 28 };
-  const x = i => P.l + (W - P.l - P.r) * i / (weeks - 1);
+  const el = $("trend"); const W = el.clientWidth || 700, H = 260, P = { l: 36, r: 12, t: 10, b: 28 };
+  const x = i => P.l + (W - P.l - P.r) * i / (trendWeeks - 1);
   const y = v => P.t + (H - P.t - P.b) * (1 - v / 160);
   const line = k => trend.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join("");
-  const area = line("active") + `L${x(weeks - 1)},${y(0)}L${x(0)},${y(0)}Z`;
+  const area = line("active") + `L${x(trendWeeks - 1)},${y(0)}L${x(0)},${y(0)}Z`;
   const grid = [0, 40, 80, 120, 160].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#E4E1DD"/><text x="${P.l - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="#6E7C8C">${v}</text>`).join("");
-  const labels = trend.map((p, i) => (i % 4 === 0 && i < weeks - 3) || i === weeks - 1 ? `<text x="${x(i)}" y="${H - 8}" font-size="11" text-anchor="middle" fill="#6E7C8C">${p.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</text>` : "").join("");
-  const last = trend[weeks - 1];
+  const labels = trend.map((p, i) => (i % 4 === 0 && i < trendWeeks - 3) || i === trendWeeks - 1 ? `<text x="${x(i)}" y="${H - 8}" font-size="11" text-anchor="middle" fill="#6E7C8C">${fmtDate(p.date)}</text>` : "").join("");
+  const last = trend[trendWeeks - 1];
   el.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Active users trend">
     ${grid}<path d="${area}" fill="#00426C" fill-opacity=".10"/>
     <path d="${line("licensed")}" fill="none" stroke="#C7D5DF" stroke-width="2" stroke-dasharray="5 4"/>
     <path d="${line("active")}" fill="none" stroke="#00426C" stroke-width="2.5"/>
-    <circle cx="${x(weeks - 1)}" cy="${y(last.active)}" r="4.5" fill="#00426C"/>
-    <text x="${x(weeks - 1) - 8}" y="${y(last.active) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${last.active} active</text>
+    <circle cx="${x(trendWeeks - 1)}" cy="${y(last.active)}" r="4.5" fill="#00426C"/>
+    <text x="${x(trendWeeks - 1) - 8}" y="${y(last.active) - 10}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C">${last.active} active</text>
     ${labels}</svg>`;
 }
-drawTrend(); window.addEventListener("resize", drawTrend);
+const appCounts = APPS.map(([s, full]) => [full, active.filter(p => p.apps[s]).length]).sort((a, b) => b[1] - a[1]);
+$("apps").innerHTML = appCounts.map(([a, n]) => `<div class="row"><span>${a}</span><div class="track"><div class="fill" style="width:${pct(n, LICENSED)}%"></div></div><span class="num">${n} · ${pct(n, LICENSED)}%</span></div>`).join("");
+$("ns-count").textContent = `(${notStarted.length})`;
+$("lp-count").textContent = `(${lapsedList.length})`;
+const rowLink = p => `class="click" data-p="${people.indexOf(p)}"`;
+$("notstarted").innerHTML = notStarted.slice(0, 8).map(p => `<tr ${rowLink(p)}><td>${p.name}</td><td><span class="pill">${p.dept}</span></td></tr>`).join("") + `<tr><td colspan="2" style="color:#6E7C8C">+ ${notStarted.length - 8} more on the People tab</td></tr>`;
+$("lapsed").innerHTML = lapsedList.slice(0, 8).map(p => `<tr ${rowLink(p)}><td>${p.name}</td><td>${fmtDate(p.lastUsed)}</td><td>${APPS.find(a => a[0] === Object.keys(p.apps)[0])[1]}</td></tr>`).join("") + `<tr><td colspan="3" style="color:#6E7C8C">+ ${lapsedList.length - 8} more on the People tab</td></tr>`;
 
-// ---- app bars ----
-document.getElementById("apps").innerHTML = apps.map(([a, n]) => `<div class="row"><span>${a}</span><div class="track"><div class="fill" style="width:${pct(n, LICENSED)}%"></div></div><span class="num">${n} · ${pct(n, LICENSED)}%</span></div>`).join("");
+// ================= habits =================
+const stageCount = m => STAGES.map((_, s) => people.filter(p => stageOf(p.monthly[m]) === s).length);
+const nowCounts = stageCount(5), julCounts = stageCount(1);
+$("stage-tiles").innerHTML = STAGES.map((s, i) => {
+  const d = nowCounts[i] - julCounts[i];
+  const good = i === 0 ? d < 0 : d > 0;
+  return `<div class="tile stage" style="--c:${s.c}"><div class="label">${s.label}</div><div class="value">${nowCounts[i]}</div><div class="sub">${s.range} · ${pct(nowCounts[i], LICENSED)}%</div><div class="delta ${good ? "up" : "down"}">${d >= 0 ? "▲" : "▼"} ${Math.abs(d)} since July</div></div>`;
+}).join("");
+$("stage-legend").innerHTML = STAGES.map(s => `<span><i style="background:${s.c}"></i>${s.label} <span style="color:var(--faint)">${s.range}</span></span>`).join("");
 
-// ---- lists ----
-document.getElementById("ns-count").textContent = `(${notStarted.length})`;
-document.getElementById("lp-count").textContent = `(${lapsed.length})`;
-document.getElementById("notstarted").innerHTML = notStarted.slice(0, 8).map(p => `<tr><td>${p.name}</td><td><span class="pill">${p.dept}</span></td></tr>`).join("") + `<tr><td colspan="2" style="color:#6E7C8C">+ ${notStarted.length - 8} more</td></tr>`;
-document.getElementById("lapsed").innerHTML = lapsed.map(p => `<tr><td>${p.name}</td><td>${p.last.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td><td>${p.where}</td></tr>`).join("");
+function drawMonthly() {
+  const el = $("monthly"); const W = el.clientWidth || 700, H = 280, P = { l: 36, r: 12, t: 10, b: 28 };
+  const cols = MONTHS.length, slot = (W - P.l - P.r) / cols, bw = Math.min(64, slot * .62);
+  const y = v => P.t + (H - P.t - P.b) * (1 - v / LICENSED);
+  const grid = [0, 50, 100, 148].map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#E4E1DD"/><text x="${P.l - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="#6E7C8C">${v}</text>`).join("");
+  let bars = "";
+  MONTHS.forEach((m, i) => {
+    const counts = stageCount(i); let acc = 0;
+    const x = P.l + slot * i + (slot - bw) / 2;
+    counts.forEach((n, s) => {
+      if (!n) return;
+      const y0 = y(acc), y1 = y(acc + n);
+      bars += `<rect x="${x}" y="${y1}" width="${bw}" height="${Math.max(0, y0 - y1 - 1)}" fill="${STAGES[s].c}"><title>${m}: ${STAGES[s].label} ${n}</title></rect>`;
+      acc += n;
+    });
+    const habitual = counts[3] + counts[4];
+    bars += `<text x="${x + bw / 2}" y="${H - 8}" font-size="11.5" text-anchor="middle" fill="#3B5068" font-weight="${i === cols - 1 ? 600 : 400}">${i === cols - 1 ? "Last 28 days" : m}</text>`;
+    if (y(LICENSED - habitual) - y(LICENSED) >= 18) bars += `<text x="${x + bw / 2}" y="${y(LICENSED - habitual / 2) + 4}" font-size="11.5" text-anchor="middle" fill="#fff" font-weight="600">${habitual}</text>`;
+  });
+  el.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Habit stages by month">${grid}${bars}</svg>
+    <p class="hint" style="margin:6px 0 0">The number on each bar is people at Habitual or Power.</p>`;
+}
+const moveCounts = Object.keys(MOVES).map(k => [k, people.filter(p => p.move === k).length]);
+const moveMax = Math.max(...moveCounts.map(m => m[1]));
+$("movement").innerHTML = moveCounts.map(([k, n]) => `<div class="row" style="grid-template-columns:90px 1fr 40px"><span class="mv ${k}">${MOVES[k]}</span><div class="track"><div class="fill" style="width:${100 * n / moveMax}%;background:${{ new: "var(--blue)", ramped_up: "var(--good)", steady: "var(--soft-line)", cooled: "var(--warn)", lapsed: "var(--bad)" }[k]}"></div></div><span class="num">${n}</span></div>`).join("")
+  + `<p class="hint" style="margin-top:14px">Select a group on the People tab to see who.</p>`;
+
+// ================= departments =================
+const TOP_USE = { "Agency Lending": "Client email draft", "Balance Sheet Lending": "Document summarization", "CMBS": "Table extraction", "Leasing": "Contract clause review", "Private Client": "Email summarization", "Firm Operations": "Rewrite / tone polish" };
+function groupRows(key, withExtras) {
+  const groups = {};
+  people.forEach(p => (groups[p[key]] = groups[p[key]] || []).push(p));
+  return Object.entries(groups).sort((a, b) => pct(b[1].filter(p => p.stage >= 3).length, b[1].length) - pct(a[1].filter(p => p.stage >= 3).length, a[1].length)).map(([name, g]) => {
+    const act = g.filter(p => p.days), hab = g.filter(p => p.stage >= 3);
+    const julAct = g.filter(p => p.monthly[1]).length;
+    const d = pct(act.length, g.length) - pct(julAct, g.length);
+    const base = `<td>${name}</td><td class="n">${g.length}</td><td class="n">${pct(act.length, g.length)}%</td><td>${stackBar(g)}</td><td class="n">${pct(hab.length, g.length)}%</td><td class="n">${median(act.map(p => p.days))}</td>`;
+    if (!withExtras) return `<tr>${base}</tr>`;
+    const ppp = act.length ? Math.round(act.reduce((s, p) => s + p.prompts, 0) / act.length) : 0;
+    return `<tr>${base}<td class="n">${ppp}</td><td><span class="pill">${TOP_USE[name] || "–"}</span></td><td class="n"><span class="delta ${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : ""}${d} pts</span></td></tr>`;
+  }).join("");
+}
+$("dept-rows").innerHTML = groupRows("dept", true);
+$("role-rows").innerHTML = groupRows("role", false);
+
+// ================= people =================
+const fill = (id, opts) => $(id).insertAdjacentHTML("beforeend", opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join(""));
+fill("f-dept", DEPTS.map(([d]) => [d, d]));
+fill("f-stage", STAGES.map((s, i) => [i, s.label]));
+fill("f-move", Object.entries(MOVES));
+let sortKey = "days", sortDir = -1, showAll = false;
+const moveRank = { ramped_up: 0, new: 1, steady: 2, cooled: 3, lapsed: 4 };
+function renderPeople() {
+  const q = $("q").value.trim().toLowerCase(), fd = $("f-dept").value, fs = $("f-stage").value, fm = $("f-move").value;
+  let rows = people.filter(p => (!q || p.name.toLowerCase().includes(q)) && (!fd || p.dept === fd) && (fs === "" || p.stage === +fs) && (!fm || p.move === fm));
+  const val = p => sortKey === "name" ? p.name : sortKey === "stage" ? p.stage * 100 + p.days : sortKey === "move" ? -(moveRank[p.move] ?? 9) : p[sortKey];
+  rows.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sortDir);
+  $("ppl-count").textContent = `(${rows.length})`;
+  const shown = showAll ? rows : rows.slice(0, 15);
+  $("ppl-rows").innerHTML = shown.map(p => `<tr ${rowLink(p)}><td>${p.name}</td><td><span class="pill">${p.dept}</span></td><td>${p.role}</td><td>${stagePill(p.stage)}</td><td class="n">${p.days}</td><td class="n">${p.prompts || 0}</td><td>${spark(p)}</td><td>${appChips(p)}</td><td>${movePill(p.move)}</td></tr>`).join("")
+    || `<tr><td colspan="9" style="color:#6E7C8C">No one matches.</td></tr>`;
+  $("more").style.display = rows.length > 15 && !showAll ? "inline-block" : "none";
+  $("more").textContent = `Show all ${rows.length}`;
+}
+["q", "f-dept", "f-stage", "f-move"].forEach(id => $(id).addEventListener("input", () => { showAll = false; renderPeople(); }));
+document.querySelectorAll("th.sort").forEach(th => th.addEventListener("click", () => {
+  sortDir = sortKey === th.dataset.k ? -sortDir : (th.dataset.k === "name" ? 1 : -1); sortKey = th.dataset.k; renderPeople();
+}));
+$("more").addEventListener("click", e => { e.preventDefault(); showAll = true; renderPeople(); });
+
+// ================= person drawer =================
+function nextStep(p) {
+  const has = s => !!p.apps[s];
+  if (p.kind === "never") return "Hasn't tried Copilot yet. Send the Get Started page, or offer 15 minutes with someone from the AI Working Group.";
+  if (p.days === 0) return `Last used ${fmtDate(p.lastUsed)}. A quick check-in often finds a blocker. Share this week's Friday Tip as a reason to try it again.`;
+  if (p.stage === 4) return "Uses Copilot most working days. A good candidate to share prompts in the Prompt Library or join the AI Working Group.";
+  if (!has("Word")) return "Not using Copilot in Word yet. Point them to the drafting and summarizing prompts in the Prompt Library.";
+  if (!has("Outlook")) return "Not using Copilot in Outlook yet. Summarizing long threads is the quickest win for most people at the firm.";
+  if (p.move === "cooled") return "Using it less than in the summer. Worth asking what changed; a Demo Video for their practice area may help.";
+  if (p.stage <= 2) return "Uses it some weeks. The Friday Tips archive is a good way to build a weekly habit.";
+  return "Using it regularly. Nothing needed.";
+}
+function openPerson(p) {
+  const H = 120, W = 400, bw = 46, gap = 18, T = 18;
+  const chart = `<svg width="100%" viewBox="0 -${T} ${W} ${H + 22 + T}" role="img" aria-label="Active days by month">
+    ${[0, 10, 20].map(v => `<line x1="0" x2="${W}" y1="${H - H * v / 22}" y2="${H - H * v / 22}" stroke="#E4E1DD"/>`).join("")}
+    ${p.monthly.map((d, i) => { const h = Math.max(1, H * d / 22), x = 8 + i * (bw + gap); return `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" fill="${d ? STAGES[stageOf(d)].c : "#E1E5EA"}"/><text x="${x + bw / 2}" y="${H - h - 5}" font-size="12" text-anchor="middle" fill="#021D3C">${d}</text><text x="${x + bw / 2}" y="${H + 16}" font-size="11.5" text-anchor="middle" fill="#6E7C8C">${i === 5 ? "Now" : MONTHS[i]}</text>`; }).join("")}
+  </svg>`;
+  const apps = APPS.filter(([s]) => p.apps[s]).map(([s, full]) => `<tr><td>${full}</td><td class="n">${fmtDate(p.apps[s])}</td></tr>`).join("") || `<tr><td colspan="2" style="color:#6E7C8C">No Copilot activity</td></tr>`;
+  $("pd-body").innerHTML = `
+    <div class="hd"><button class="x" data-close aria-label="Close">×</button><h3>${p.name}</h3><p>${p.role} · ${p.dept}</p>
+      <div class="hdtags"><span class="stg" style="--c:${STAGES[p.stage].c}"><i></i>${STAGES[p.stage].label}</span>${p.move ? `<span class="mv ${p.move}">${MOVES[p.move]} since summer</span>` : ""}</div></div>
+    <div class="bd">
+      <div class="mini"><div><div class="v">${p.days}</div><div class="k">Active days (28)</div></div><div><div class="v">${p.prompts || 0}</div><div class="k">Prompts (28)</div></div><div><div class="v">${Object.keys(p.apps).length && p.days ? Object.keys(p.apps).length : 0}</div><div class="k">Apps used</div></div></div>
+      <h4>Active days by month</h4>${chart}
+      <h4>Last used, by app</h4><table>${apps}</table>
+      <h4>Suggested next step</h4><div class="next">${nextStep(p)}</div>
+      <p class="private">What ${p.name} asks Copilot isn't shown here. Task types are reported for the firm and departments only.</p>
+    </div>`;
+  $("pd").classList.add("open");
+}
+document.addEventListener("click", e => {
+  const r = e.target.closest("tr.click"); if (r) return openPerson(people[+r.dataset.p]);
+  if (e.target.closest("[data-close]")) $("pd").classList.remove("open");
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("pd").classList.remove("open"); });
+
+// ================= how it's used =================
+const promptsNow = active.reduce((s, p) => s + p.prompts, 0);
+const hours = Math.round(promptsNow * .8 * 6 / 60);
+$("depth").innerHTML = [
+  ["Grounded prompts", "41%", "29%", "Prompts that point Copilot at a specific file, email or meeting"],
+  ["Apps per person", "2.7", "2.1", "Copilot apps each active person uses"],
+  ["Task types per person", "3.6", "2.4", "Different kinds of work each person uses it for"],
+  ["Time assisted", `${hours}<small> hrs</small>`, null, "Estimate: 6 minutes per substantive prompt, Microsoft's factor. Firm-wide only."],
+].map(([k, v, was, d]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="d">${was ? `<span class="delta up">▲ from ${was} in July</span><br>` : ""}${d}</div></div>`).join("");
+const TASKS = [["Email summarization", 78, 52], ["Client email draft", 64, 40], ["Document summarization", 61, 37], ["Rewrite / tone polish", 47, 33], ["Contract clause review", 39, 18], ["Meeting recap", 34, 29], ["Table extraction", 22, 11], ["Definitions and research", 20, 15], ["Scheduling", 14, 12]];
+$("tasks").innerHTML = TASKS.map(([t, n, was]) => `<div class="row" style="grid-template-columns:180px 1fr 90px"><span>${t}</span><div class="track"><div class="fill" style="width:${pct(n, active.length)}%"></div><div class="ghost" style="left:0;width:${pct(was, active.length)}%"></div></div><span class="num">${n} people</span></div>`).join("");
+
+// ================= tabs =================
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.view));
+  draw();
+}));
+function draw() { drawTrend(); drawMonthly(); }
+renderPeople(); draw();
+window.addEventListener("resize", draw);
 </script>
 </body>
 </html>
