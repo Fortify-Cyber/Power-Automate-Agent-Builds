@@ -96,7 +96,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
       })
       .catch(err => {
         const section = SECTIONS.find(s => s.key === this.properties.section);
-        const msg = err instanceof AdoptionError ? this._adoptionMessage(err)
+        const isAdoption = err instanceof AdoptionError || (err as { isAdoptionError?: boolean })?.isAdoptionError === true;
+        const msg = isAdoption ? this._adoptionMessage(err as AdoptionError)
           : err instanceof ListNotFoundError
           ? `Couldn't find the ${section?.list.replace('Lists/', '')} list on this site. This web part only works on the Cassin AI Hub site.`
           : "Couldn't load this section. Refresh the page; if it keeps happening, tell the AI Working Group.";
@@ -195,7 +196,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     if (err.kind === 'role') {
       return "Microsoft only shows Copilot usage reports to people with a reports role. Ask an IT admin to give your account the Reports Reader role in Microsoft Entra ID (it can take an hour to apply), then reload this page.";
     }
-    return "Couldn't load Microsoft's Copilot usage reports. Refresh the page; if it keeps happening, tell Fortify Cyber.";
+    // Unexpected: show a short reason so it can be reported (the message is escaped by R.empty).
+    return `Couldn't load Microsoft's Copilot usage reports. Refresh the page; if it keeps happening, tell Fortify Cyber and include this: ${String(err.message || '').slice(0, 200)}`;
   }
 
   protected onDispose(): void {

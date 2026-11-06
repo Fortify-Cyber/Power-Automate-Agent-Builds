@@ -54,7 +54,13 @@ export const LISTS = {
   waiting: 'Lists/WaitingOnCassin'
 } as const;
 
-export class ListNotFoundError extends Error {}
+// See AdoptionError: restore the prototype so instanceof works under ES5.
+export class ListNotFoundError extends Error {
+  public constructor(message?: string) {
+    super(message);
+    Object.setPrototypeOf(this, ListNotFoundError.prototype);
+  }
+}
 
 export class HubData {
   public constructor(private readonly _http: SPHttpClient, private readonly _webUrl: string,

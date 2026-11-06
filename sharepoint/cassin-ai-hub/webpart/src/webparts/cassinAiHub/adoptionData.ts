@@ -16,8 +16,14 @@ import {
 
 export const HISTORY_LIST = 'Lists/CopilotAdoptionHistory';
 
+// The web part compiles to ES5, where a subclass of Error loses its prototype (instanceof
+// fails), so restore it; the web part also checks `kind` rather than relying on instanceof.
 export class AdoptionError extends Error {
-  public constructor(message: string, public readonly kind: 'consent' | 'role' | 'other') { super(message); }
+  public readonly isAdoptionError = true;
+  public constructor(message: string, public readonly kind: 'consent' | 'role' | 'other') {
+    super(message);
+    Object.setPrototypeOf(this, AdoptionError.prototype);
+  }
 }
 
 const REPORTS = '/copilot/reports';
