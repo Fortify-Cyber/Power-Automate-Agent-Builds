@@ -114,6 +114,7 @@ export const CSS = `
 .cah .ad-tabs button:hover { color:var(--navy); }
 .cah .ad-tabs button.on { color:var(--navy); border-bottom-color:var(--blue); font-weight:600; }
 .cah .ad section[hidden], .cah .ad [hidden] { display:none !important; }
+.cah .ad-info { background:var(--soft); border-left:4px solid var(--primary); padding:10px 16px; font-size:14px; margin-bottom:16px; color:var(--muted); }
 .cah .ad-warn { background:#FBF3E4; border-left:4px solid var(--warn); padding:12px 16px; font-size:14.5px; margin-bottom:16px; }
 .cah .ad-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
 .cah .ad-tiles.five { grid-template-columns:repeat(5,1fr); }

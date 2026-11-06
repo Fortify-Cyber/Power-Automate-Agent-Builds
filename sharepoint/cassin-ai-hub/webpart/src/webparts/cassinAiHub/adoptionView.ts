@@ -24,7 +24,8 @@ export class AdoptionView {
   private _root: HTMLElement | undefined;
   private readonly _onResize = (): void => this._drawCharts();
 
-  public constructor(private readonly _m: IAdoption, private readonly _saved: boolean) {}
+  public constructor(private readonly _m: IAdoption, private readonly _saved: boolean,
+                     private readonly _src: { source: 'live' | 'stored'; savedAt?: string; shared: boolean } = { source: 'live', shared: false }) {}
 
   public html(): string {
     const m = this._m;
@@ -35,11 +36,12 @@ export class AdoptionView {
           `<button type="button" role="tab" data-ad-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('')}</div>
       </div>
       ${m.namesHidden ? `<div class="ad-warn"><b>Names are hidden in Microsoft's reports.</b> Microsoft 365 is set to conceal user names in usage reports, so people can't be matched to names or job titles. A Global Admin can change this in the Microsoft 365 admin center: <b>Settings → Org settings → Services → Reports</b>, then clear <b>Display concealed user, group, and site names in all reports</b>. Monthly history isn't saved while names are hidden.</div>` : ''}
+      ${this._src.source === 'stored' ? `<div class="ad-info">Microsoft's figures up to ${m.refresh ? longDate(m.refresh) : 'the last saved date'}${this._src.savedAt && /^\d{4}-\d{2}-\d{2}/.test(this._src.savedAt) ? `, saved ${longDate(this._src.savedAt.slice(0, 10))}` : ''}. They're refreshed whenever an account that can read Microsoft's usage reports (such as AI Admin) opens this page.</div>` : ''}
       <section data-ad-view="overview" ${this._tab === 'overview' ? '' : 'hidden'}>${this._overview()}</section>
       <section data-ad-view="habits" ${this._tab === 'habits' ? '' : 'hidden'}>${this._habits()}</section>
       <section data-ad-view="roles" ${this._tab === 'roles' ? '' : 'hidden'}>${this._roles()}</section>
       <section data-ad-view="people" ${this._tab === 'people' ? '' : 'hidden'}>${this._peopleShell()}</section>
-      <p class="ad-note">Source: Microsoft 365 Copilot usage reports and Entra ID (names and job titles) through Microsoft Graph, read as you.
+      <p class="ad-note">Source: Microsoft 365 Copilot usage reports and Entra ID (names and job titles) through Microsoft Graph, ${this._src.source === 'live' ? `read as you${this._src.shared ? ' and saved for the other admins' : ''}` : 'as saved for admins'}.
         ${m.refresh ? `Microsoft's data is up to ${longDate(m.refresh)}.` : ''}
         Monthly history is saved to the admin-only Copilot Adoption History list on this site${this._saved ? ' (this month\'s was just saved)' : ''}.
         Everything stays in Cassin's Microsoft 365. This page counts usage only; it never reads what anyone asks Copilot.</p>

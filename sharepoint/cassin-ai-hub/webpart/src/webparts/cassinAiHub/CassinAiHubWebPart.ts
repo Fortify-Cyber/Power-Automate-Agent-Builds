@@ -139,8 +139,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
       case 'adoption': {
         const web = this.context.pageContext.web;
         return new AdoptionData(this.context.msGraphClientFactory, this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl)
-          .load().then(({ model, saved }) => {
-            this._adoption = new AdoptionView(model, saved);
+          .load().then(({ model, saved, source, savedAt, shared }) => {
+            this._adoption = new AdoptionView(model, saved, { source, savedAt, shared });
             return this._adoption.html();
           });
       }
@@ -192,6 +192,9 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     console.error('Cassin AI Hub adoption', err.message);
     if (err.kind === 'consent') {
       return "This page can't read Microsoft's Copilot reports yet. A SharePoint admin needs to approve the web part's Microsoft Graph access: SharePoint admin center → Advanced → API access, then approve Reports.Read.All and User.Read.All for Cassin AI Hub web part.";
+    }
+    if (err.kind === 'nodata') {
+      return "No Copilot figures have been saved here yet. They're saved the first time an account that can read Microsoft's usage reports (such as AI Admin) opens this page; after that, everyone who can open this page sees them.";
     }
     if (err.kind === 'role') {
       return "Microsoft only shows Copilot usage reports to people with a reports role. Ask an IT admin to give your account the Reports Reader role in Microsoft Entra ID (it can take an hour to apply), then reload this page.";

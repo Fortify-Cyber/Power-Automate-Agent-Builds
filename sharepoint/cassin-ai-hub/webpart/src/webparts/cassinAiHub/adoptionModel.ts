@@ -296,6 +296,46 @@ function cleanSnapshot(s: ISnapshot): ISnapshot | null {
   return { month: s.month, refresh: String(s.refresh || ''), licensed: num(s.licensed), people, id: s.id };
 }
 
+/**
+ * The figures an account with Microsoft's reports access saves for everyone else who can open
+ * the page (owners, AI Hub Admins), so they don't each need that access in Entra ID. Read
+ * back from a list admins can edit, so every value is checked before use.
+ */
+export interface IStoredAdoption {
+  v: 1; savedAt: string; usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[]; directory: IDirectoryUser[];
+}
+
+const APP_BY_KEY: Record<string, IApp> = {};
+APP_RULES.forEach(([, a]) => { APP_BY_KEY[a.key] = a; });
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+const num = (v: unknown): number | null => { const n = asNumber(v); return n === null ? null : Math.max(0, Math.min(n, 1e7)); };
+
+function cleanReport(r: unknown): IUsageReport | null {
+  const x = r as Partial<IUsageReport> | null;
+  if (!x || !Array.isArray(x.rows)) return null;
+  const rows: IUsage[] = x.rows.map(u => {
+    const apps: Record<string, string> = {};
+    const raw = (u && typeof u.apps === 'object' && u.apps) || {};
+    Object.keys(raw).forEach(k => { const d = asDate((raw as Record<string, unknown>)[k]); if (APP_BY_KEY[k] && d) apps[k] = d; });
+    return { upn: str(u?.upn), name: str(u?.name), refresh: asDate(u?.refresh), last: asDate(u?.last), apps, days: num(u?.days), prompts: num(u?.prompts) };
+  }).filter(u => u.upn);
+  const apps = (Array.isArray(x.apps) ? x.apps : []).map(a => APP_BY_KEY[str((a as IApp)?.key)]).filter((a): a is IApp => !!a);
+  return { rows, apps, refresh: asDate(x.refresh), hasDays: x.hasDays === true, hasPrompts: x.hasPrompts === true, fields: [] };
+}
+
+export function cleanStored(raw: unknown): IStoredAdoption | null {
+  const x = raw as Partial<IStoredAdoption> | null;
+  if (!x || x.v !== 1) return null;
+  const usage28 = cleanReport(x.usage28);
+  if (!usage28) return null;
+  const trend = (Array.isArray(x.trend) ? x.trend : []).map(t => {
+    const date = asDate(t?.date), active = num(t?.active);
+    return date && active !== null ? { date, active, enabled: num(t?.enabled) ?? 0, prompts: num(t?.prompts) } : null;
+  }).filter((t): t is ITrendPoint => !!t);
+  const directory = (Array.isArray(x.directory) ? x.directory : []).map(d => ({ upn: str(d?.upn), name: str(d?.name), title: str(d?.title) })).filter(d => d.upn);
+  return { v: 1, savedAt: str(x.savedAt), usage28, usage180: cleanReport(x.usage180), trend, directory };
+}
+
 export interface IAdoptionInput {
   usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[];
   directory: IDirectoryUser[]; snapshots: ISnapshot[]; maxMonths?: number;
