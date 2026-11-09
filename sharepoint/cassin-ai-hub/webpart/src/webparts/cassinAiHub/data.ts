@@ -7,6 +7,8 @@ export interface ILink { Url: string; Description: string }
 export interface IPrompt {
   Id: number; Title: string; PromptText: string; Category: string; Practice: string;
   WorksIn: string[]; HowToUse: string; WatchOuts: string; Featured: boolean;
+  /** Set for prompts that come from a Friday tip rather than the Prompt Library list. */
+  Source?: { label: string; url: string; tip: number };
 }
 export interface ITip {
   Id: number; Title: string; TipNumber: number; TipDate: string; WorksWith: string;

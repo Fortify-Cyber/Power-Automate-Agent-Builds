@@ -133,7 +133,7 @@ How it fits together:
 
 | Task | How |
 |---|---|
-| Add this week's Friday tip | Friday Tips → **+ New**. Fill in Tip #, Sent on, prompt and video. Home shows the newest tip automatically |
+| Add this week's Friday tip | Friday Tips → **+ New**. Fill in Tip #, Sent on, prompt and video. Home shows the newest tip automatically, and its prompt appears in the Prompt Library under **From Friday Tips** (no need to add it there too) |
 | Approve a submitted prompt | Prompt Library → view **Approve/reject items** → select → **Approve** |
 | Feature a prompt on Home | Edit the prompt and tick **Featured** (Home shows up to six) |
 | Answer feedback | Hub Feedback → set **Status** and **Our response**. The submitter sees both |

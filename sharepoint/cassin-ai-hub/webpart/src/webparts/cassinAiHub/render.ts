@@ -41,7 +41,7 @@ export function empty(text: string): string {
 export function promptCard(p: IPrompt, clamp = false): string {
   return `<article class="card">
     <h4>${esc(p.Title)}</h4>
-    <div class="meta"><span class="chip">${esc(p.Category)}</span>${p.WorksIn.map(w => `<span class="chip n">${esc(w)}</span>`).join('')}</div>
+    <div class="meta">${p.Source ? `<a class="chip tipchip" href="${esc(p.Source.url)}">${esc(p.Source.label)}</a>` : `<span class="chip">${esc(p.Category)}</span>`}${p.WorksIn.map(w => `<span class="chip n">${esc(w)}</span>`).join('')}</div>
     <p class="prompt">${clamp ? `<span class="clamp">${esc(p.PromptText)}</span>` : esc(p.PromptText)}</p>
     ${p.HowToUse || p.WatchOuts ? `<details class="more"><summary>How to use it</summary>
       ${p.HowToUse ? `<p>${esc(p.HowToUse)}</p>` : ''}
@@ -59,8 +59,37 @@ export function featuredPrompts(prompts: IPrompt[], libraryUrl: string, max: num
 
 export interface IPromptFilter { q: string; cat: string }
 
+// A tip's numbered steps, one per line.
+const steps = (s: string): string[] => (s || '').split(/\r?\n/).map(x => x.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
+
+/** The Prompt Library's filter for prompts that come from Friday tips. */
+export const TIP_CATEGORY = 'From Friday Tips';
+
+// The Prompt Library plus every Friday tip's prompt, so nobody has to copy tips over. A tip
+// whose prompt is already in the library (same title, or the same opening words) isn't added
+// again; that library prompt gets the tip's badge instead. Other tips are added under
+// "From Friday Tips". The "From Friday Tips" filter shows every prompt that came from a tip.
+export function withTipPrompts(library: IPrompt[], tips: ITip[], tipsPageUrl: string): IPrompt[] {
+  const norm = (t: string): string => (t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const source = (t: ITip): { label: string; url: string; tip: number } =>
+    ({ label: `Friday Tip #${t.TipNumber ?? ''}${t.TipDate ? ' · ' + shortDate(t.TipDate) : ''}`, url: tipsPageUrl, tip: Number(t.TipNumber) || 0 });
+  const out = library.map(p => ({ ...p }));
+  const added: IPrompt[] = [];
+  tips.filter(t => t.TipPrompt).forEach(t => {
+    const match = out.find(p => norm(p.Title) === norm(t.Title) || norm(p.PromptText).slice(0, 80) === norm(t.TipPrompt).slice(0, 80));
+    if (match) { if (!match.Source) match.Source = source(t); return; }
+    added.push({
+      Id: -t.Id, Title: t.Title, PromptText: t.TipPrompt, Category: TIP_CATEGORY,
+      Practice: t.WorksWith || 'All practices', WorksIn: [],
+      HowToUse: steps(t.Steps).map((x, i) => `${i + 1}. ${x}`).join('\n'), WatchOuts: '', Featured: false, Source: source(t)
+    });
+  });
+  return [...out, ...added];
+}
+
 export function promptLibraryShell(prompts: IPrompt[], f: IPromptFilter): string {
-  const cats = ['All', ...Array.from(new Set(prompts.map(p => p.Category).filter(Boolean)))];
+  const cats = ['All', ...Array.from(new Set(prompts.map(p => p.Category).filter(c => c && c !== TIP_CATEGORY)))];
+  if (prompts.some(p => p.Source)) cats.push(TIP_CATEGORY);
   return `<div class="toolbar"><input type="search" data-search placeholder="Search prompts (try: title, loan, email)" aria-label="Search prompts" value="${esc(f.q)}"></div>
     <div class="toolbar" role="group" aria-label="Filter by category">${cats.map(c =>
       `<button type="button" class="filter${c === f.cat ? ' on' : ''}" data-cat="${esc(c)}" aria-pressed="${c === f.cat}">${esc(c)}</button>`).join('')}</div>
@@ -69,16 +98,20 @@ export function promptLibraryShell(prompts: IPrompt[], f: IPromptFilter): string
 
 export function promptResults(prompts: IPrompt[], f: IPromptFilter): string {
   const q = f.q.trim().toLowerCase();
-  const rows = prompts.filter(p => (f.cat === 'All' || p.Category === f.cat) &&
+  const rows = prompts.filter(p => (f.cat === 'All' || p.Category === f.cat || (f.cat === TIP_CATEGORY && !!p.Source)) &&
     (!q || `${p.Title} ${p.PromptText} ${p.Practice} ${p.WorksIn.join(' ')}`.toLowerCase().includes(q)));
   if (!rows.length) return empty('No prompts match. Try another word, or submit one.');
+  if (f.cat === TIP_CATEGORY) {
+    // One group, newest tip first.
+    const tipRows = [...rows].sort((a, b) => (b.Source?.tip ?? 0) - (a.Source?.tip ?? 0));
+    return `<h3 class="group">${esc(TIP_CATEGORY)} (${tipRows.length})</h3><div class="grid">${tipRows.map(p => promptCard(p)).join('')}</div>`;
+  }
   return groupBy(rows, p => p.Category).map(([g, ps]) =>
     `<h3 class="group">${esc(g)} (${ps.length})</h3><div class="grid">${ps.map(p => promptCard(p)).join('')}</div>`).join('');
 }
 
 // ---- Friday tips -----------------------------------------------------------
 
-const steps = (s: string): string[] => (s || '').split(/\r?\n/).map(x => x.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
 
 export function tipCard(t: ITip): string {
   const list = steps(t.Steps);

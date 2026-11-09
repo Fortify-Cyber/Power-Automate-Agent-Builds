@@ -23,6 +23,8 @@ export const CSS = `
 .cah .chip { display:inline-block; font-size:12px; padding:2px 9px; border-radius:12px; background:var(--soft); color:var(--primary);
   font-weight:600; margin:0 4px 4px 0; }
 .cah .chip.n { background:var(--sand-2); color:var(--muted); }
+.cah details.more p { white-space:pre-line; }
+.cah a.chip.tipchip { background:var(--sand); color:var(--navy); text-decoration:none; } .cah a.chip.tipchip:hover { text-decoration:underline; }
 .cah .pill { display:inline-block; font-size:12px; padding:2px 10px; border-radius:12px; font-weight:600; background:#eee; }
 .cah .s-Live, .cah .s-Done { background:#D7F0DD; } .cah .s-Pilot, .cah .s-Reviewing { background:#D6E9F8; }
 .cah .s-Upnext, .cah .s-New { background:var(--sand); } .cah .s-Planned { background:#E4DCF5; }

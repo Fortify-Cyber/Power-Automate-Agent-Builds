@@ -115,7 +115,11 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
       case 'featuredPrompts':
         return this._data.prompts().then(p => R.featuredPrompts(p, page('Prompt-Library'), this.properties.maxItems || 6));
       case 'promptLibrary':
-        return this._data.prompts().then(p => { this._prompts = p; return R.promptLibraryShell(p, this._filter); });
+        // The library's own prompts plus every Friday tip's prompt (render.withTipPrompts).
+        return Promise.all([this._data.prompts(), this._data.tips().catch(() => [])]).then(([lib, tips]) => {
+          this._prompts = R.withTipPrompts(lib, tips, page('Friday-Tips'));
+          return R.promptLibraryShell(this._prompts, this._filter);
+        });
       case 'fridayTips':
         return this._data.tips().then(R.allTips);
       case 'videos':
