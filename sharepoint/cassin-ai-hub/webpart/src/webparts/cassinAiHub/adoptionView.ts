@@ -21,6 +21,8 @@ export class AdoptionView {
   private _sort: { key: string; dir: number } = { key: 'days', dir: -1 };
   private _filter: IFilter = { q: '', role: '', stage: '', move: '' };
   private _showAll = false;
+  /** Charts show each day as reported (weekend dips included) instead of the 7-day average. */
+  private _daily = false;
   private _root: HTMLElement | undefined;
   private readonly _onResize = (): void => this._drawCharts();
 
@@ -66,6 +68,17 @@ export class AdoptionView {
     const t = e.target as HTMLElement;
     const tab = t.closest<HTMLElement>('[data-ad-tab]');
     if (tab) { this._setTab(tab.getAttribute('data-ad-tab') as Tab); return true; }
+    const smooth = t.closest<HTMLElement>('[data-ad-smooth]');
+    if (smooth) {
+      this._daily = smooth.getAttribute('data-ad-smooth') === 'daily';
+      this._root?.querySelectorAll<HTMLElement>('[data-ad-smooth]').forEach(b => {
+        const on = (b.getAttribute('data-ad-smooth') === 'daily') === this._daily;
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+      });
+      this._root?.querySelectorAll<HTMLElement>('[data-ad-smoothnote]').forEach(n => { n.textContent = this._daily ? '(as Microsoft reports it)' : '(7-day average)'; });
+      this._drawCharts();
+      return true;
+    }
     const goto = t.closest<HTMLElement>('[data-ad-goto]');
     if (goto) {
       this._filter.move = goto.getAttribute('data-ad-goto') || '';
@@ -128,15 +141,17 @@ export class AdoptionView {
     return `<div class="ad-tiles">${tiles.map(t => `<div class="ad-tile${t.accent ? ' accent' : ''}"><div class="k">${t.label}</div><div class="v">${t.value}</div><div class="s">${t.sub}</div>${t.delta}</div>`).join('')}</div>
       <div class="ad-grid2">
         <div class="ad-panel"><h3>Copilot use over time</h3>
-          <p class="hint">People using Copilot on an average day (7-day average), against licensed people.</p>
-          <div class="ad-legend"><span><i style="background:#00426C"></i>Active on an average day</span><span><i style="background:#C7D5DF"></i>Licensed</span></div>
+          <p class="hint">People using Copilot each day <span data-ad-smoothnote>(7-day average)</span>, against licensed people.</p>
+          ${this._smoothSwitch()}
+          <div class="ad-legend"><span><i style="background:#00426C"></i>Active people</span><span><i style="background:#C7D5DF"></i>Licensed</span></div>
           <div data-ad-chart="trend"></div></div>
         <div class="ad-panel"><h3>Where people use it</h3><p class="hint">Active users by app, last 28 days.</p>
           <div class="ad-bars">${m.appCounts.map(a => `<div class="row"><span>${esc(a.app.label)}</span><div class="track"><div class="fill" style="width:${pct(a.users, m.licensed)}%"></div></div><span class="num">${a.users} · ${pct(a.users, m.licensed)}%</span></div>`).join('') || '<p class="faint">No app activity in the report.</p>'}</div></div>
       </div>
       ${m.promptsNow !== null ? `<div class="ad-panel"><h3>Prompts over time</h3>
-          <p class="hint">${m.hasDailyPrompts ? 'Prompts people sent Copilot each day (7-day average). More prompts from the same people means Copilot is becoming part of the work.'
+          <p class="hint">${m.hasDailyPrompts ? 'Prompts people sent Copilot each day <span data-ad-smoothnote>(7-day average)</span>. More prompts from the same people means Copilot is becoming part of the work.'
             : 'Prompts people sent Copilot each month. The first bar is the monthly average over the five months before the last 28 days, from Microsoft\'s 180-day report; each month after launch is added as it\'s saved.'}</p>
+          ${m.hasDailyPrompts ? this._smoothSwitch() : ''}
           <div data-ad-chart="prompts"></div></div>` : ''}
       <div class="ad-grid2b">
         <div class="ad-panel"><h3>Not started <span class="count">(${never.length})</span></h3>
@@ -363,6 +378,15 @@ export class AdoptionView {
     if (monthly && monthly.offsetParent) monthly.innerHTML = this._monthlySvg(monthly.clientWidth || 700);
   }
 
+  // Both time charts share one switch: the 7-day average (the trend) or each day as reported.
+  private _smoothSwitch(): string {
+    const b = (k: string, label: string): string => {
+      const on = (k === 'daily') === this._daily;
+      return `<button type="button" data-ad-smooth="${k}" class="${on ? 'on' : ''}" aria-pressed="${on}">${label}</button>`;
+    };
+    return `<div class="ad-seg" role="group" aria-label="Show">${b('avg', '7-day average')}${b('daily', 'Daily')}</div>`;
+  }
+
   private _trendSvg(W: number): string {
     const pts = this._m.trend;
     if (pts.length < 2) return '<p class="faint">Microsoft\'s trend report isn\'t available yet.</p>';
@@ -371,7 +395,7 @@ export class AdoptionView {
       const win = pts.slice(Math.max(0, i - 6), i + 1);
       return { date: p.date, active: win.reduce((s, x) => s + x.active, 0) / win.length, enabled: p.enabled };
     }).slice(6);
-    const series = avg.length >= 2 ? avg : pts;
+    const series = this._daily || avg.length < 2 ? pts : avg;
     const H = 260, P = { l: 36, r: 12, t: 10, b: 28 };
     const max = Math.max(10, ...series.map(p => Math.max(p.enabled, p.active)));
     const top = Math.ceil(max / 20) * 20;
@@ -389,7 +413,7 @@ export class AdoptionView {
       ${series.some(p => p.enabled) ? `<path d="${line('enabled')}" fill="none" stroke="#C7D5DF" stroke-width="2" stroke-dasharray="5 4"/>` : ''}
       <path d="${line('active')}" fill="none" stroke="#00426C" stroke-width="2.5"/>
       <circle cx="${x(series.length - 1)}" cy="${y(last.active)}" r="4.5" fill="#00426C"/>
-      <text x="${x(series.length - 1) - 10}" y="${y(last.active) - 12}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${Math.round(last.active)} a day</text>
+      <text x="${x(series.length - 1) - 10}" y="${y(last.active) - 12}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${Math.round(last.active)} ${this._daily ? 'on ' + shortDate(last.date) : 'a day'}</text>
       ${labels}</svg>`;
   }
 
@@ -403,7 +427,7 @@ export class AdoptionView {
       const pts = m.trend.filter(t => t.prompts !== null) as Array<{ date: string; prompts: number }>;
       if (pts.length < 2) return '<p class="faint">Not enough days yet.</p>';
       const avg = pts.map((p, i) => { const w = pts.slice(Math.max(0, i - 6), i + 1); return { date: p.date, v: w.reduce((t, x) => t + x.prompts, 0) / w.length }; });
-      const series = avg.length > 8 ? avg.slice(6) : avg;
+      const series = this._daily ? pts.map(p => ({ date: p.date, v: p.prompts })) : avg.length > 8 ? avg.slice(6) : avg;
       const top = Math.max(10, ...series.map(p => p.v)) * 1.1;
       const x = (i: number): number => P.l + (W - P.l - P.r) * i / (series.length - 1);
       const y = (v: number): number => P.t + (H - P.t - P.b) * (1 - v / top);
@@ -416,7 +440,7 @@ export class AdoptionView {
         <path d="${line}L${x(series.length - 1)},${y(0)}L${x(0)},${y(0)}Z" fill="#2A73B0" fill-opacity=".12"/>
         <path d="${line}" fill="none" stroke="#2A73B0" stroke-width="2.5"/>
         <circle cx="${x(series.length - 1)}" cy="${y(last.v)}" r="4.5" fill="#2A73B0"/>
-        <text x="${x(series.length - 1) - 10}" y="${Math.max(14, y(last.v) - 12)}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${n(last.v)} a day</text>
+        <text x="${x(series.length - 1) - 10}" y="${Math.max(14, y(last.v) - 12)}" font-size="12" font-weight="600" text-anchor="end" fill="#021D3C" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">${n(last.v)} ${this._daily ? 'on ' + shortDate(last.date) : 'a day'}</text>
         ${series.map((p, i) => (i % step === 0 && i < series.length - step / 2) || i === series.length - 1
           ? `<text x="${x(i)}" y="${H - 8}" font-size="11" text-anchor="${i === series.length - 1 ? 'end' : 'middle'}" fill="#6E7C8C">${shortDate(p.date)}</text>` : '').join('')}
       </svg>`;
