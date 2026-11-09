@@ -15,6 +15,8 @@ It replaces two rule-based Power Automate flows (**Fortify End of Day Digest** a
 
 **Daily Digest as an organization prompt** (trial): `prompts/daily-digest.md` is a plain Copilot Chat version to publish from the Microsoft 365 admin center (Copilot → Prompts), with steps and a comparison checklist.
 
+**Email filing as a prompt** (trial): `prompts/email-filing.md` is the filing rules as one Copilot prompt, with a checklist to compare it against Filing Assistant in Copilot Chat and Cowork.
+
 Why this design, and what it costs ($0 extra for Copilot-licensed users): [docs/architecture-and-costs.md](docs/architecture-and-costs.md).
 
 ## Repository layout
