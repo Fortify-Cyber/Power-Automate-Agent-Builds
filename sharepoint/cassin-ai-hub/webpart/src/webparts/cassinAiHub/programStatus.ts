@@ -7,10 +7,13 @@ import { esc } from './render';
 // and members can open (Hub Feedback is the firm's own form; owners and members see every item).
 
 export const STAGES = ['Scoping', 'Building', 'Pilot', 'Firm rollout', 'Live'];
+/** Parked items: kept on the roadmap for the record, but out of the pipeline. */
+export const PARKED = ['On hold', "Won't do"];
 export const TRACKS = ['Quick Wins', 'Big Bets', 'Fill-ins', 'Not Now'];
 const OPEN_FEEDBACK = ['New', 'Reviewing', 'Planned', ''];
 const CONFIDENCE: Record<string, string> = { 'On track': 'ok', 'At risk': 'risk', Slipped: 'slip' };
-const STAGE_COLOR: Record<string, string> = { Scoping: '#E1E5EA', Building: '#E4DCF5', Pilot: '#D6E9F8', 'Firm rollout': '#BFE3CB', Live: '#D7F0DD' };
+const STAGE_COLOR: Record<string, string> = { Scoping: '#E1E5EA', Building: '#E4DCF5', Pilot: '#D6E9F8', 'Firm rollout': '#BFE3CB', Live: '#D7F0DD', 'On hold': '#FBE7C6', "Won't do": '#E1E5EA' };
+const FILTER_KEY = 'cah-program-status-filters';
 
 type Tab = 'stage' | 'track' | 'all' | 'waiting' | 'feedback';
 
@@ -25,6 +28,9 @@ export class ProgramStatusView {
   private _tab: Tab = 'stage';
   private _showDoneWaiting = false;
   private _showClosedFeedback = false;
+  // Roadmap filters, remembered in this browser only.
+  private _showLive = true;
+  private _showParked = false;
   private _root: HTMLElement | undefined;
 
   public constructor(private readonly _items: IRoadmapItem[], private readonly _waiting: IWaiting[],
@@ -32,7 +38,18 @@ export class ProgramStatusView {
                      /** Owners and members, who can edit the lists and see every feedback item. The
                       * read-only AI Working Group group sees the roadmap but not others' feedback. */
                      private readonly _canManage: boolean = true,
-                     private readonly _today: string = new Date().toISOString().slice(0, 10)) {}
+                     private readonly _today: string = new Date().toISOString().slice(0, 10)) {
+    try {
+      const f = JSON.parse(window.localStorage.getItem(FILTER_KEY) || '{}') as { live?: boolean; parked?: boolean };
+      if (typeof f.live === 'boolean') this._showLive = f.live;
+      if (typeof f.parked === 'boolean') this._showParked = f.parked;
+    } catch { /* storage blocked: use the defaults */ }
+  }
+
+  /** Roadmap items that pass the filters. */
+  private _visible(): IRoadmapItem[] {
+    return this._items.filter(i => (this._showLive || i.RoadmapStage !== 'Live') && (this._showParked || PARKED.indexOf(i.RoadmapStage) < 0));
+  }
 
   /** Open feedback for a roadmap item, matched on the Feedback form's "About" value. */
   private _openFeedback(item: IRoadmapItem): number {
@@ -52,12 +69,17 @@ export class ProgramStatusView {
     const unpublished = this._items.filter(i => (i.RoadmapStage === 'Firm rollout' || i.RoadmapStage === 'Live') && !i.PublishedLink?.Url);
     return `<div class="ad ps">
       <div class="ad-tiles five">${STAGES.map(s => `<div class="ad-tile stage" style="--c:${STAGE_COLOR[s]}"><div class="k">${s}</div><div class="v">${count(s)}</div></div>`).join('')}</div>
+      ${PARKED.some(s => count(s)) ? `<p class="ps-parked">${PARKED.filter(s => count(s)).map(s => `${s}: <b>${count(s)}</b>`).join(' · ')}</p>` : ''}
       ${unpublished.length && this._canManage ? `<div class="ad-warn"><b>Ready for the hub?</b> ${unpublished.map(i => esc(i.Title)).join(', ')} ${unpublished.length === 1 ? 'is' : 'are'} at Firm rollout or Live with no <i>Published on hub</i> link. Add ${unpublished.length === 1 ? 'it' : 'them'} to Agents &amp; Tools, the Prompt Library or a tip, then paste that link into the roadmap item.</div>` : ''}
       <div class="ad-head"><div class="ad-lock">🔒 AI Working Group only</div>
         <div class="ad-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-ps-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-      <section data-ps-view="stage">${this._board('RoadmapStage', STAGES)}${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
-      <section data-ps-view="track" hidden>${this._board('Track', TRACKS)}${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
-      <section data-ps-view="all" hidden>${this._table()}${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
+      <div class="ps-filters" data-ps-filters>
+        <label><input type="checkbox" id="ps-show-live" data-ps-filter="live"${this._showLive ? ' checked' : ''}> Show live</label>
+        <label><input type="checkbox" id="ps-show-parked" data-ps-filter="parked"${this._showParked ? ' checked' : ''}> Show on hold &amp; won't do</label>
+        <span class="faint" data-ps-hidden></span></div>
+      <section data-ps-view="stage"><div data-ps-roadmap="stage"></div>${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
+      <section data-ps-view="track" hidden><div data-ps-roadmap="track"></div>${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
+      <section data-ps-view="all" hidden><div data-ps-roadmap="all"></div>${this._edit(this._links.roadmap, 'Edit the roadmap')}</section>
       <section data-ps-view="waiting" hidden><div data-ps-waiting></div>${this._edit(this._links.waiting, 'Add or update items')}</section>
       ${this._canManage ? `<section data-ps-view="feedback" hidden><div data-ps-feedback></div>${this._edit(this._links.feedback, 'Open the feedback list')}</section>` : ''}
     </div>`;
@@ -65,6 +87,7 @@ export class ProgramStatusView {
 
   public mount(root: HTMLElement): void {
     this._root = root;
+    this._renderRoadmap();
     this._renderWaiting();
     this._renderFeedback();
   }
@@ -78,6 +101,15 @@ export class ProgramStatusView {
         const on = b === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
       });
       this._root?.querySelectorAll<HTMLElement>('[data-ps-view]').forEach(v => { v.hidden = v.getAttribute('data-ps-view') !== this._tab; });
+      const filters = this._root?.querySelector<HTMLElement>('[data-ps-filters]');
+      if (filters) filters.hidden = this._tab === 'waiting' || this._tab === 'feedback';
+      return true;
+    }
+    const filter = t.closest<HTMLInputElement>('input[data-ps-filter]');
+    if (filter) {
+      if (filter.getAttribute('data-ps-filter') === 'live') this._showLive = filter.checked; else this._showParked = filter.checked;
+      try { window.localStorage.setItem(FILTER_KEY, JSON.stringify({ live: this._showLive, parked: this._showParked })); } catch { /* not remembered */ }
+      this._renderRoadmap();
       return true;
     }
     const toggle = t.closest<HTMLElement>('[data-ps-toggle]');
@@ -99,7 +131,7 @@ export class ProgramStatusView {
 
   private _card(i: IRoadmapItem, by: 'RoadmapStage' | 'Track'): string {
     const fb = this._canManage ? this._openFeedback(i) : 0;
-    const other = by === 'RoadmapStage' ? this._pill(i.Track, 'track') : this._pill(i.RoadmapStage, 'stage');
+    const other = by === 'RoadmapStage' ? this._pill(i.Track, 'track') : this._pill(i.RoadmapStage, 'stage st-' + (i.RoadmapStage || '').replace(/[^A-Za-z]/g, ''));
     const facts = [
       i.TargetWindow && i.TargetWindow !== 'n/a' ? `<div><dt>Target</dt><dd>${esc(i.TargetWindow)}</dd></div>` : '',
       i.TimeSaved ? `<div><dt>Saves</dt><dd>${esc(i.TimeSaved)}</dd></div>` : '',
@@ -118,24 +150,37 @@ export class ProgramStatusView {
     </article>`;
   }
 
-  private _board(by: 'RoadmapStage' | 'Track', columns: string[]): string {
-    const known = new Set(columns);
-    const extra = this._items.filter(i => !known.has(i[by]));
+  private _renderRoadmap(): void {
+    const root = this._root;
+    if (!root) return;
+    const stageCols = [...STAGES.filter(s => this._showLive || s !== 'Live'), ...(this._showParked ? PARKED : [])];
+    const fill = (k: string, html: string): void => { const el = root.querySelector(`[data-ps-roadmap="${k}"]`); if (el) el.innerHTML = html; };
+    fill('stage', this._board('RoadmapStage', stageCols, [...STAGES, ...PARKED]));
+    fill('track', this._board('Track', TRACKS, TRACKS));
+    fill('all', this._table());
+    const hidden = this._items.length - this._visible().length;
+    const note = root.querySelector('[data-ps-hidden]');
+    if (note) note.textContent = hidden ? `${hidden} hidden by these filters` : '';
+  }
+
+  private _board(by: 'RoadmapStage' | 'Track', columns: string[], known: string[]): string {
+    const items = this._visible();
+    const extra = items.filter(i => known.indexOf(i[by]) < 0);
     const cols = extra.length ? [...columns, 'Not set'] : columns;
     return `<div class="ps-board" style="--cols:${cols.length}">${cols.map(c => {
-      const items = c === 'Not set' ? extra : this._items.filter(i => i[by] === c);
+      const items = c === 'Not set' ? extra : this._visible().filter(i => i[by] === c);
       return `<div class="ps-col"><div class="ps-col-head"><span>${esc(c)}</span><span class="count">${items.length}</span></div>
         ${items.map(i => this._card(i, by)).join('') || '<p class="faint">Nothing here.</p>'}</div>`;
     }).join('')}</div>`;
   }
 
   private _table(): string {
-    const rows = [...this._items].sort((a, b) =>
+    const rows = this._visible().sort((a, b) =>
       (TRACKS.indexOf(a.Track) + 10) % 10 - (TRACKS.indexOf(b.Track) + 10) % 10 || a.Title.localeCompare(b.Title));
     return `<div class="ad-panel"><div class="scroll"><table><thead><tr><th>Item</th><th>Type</th><th>Home</th><th>Track</th><th>Stage</th>
       <th>Est. time saved</th><th>Target window</th><th>Confidence</th><th>Champion</th>${this._canManage ? '<th class="n">Open feedback</th>' : ''}<th>Next up</th><th>Notes</th></tr></thead><tbody>
       ${rows.map(i => `<tr><td><b>${esc(i.Title)}</b></td><td>${esc(i.ItemType.join(', '))}</td><td>${esc(i.HomeArea.join(', '))}</td>
-        <td>${esc(i.Track)}</td><td>${this._pill(i.RoadmapStage, 'stage')}</td><td>${esc(i.TimeSaved)}</td><td>${esc(i.TargetWindow)}</td>
+        <td>${esc(i.Track)}</td><td>${this._pill(i.RoadmapStage, 'stage st-' + (i.RoadmapStage || '').replace(/[^A-Za-z]/g, ''))}</td><td>${esc(i.TimeSaved)}</td><td>${esc(i.TargetWindow)}</td>
         <td>${this._pill(i.Confidence, CONFIDENCE[i.Confidence] || '')}</td><td>${esc(i.Champion)}</td>${this._canManage ? `<td class="n">${this._openFeedback(i) || ''}</td>` : ''}
         <td class="wide">${esc(i.NextUp)}</td><td class="wide">${i.RoadmapNotes ? `<details><summary>Show</summary><p>${esc(i.RoadmapNotes)}</p></details>` : ''}</td></tr>`).join('')}
       </tbody></table></div></div>`;

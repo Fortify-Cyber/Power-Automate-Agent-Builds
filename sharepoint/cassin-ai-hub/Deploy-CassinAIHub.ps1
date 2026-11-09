@@ -424,7 +424,12 @@ Set-Formatter $L "Decision" (New-Pill ([ordered]@{ "Published" = "#d7f0dd"; "Dra
 Write-Step "AI Roadmap"
 $L = "Lists/AIRoadmap"
 New-HubList "AI Roadmap" $L "Item" "Every agent, skill, flow and prompt in the AI program: stage, timing and what's next. AI Working Group only."
-Add-ChoiceField $L "RoadmapStage" "Stage" @("Scoping", "Building", "Pilot", "Firm rollout", "Live") -Default "Scoping"
+$stages = @("Scoping", "Building", "Pilot", "Firm rollout", "Live", "On hold", "Won't do")
+Add-ChoiceField $L "RoadmapStage" "Stage" $stages -Default "Scoping"
+# Add-ChoiceField leaves an existing column alone, so bring its choices up to date here
+# (On hold and Won't do were added after the first deploy).
+try { Set-PnPField -List $L -Identity "RoadmapStage" -Values @{ Choices = [string[]] $stages } | Out-Null }
+catch { Write-Host "  Couldn't update the Stage choices: add On hold and Won't do in the list's Stage column settings." -ForegroundColor Yellow }
 Add-ChoiceField $L "Track" "Track" @("Quick Wins", "Big Bets", "Fill-ins", "Not Now") -Default "Quick Wins"
 Add-ChoiceField $L "ItemType" "Type" @("Agent", "Skill", "Flow", "Prompt", "Native (Copilot for Legal)") -Multi
 Add-ChoiceField $L "HomeArea" "Home" @("Deal Assistant", "Inbox Assistant", "Agency Guide Q&A", "Copilot for Legal", "Prompt Pack", "Background") -Multi
@@ -454,7 +459,7 @@ Set-HubView $L "All items" @("LinkTitle", "RoadmapStage", "ItemType", "HomeArea"
     "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"Track`" /></GroupBy><OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -RowLimit 300 -Default
 Set-HubView $L "By stage" @("LinkTitle", "Track", "ItemType", "TargetWindow", "Confidence", "Champion", "PublishedLink") `
     "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"RoadmapStage`" /></GroupBy><OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -RowLimit 300
-Set-Formatter $L "RoadmapStage" (New-Pill ([ordered]@{ "Live" = "#d7f0dd"; "Firm rollout" = "#bfe3cb"; "Pilot" = "#d6e9f8"; "Building" = "#e4dcf5" }))
+Set-Formatter $L "RoadmapStage" (New-Pill ([ordered]@{ "Live" = "#d7f0dd"; "Firm rollout" = "#bfe3cb"; "Pilot" = "#d6e9f8"; "Building" = "#e4dcf5"; "On hold" = "#fbe7c6" }))
 Set-Formatter $L "Confidence" (New-Pill ([ordered]@{ "On track" = "#d7f0dd"; "At risk" = "#fbe7c6"; "Slipped" = "#f6d5d5" }))
 
 Write-Step "Waiting on Cassin"
