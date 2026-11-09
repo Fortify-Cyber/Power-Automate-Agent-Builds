@@ -95,9 +95,6 @@ export const CSS = `
 .cah .ps-pill.ok { background:#D7F0DD; } .cah .ps-pill.risk { background:#FBE7C6; } .cah .ps-pill.slip { background:#F6D5D5; }
 .cah .ps-pill.track { background:var(--sand); }
 .cah .ps-pill.st-Onhold { background:#FBE7C6; } .cah .ps-pill.st-Wontdo { background:#E1E5EA; color:var(--muted); }
-.cah .ps-filters { display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; font-size:14px; color:var(--muted); margin:0 0 12px; }
-.cah .ps-filters label { display:inline-flex; gap:6px; align-items:center; cursor:pointer; }
-.cah .ps-filters input { accent-color:var(--primary); width:16px; height:16px; }
 .cah .ps-parked { margin:-8px 0 16px; font-size:13.5px; color:var(--muted); }
 .cah .ps-pill.w-Open, .cah .ps-pill.f-New { background:var(--sand); } .cah .ps-pill.w-Inprogress, .cah .ps-pill.f-Reviewing { background:#D6E9F8; }
 .cah .ps-pill.w-Done, .cah .ps-pill.f-Done { background:#D7F0DD; } .cah .ps-pill.f-Planned { background:#E4DCF5; } .cah .ps-pill.f-Wontdo { background:#E1E5EA; }
