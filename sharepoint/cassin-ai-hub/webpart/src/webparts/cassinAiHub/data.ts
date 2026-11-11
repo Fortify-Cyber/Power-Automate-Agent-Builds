@@ -7,6 +7,8 @@ export interface ILink { Url: string; Description: string }
 export interface IPrompt {
   Id: number; Title: string; PromptText: string; Category: string; Practice: string;
   WorksIn: string[]; HowToUse: string; WatchOuts: string; Featured: boolean;
+  /** Who shared it (the list's Source column), e.g. "Eric Kaden". */
+  Contributor?: string;
   /** Set for prompts that come from a Friday tip rather than the Prompt Library list. */
   Source?: { label: string; url: string; tip: number };
 }
@@ -75,7 +77,7 @@ export class HubData {
   public prompts(): Promise<IPrompt[]> {
     // Only approved prompts: owners would otherwise also see pending submissions.
     return this._items<IPrompt>(LISTS.prompts,
-      'Id,Title,PromptText,Category,Practice,WorksIn,HowToUse,WatchOuts,Featured',
+      'Id,Title,PromptText,Category,Practice,WorksIn,HowToUse,WatchOuts,Featured,Contributor',
       'OData__ModerationStatus eq 0', 'Title')
       .then(rows => rows.map(r => ({ ...r, WorksIn: asArray(r.WorksIn) })));
   }

@@ -35,6 +35,12 @@ export const CSS = `
 .cah .prompt { border-left:4px solid var(--primary); background:var(--prompt-bg); padding:10px 14px; font-style:italic;
   white-space:pre-wrap; font-size:15px; margin:0 0 12px; overflow-wrap:anywhere; }
 .cah .clamp { display:-webkit-box; overflow-wrap:anywhere; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+.cah .clamp.open { display:block; -webkit-line-clamp:unset; overflow:visible; }
+.cah .grid:has(.clamp.open) { align-items:start; }
+.cah .chip.testing { background:#FBE7C6; color:var(--navy); }
+.cah .prompt-actions { margin:2px 0 10px; }
+.cah .toolbar-label { font-size:12px; letter-spacing:1px; text-transform:uppercase; font-weight:600; color:var(--muted); margin-right:4px; }
+.cah .hintline { font-size:14px; color:var(--muted); margin:0 0 14px; }
 .cah details.more { font-size:14.5px; color:var(--muted); margin-bottom:12px; }
 .cah details.more summary { cursor:pointer; color:var(--primary); font-weight:600; }
 .cah details.more p { margin:6px 0 0; }

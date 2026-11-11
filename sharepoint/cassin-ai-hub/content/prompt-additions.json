@@ -1,0 +1,119 @@
+[
+  {
+    "Title": "Background searches into a table",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Attached are background searches run on various entities and/or persons. Create a table with three columns: ENTITY, TYPE, NOTES. For each search hit, identify the below information and insert into the table. Each individual hit should be its own row. All information should come from the attached document(s) and not from any other sources. If information cannot be determined because the document(s) is difficult to read, note that in the table. Do not include any hyperlinks in the output.\nAdditionally, for each hit, extract the PDF pages that are relating to that hit. Name the resulting PDF file in the following format: [Entity]-[Type of Hit]\nIf the search hit is litigation-related, include the following information in each column:\nENTITY: name of the entity that had the search hit\nTYPE: write \"litigation\" as well as the name of the county, state, and courthouse\nNOTES: provide a brief overview of the litigation\nIf the search hit is UCC filing or a fixture filing, include the following information in each column:\nENTITY: name of the entity that had the search hit\nTYPE: use this format: UCC - California Secretary of State OR UCC - California - Santa Cruz County (depending on if it’s a state or county UCC/fixture filing)\nNOTES: include the UCC id number, date of initial filing, the secured party, the collateral, and whether any continuations or terminations have been filed (and the dates of the continuations or terminations). Include the collateral description exactly how it is written in the UCC, i.e., verbatim. Each piece of information should be displayed on a new line so it's easy to read. Never include images in the table. Use this formatting as an example:\nUCC ID Number: 2020334816\nDate of initial filing: 05/12/2020\nIf the search hit is federal tax lien, state tax lien, or judgement lien, include the following information in each column:\nENTITY: name of the entity that had the search hit\nTYPE: \"federal tax lien\"  or \"state tax lien\" or \"judgement lien\" and the jurisdiction that issued it\nNOTES: briefly describe the lien, including the amount, the jurisdiction, what it is for etc.\nIf the search hit is a municipal violation (e.g., a fire code violation, building code violation, zoning violation, environmental violation), include the following information:\nENTITY: name of the entity that had the search hit\nTYPE: list the type of violation and the department that issued it\nNOTES: summarize the violation. Include the date, what the violation relates to, how much money is owed, and any other relevant information.\nIf the search hit is for any other kind of item e.g., bankruptcy, use the same formatting as above and use best judgement as to what information to add to each column.",
+    "HowToUse": "Upload the search reports (PDF) to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Copilot Chat may not be able to split out PDF pages; if it can't, ask it for the page numbers of each hit instead. Check every row against the search reports.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Check that every required search was run",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Attached are several documents: (i) a Search Matrix identifying all searches that were required to be run, and (ii) one or more Search Results Report(s) identifying the searches that were actually performed and whether any hits were found. Compare the Search Results Report(s) against the Search Matrix and determine whether every required search was performed. Review each entity separately and identify every search required by the Search Matrix. For each required search, verify whether a corresponding search appears in the Search Results Report. Ignore whether a search returned hits or no hits; the review should focus solely on whether the search was performed. If a required search appears in the Search Results Report, mark it as ✅ Included. If a required search does not appear, mark it as ❌ Missing.\nWhen reviewing jurisdictions, if the Search Matrix identifies both a County/City of Property and a County/City of Registered Office or Primary Residence, verify that searches were run in both jurisdictions. If the Search Matrix identifies only a County/City of Registered Office or Primary Residence and does not identify a separate property county, then only that jurisdiction is required. Do not assume that a search performed in one jurisdiction satisfies a requirement for another jurisdiction.\nProvide the results in three sections. First, prepare an Executive Summary stating whether all required searches were performed, identifying any missing searches, and providing the total number of missing searches. Second, prepare a Detailed Review Table with the columns: Entity, Required Search, Included in Search Results?, and Notes. For each required search, list the exact search category from the Search Matrix, mark it as ✅Included or ❌ Missing, and briefly explain how the search was matched or why it is missing. Third, provide a Conclusion that groups all missing searches by entity. If no searches are missing, state: “All searches required by the Search Matrix were included in the Search Results Report.”\nDo not assume a search was performed unless it appears in the Search Results Report. Identify every missing search explicitly. Cite both the Search Matrix and the Search Results Report for every conclusion.",
+    "HowToUse": "Upload the search matrix and the search results report(s) to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Confirm anything marked Missing against the original reports before ordering new searches.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Certificate of good standing checker",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Review each attached certificate of good standing for completeness and consistency. For each certificate, check:\n• Entity name and jurisdiction\n• Whether the certificate states that the entity is in good standing, active, or the jurisdiction's equivalent status\n• Certificate issuance date\n• Any expiration date or indication that the certificate may be stale\n• Any qualification, limitation, disclaimer, or adverse notation\n• Any apparent inconsistencies, missing information, or legibility issues that could affect reliance on the certificate\nFlag each issue clearly and identify the certificate and specific information that caused the concern. Do not assume that a certificate is valid or invalid based on information that is not provided.\nFlag any certificate issued more than 30 days ago.\nProvide the results in a concise table with columns for Entity, Jurisdiction, Certificate Date, Status, and Issues/Comments.\nIf you identify no issues with any of the certificates based on the documents provided, state clearly: “No issues identified.”",
+    "HowToUse": "Upload the certificates of good standing to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Confirm dates and status against the certificates themselves before relying on the table.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Incumbency certificate checker",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Review the attached officer’s/corporate certificate(s) and all exhibits as a transactional real estate attorney performing a pre-closing quality-control review.\nFor each certification and referenced exhibit:\n• Confirm that the exhibit actually attached is the document described in the certificate, including the correct document type, entity, jurisdiction, and date.\n• Confirm the exhibit appears complete, checking page numbering, section continuity, referenced attachments, signature pages, filing pages/stamps, and any indication of missing, duplicated, or out-of-order pages.\n• Confirm the document appears properly executed or filed, as applicable. Check signatures, dates, titles, notarizations, Secretary of State certifications/stamps, and other execution formalities visible in the PDF. Flag blank signature lines or other apparent execution issues.\n• Cross-check the certificate and exhibits for inconsistencies in entity names, organizational relationships, officers/directors, dates, addresses, document titles, filing numbers, and other material information.\n• Review the certificate itself for incorrect exhibit references, dates, names, defined terms, blanks, drafting errors, grammatical errors affecting meaning, and other inconsistencies. Note if any item is in brackets or looks unfinished or not finalized.\n• Flag anything unusual, incomplete, inconsistent, potentially incorrect, or otherwise worthy of attorney review, even if not specifically covered above.\nDo not assume an exhibit is correct merely because it appears behind the correct exhibit divider. Inspect the actual contents. Likewise, distinguish between facts that can be verified from the PDF and certifications that cannot be independently verified from the supplied documents, such as a statement that organizational documents have never been further amended.\nOutput:\n• Each certificate should have its own section of output. For example, list all of the issues with certificate 1 per the formatting described below, then list all of the issues with certificate 2 etc. Don't combine issue lists.\n• Overall conclusion: Briefly state whether the certificate appears ready for closing and identify any significant issues.\n• Exhibit review: For each exhibit, state Correct / Issue / Unable to Verify, with a concise explanation and PDF page reference. Put this into a table format.\n• Certificate issues: Identify any drafting, factual, execution, or consistency issues in the certificate itself.\n• Final punch list: For each individual certificate, list each item that should be corrected, confirmed, or replaced before closing.\nBe precise and skeptical. Do not invent facts or treat something as verified when the PDF does not establish it.",
+    "HowToUse": "Upload the officer's or incumbency certificate with all exhibits to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Copilot can only check what's in the PDF. Statements it can't verify (for example, that documents haven't been amended) still need your confirmation.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Draft a request to remove a title exception",
+    "Category": "Drafting",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "You are an attorney representing the lender to a borrower on a real estate transaction and are responsible for putting together the lender title insurance policy. The attached document is an exception to the policy. Draft two sentences that will be sent to the title company explaining why this exception should be omitted from the policy.",
+    "HowToUse": "Upload the exception document to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Review the two sentences before they go to the title company.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Org chart into an entity table",
+    "Category": "Deal management",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Review the attached organizational chart and identify all entities and individuals shown.\nCreate a table with the following columns:\nInstructions\n• For business entities:\n  • Column 1: Full legal name of the entity as shown on the org chart.\n  • Column 2: State of organization/incorporation, if provided on the org chart.\n  • Column 3: Entity type (e.g., LLC, LP, LLLP, Corporation, Trust, Partnership, etc.).\n  • Column 4: Relationship to the borrower as indicated by the org chart (e.g., Borrower, Direct Owner, Indirect Owner, Managing Member, Sole Member, Guarantor, Parent Entity, Affiliate, etc.). Include ownership percentage in Borrower.\n• For individuals:\n  • Column 1: Individual's full name.\n  • Column 2: N/A.\n  • Column 3: N/A.\n  • Column 4: Relationship to the borrower as shown on the org chart.  Include ownership percentage in Borrower.\n• If the state of organization or entity type is not expressly stated on the org chart, indicate \"Not Provided.\"\n• Include every entity and individual depicted on the chart.\n• Do not infer information that is not expressly shown on the org chart.\n• Present the results in a clean, complete table.",
+    "HowToUse": "Upload the organizational chart to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Check names, states and ownership percentages against the chart; it should show Not Provided rather than guess.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Review recorded documents in one table",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Attached are several recorded documents. The output of this prompt should be a table with the following column names:\nColumn 1: Document Name\nColumn 2: Instrument Number\nColumn 3: Date Recorded\nColumn 4: Filed in Which County?\nColumn 5: Pages in PDF\nColumn 6: Key Terms\nColumn 7: Any issues with the recording?\nEach row of the table should be a separate recorded document. The rows should be in order of the instrument number, from smallest to largest. This way, the table shows the order in which the documents were recorded.\nColumn 1:\nPut the name of the Document. For Mortgages, put the entire name of the Mortgage \"Multifamily Deed of Trust etc.\"\nColumn 2:\nPut the recorded number. If there a book and page number, include that as well.\nColumn 3:\nPut the date that the document was recorded.\nColumn 4:\nPut the name of the county where the document was recorded, in the format \"Morris County, New Jersey\". If the document was recorded with the Secretary of State or similar office, indicate that as well.\nColumn 5:\nPut the number of pages in the PDF document.\nColumn 6: For mortgages, identify the debtor, secured party, and any assignor/assignee. For UCCs, identify debtor, secured party, and any assignor/assignee. For any agreements, note the parties to the agreements. For other kinds of documents, use best judgement for what to put in this box.\nColumn 7:\nAnalyze the whole recorded document and flag any issues. Some examples of issues that might be present are: missing signature, a missing page, recorded in wrong county, missing the legal description (if the document is meant to include a legal description). If there are no issues state \"no issue identified\".",
+    "HowToUse": "Upload the recorded documents to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Check instrument numbers, recording dates and any flagged issues against the documents.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Executed document checker",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Review each attached executed document for execution, completeness, and internal consistency. The goal is not to improve the content of the documents as these documents have been reviewed and approved. Instead, these documents have now been signed by the relevant parties, and the goal is to make sure they are in final form and requiring no further fixes.\nFor each document:\n• Execution and signatures\n  • Confirm that all required signature blocks appear to be signed.\n  • Verify that the names, titles, entities, and capacities shown in the signature blocks are consistent with the parties identified in the document.\n  • Identify any missing signatures, initials, dates, acknowledgments, notarizations, or other execution formalities that appear to be required.\n  • Flag incomplete or inconsistent signature blocks, including blank fields or discrepancies between the signature pages and the body of the document.\n• Exhibits, schedules, and attachments\n  • Identify every exhibit, schedule, appendix, rider, annex, or other attachment referenced in the document.\n  • Confirm whether each referenced item is actually attached and appears complete.\n  • Flag any referenced attachment that is missing, blank, incomplete, incorrectly labeled, or appears to be the wrong attachment.\n  • Also flag any attached exhibit or schedule that is not referenced where expected.\n• Completeness and document integrity\n  • Check for missing pages, obvious pagination problems, blank pages that appear unintended, incomplete provisions, unfilled blanks, placeholders, bracketed drafting notes, or unresolved comments.\n  • Check that defined terms, party names, property names, dates, dollar amounts, and cross-references are internally consistent.\n  • Flag obvious typographical or drafting errors if they could affect the meaning or enforceability of the document.\n  • Check for brackets around items indicating they may need to be updated.\n• Dates and document information\n  • Confirm that execution dates, effective dates, document dates, and referenced agreement dates are internally consistent.\n  • Flag undated signatures or inconsistent dates.\n• Overall review\n  • Identify anything else that appears unusual, incomplete, inconsistent, incorrectly executed, or otherwise warrants follow-up.\n  • Do not assume something is acceptable merely because the document was executed. If something cannot be verified from the materials provided, state that clearly rather than guessing.\nOutput: For each document, provide:\n• Document name\n• Status: OK / Issue Identified / Unable to Confirm\n• Signatures: Complete or identify the issue\n• Exhibits/Attachments: Complete or identify missing/incomplete items\n• Other Issues: List each issue separately\n• Citation: For every issue or conclusion, cite the relevant page and section, where available.\nEnd with a consolidated issues list containing only the items that require follow-up. If no issues are identified, expressly state that the document appears complete and properly executed based on the materials provided.",
+    "HowToUse": "Upload the executed documents to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Copilot flags issues for follow-up; it doesn't replace your closing review. Check each cited page.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  },
+  {
+    "Title": "Title commitment recorded documents table",
+    "Category": "Document review",
+    "Practice": "Agency team",
+    "WorksIn": [
+      "Copilot Chat"
+    ],
+    "Prompt": "Attached is a title commitment for a property. Our client is the lender on the transaction and so will be purchasing a lender's title insurance policy. Identify all of the recorded documents in the title report and put them into a table. Column 1 header is EXCEPTION; Column 2 is SUMMARY. Each recorded document should get its own table row.\nIn the exception column, include the name of the document and the recording information. Put the recorded document number in bold font. In the summary column, include a brief summary of the document. There may be very little information in the title report, so if there is not a lot of information on the document that is okay, and the summary can be very brief.\nExclude generic title exceptions (survey matters, parties in possession, taxes, minerals, pending tax suit, irrigation district designation, etc.) that are not tied to a specific recorded document. Do not include pictures of the title commitment.",
+    "HowToUse": "Upload the title commitment to Copilot Chat, then paste the prompt.",
+    "WatchOuts": "Being tested by the AI Working Group. Check the recording numbers against the commitment before using the table.",
+    "Featured": false,
+    "Contributor": "Eric Kaden"
+  }
+]

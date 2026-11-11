@@ -38,15 +38,29 @@ export function empty(text: string): string {
 
 // ---- Prompts ---------------------------------------------------------------
 
+// Prompts longer than this start collapsed, with a Show full prompt button.
+const LONG_PROMPT = 420;
+// The Practice value that means "everyone", which the Team filter doesn't list.
+const ALL_TEAMS = 'All practices';
+// Contributors that aren't a person (the starter set, Friday tips) aren't credited by name.
+const sharedBy = (p: IPrompt): string =>
+  p.Contributor && !/starter set|friday tip/i.test(p.Contributor) ? p.Contributor : '';
+
 export function promptCard(p: IPrompt, clamp = false): string {
+  const long = clamp || (p.PromptText || '').length > LONG_PROMPT || (p.PromptText || '').split('\n').length > 7;
+  const who = sharedBy(p);
+  const foot = [p.Practice && p.Practice !== ALL_TEAMS ? esc(p.Practice) : esc(p.Practice || ''), who ? `Shared by ${esc(who)}` : '']
+    .filter(Boolean).join(' · ');
+  // Copy sits above the prompt so it's visible without scrolling past a long prompt.
   return `<article class="card">
     <h4>${esc(p.Title)}</h4>
-    <div class="meta">${p.Source ? `<a class="chip tipchip" href="${esc(p.Source.url)}">${esc(p.Source.label)}</a>` : `<span class="chip">${esc(p.Category)}</span>`}${p.WorksIn.map(w => `<span class="chip n">${esc(w)}</span>`).join('')}</div>
-    <p class="prompt">${clamp ? `<span class="clamp">${esc(p.PromptText)}</span>` : esc(p.PromptText)}</p>
+    <div class="meta">${p.Source ? `<a class="chip tipchip" href="${esc(p.Source.url)}">${esc(p.Source.label)}</a>` : `<span class="chip">${esc(p.Category)}</span>`}${p.WorksIn.map(w => `<span class="chip n">${esc(w)}</span>`).join('')}${/^being tested/i.test(p.WatchOuts || '') ? '<span class="chip testing">Being tested</span>' : ''}</div>
+    <div class="row prompt-actions">${copyBtn(p.PromptText)}${long && !clamp ? '<button type="button" class="btn ghost" data-expand aria-expanded="false">Show full prompt</button>' : ''}</div>
+    <p class="prompt">${long ? `<span class="clamp">${esc(p.PromptText)}</span>` : esc(p.PromptText)}</p>
     ${p.HowToUse || p.WatchOuts ? `<details class="more"><summary>How to use it</summary>
       ${p.HowToUse ? `<p>${esc(p.HowToUse)}</p>` : ''}
       ${p.WatchOuts ? `<p><strong>Check before you rely on it:</strong> ${esc(p.WatchOuts)}</p>` : ''}</details>` : ''}
-    <div class="foot row">${copyBtn(p.PromptText)}<span style="font-size:13px;color:var(--faint)">${esc(p.Practice)}</span></div>
+    ${foot ? `<p class="foot" style="font-size:13px;color:var(--faint);margin:0">${foot}</p>` : ''}
   </article>`;
 }
 
@@ -57,7 +71,7 @@ export function featuredPrompts(prompts: IPrompt[], libraryUrl: string, max: num
     <p style="margin-top:14px"><a href="${esc(libraryUrl)}">See all ${prompts.length} prompts →</a></p>`;
 }
 
-export interface IPromptFilter { q: string; cat: string }
+export interface IPromptFilter { q: string; cat: string; team: string }
 
 // A tip's numbered steps, one per line.
 const steps = (s: string): string[] => (s || '').split(/\r?\n/).map(x => x.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
@@ -80,7 +94,7 @@ export function withTipPrompts(library: IPrompt[], tips: ITip[], tipsPageUrl: st
     if (match) { if (!match.Source) match.Source = source(t); return; }
     added.push({
       Id: -t.Id, Title: t.Title, PromptText: t.TipPrompt, Category: TIP_CATEGORY,
-      Practice: t.WorksWith || 'All practices', WorksIn: [],
+      Practice: ALL_TEAMS, WorksIn: t.WorksWith ? [t.WorksWith] : [],
       HowToUse: steps(t.Steps).map((x, i) => `${i + 1}. ${x}`).join('\n'), WatchOuts: '', Featured: false, Source: source(t)
     });
   });
@@ -90,16 +104,21 @@ export function withTipPrompts(library: IPrompt[], tips: ITip[], tipsPageUrl: st
 export function promptLibraryShell(prompts: IPrompt[], f: IPromptFilter): string {
   const cats = ['All', ...Array.from(new Set(prompts.map(p => p.Category).filter(c => c && c !== TIP_CATEGORY)))];
   if (prompts.some(p => p.Source)) cats.push(TIP_CATEGORY);
+  // Teams that have prompts written for them; prompts for everyone show under every team.
+  const teams = Array.from(new Set(prompts.map(p => p.Practice).filter(t => t && t !== ALL_TEAMS))).sort();
   return `<div class="toolbar"><input type="search" data-search placeholder="Search prompts (try: title, loan, email)" aria-label="Search prompts" value="${esc(f.q)}"></div>
     <div class="toolbar" role="group" aria-label="Filter by category">${cats.map(c =>
       `<button type="button" class="filter${c === f.cat ? ' on' : ''}" data-cat="${esc(c)}" aria-pressed="${c === f.cat}">${esc(c)}</button>`).join('')}</div>
+    ${teams.length ? `<div class="toolbar" role="group" aria-label="Filter by team"><span class="toolbar-label">Team</span>${['All', ...teams].map(t =>
+      `<button type="button" class="filter${t === f.team ? ' on' : ''}" data-team="${esc(t)}" aria-pressed="${t === f.team}">${t === 'All' ? 'All teams' : esc(t)}</button>`).join('')}</div>` : ''}
     <div data-results>${promptResults(prompts, f)}</div>`;
 }
 
 export function promptResults(prompts: IPrompt[], f: IPromptFilter): string {
   const q = f.q.trim().toLowerCase();
   const rows = prompts.filter(p => (f.cat === 'All' || p.Category === f.cat || (f.cat === TIP_CATEGORY && !!p.Source)) &&
-    (!q || `${p.Title} ${p.PromptText} ${p.Practice} ${p.WorksIn.join(' ')}`.toLowerCase().includes(q)));
+    (!f.team || f.team === 'All' || p.Practice === f.team) &&
+    (!q || `${p.Title} ${p.PromptText} ${p.Practice} ${p.Contributor || ''} ${p.WorksIn.join(' ')}`.toLowerCase().includes(q)));
   if (!rows.length) return empty('No prompts match. Try another word, or submit one.');
   if (f.cat === TIP_CATEGORY) {
     // One group, newest tip first.
@@ -144,7 +163,7 @@ export function latestTip(tips: ITip[], tipsPageUrl: string): string {
 
 export function videos(rows: IVideo[]): string {
   if (!rows.length) return empty('No videos yet.');
-  return groupBy(rows, v => v.App).map(([app, vs]) => `<h3 class="group">${esc(app)}</h3><div class="grid">${vs.map(v => `<article class="card">
+  return `<p class="hintline">Video won't play, or YouTube asks you to sign in? Open the link in Microsoft Edge.</p>` + groupBy(rows, v => v.App).map(([app, vs]) => `<h3 class="group">${esc(app)}</h3><div class="grid">${vs.map(v => `<article class="card">
     <div class="meta">${v.SkillLevel ? `<span class="chip">${esc(v.SkillLevel)}</span>` : ''}${v.VideoSource ? `<span class="chip n">From ${esc(v.VideoSource)}</span>` : ''}</div>
     <h4>${esc(v.Title)}</h4>${v.VideoDescription ? `<p style="color:var(--muted);font-size:15px">${esc(v.VideoDescription)}</p>` : ''}
     <div class="foot row">${watchBtn(v.VideoLink?.Url, '▶ Watch', false)}</div></article>`).join('')}</div>`).join('');

@@ -217,8 +217,12 @@ New-HubList "Prompt Library" $L "Prompt name" "Copilot prompts that work at Cass
 Add-NoteField   $L "PromptText" "Prompt" "Required=`"TRUE`""
 Add-ChoiceField $L "Category" "Category" @("Getting started", "Email & correspondence", "Document review", "Drafting",
     "Deal management", "Meetings & calls", "Research & summaries", "Excel & data", "Getting organized") -Extra "Required=`"TRUE`""
-Add-ChoiceField $L "Practice" "Practice" @("All practices", "Agency lending", "Balance sheet & bridge lending", "CMBS",
-    "Affordable housing", "Leasing", "Restructuring & workouts", "Private client", "Firm operations") -Default "All practices"
+# "Team" on the site (the Prompt Library's Team filter); the column's internal name stays Practice.
+$teams = @("All practices", "Agency team", "Balance sheet & bridge lending", "CMBS",
+    "Affordable housing", "Leasing", "Restructuring & workouts", "Private client", "Firm operations")
+Add-ChoiceField $L "Practice" "Team" $teams -Default "All practices"
+try { Set-PnPField -List $L -Identity "Practice" -Values @{ Title = "Team"; Choices = [string[]] $teams } | Out-Null }
+catch { Write-Host "  Couldn't update the Team column's choices: add Agency team in the Prompt Library's column settings." -ForegroundColor Yellow }
 Add-ChoiceField $L "WorksIn" "Works in" $apps -Multi
 Add-NoteField   $L "HowToUse" "How to use it"
 Add-NoteField   $L "WatchOuts" "Check before you rely on it"
@@ -238,6 +242,22 @@ if (Test-ListEmpty $L) {
 # Content approval: staff submissions stay pending (visible to the submitter and owners)
 # until approved. Turned on after seeding, so the starter prompts are already approved.
 Set-PnPList -Identity $L -EnableModeration $true -WriteSecurity WriteOnlyMyItems | Out-Null
+
+# Prompts added after launch (content/prompt-additions.json, e.g. ones the working group
+# shares): each is added once, by name, and approved. To take one down later, delete it in
+# the list and remove it from the file.
+$existing = @{}
+Get-PnPListItem -List $L -PageSize 500 | ForEach-Object { $existing[([string] $_["Title"]).ToLower()] = $true }
+foreach ($p in (Read-Content "prompt-additions.json")) {
+    if ($existing.ContainsKey($p.Title.ToLower())) { continue }
+    $item = Add-PnPListItem -List $L -Values @{
+        Title = $p.Title; PromptText = $p.Prompt; Category = $p.Category; Practice = $p.Practice
+        WorksIn = [string[]] $p.WorksIn; HowToUse = $p.HowToUse; WatchOuts = $p.WatchOuts
+        Featured = [bool] $p.Featured; Contributor = $p.Contributor }
+    try { Set-PnPListItem -List $L -Identity $item.Id -Values @{ "_ModerationStatus" = 0 } | Out-Null; $note = "approved" }
+    catch { $note = "approve it in Prompt Library → Approve/reject items" }
+    Write-Host "  added '$($p.Title)' from $($p.Contributor) ($note)"
+}
 Set-HubView $L "By category" @("LinkTitle", "PromptText", "WorksIn", "Practice") `
     "<GroupBy Collapse=`"FALSE`"><FieldRef Name=`"Category`" /></GroupBy><OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -Default
 Set-HubView $L "Featured" @("LinkTitle", "PromptText", "WorksIn") `
@@ -304,7 +324,10 @@ Set-Formatter $L "VideoLink" $watchBtn
 Write-Step "AI Agents"
 $L = "Lists/AIAgents"
 New-HubList "AI Agents" $L "Agent" "Agents built for the firm, what they do and how to start."
-Add-ChoiceField $L "AgentStatus" "Status" @("Live", "Pilot", "Up next", "Proposed", "Retired") -Default "Proposed"
+$agentStatuses = @("Live", "Pilot", "Up next", "On hold", "Proposed", "Retired")
+Add-ChoiceField $L "AgentStatus" "Status" $agentStatuses -Default "Proposed"
+# On hold was added later; Agents & Tools shows only Live, Pilot and Up next.
+try { Set-PnPField -List $L -Identity "AgentStatus" -Values @{ Choices = [string[]] $agentStatuses } | Out-Null } catch { }
 Add-NoteField   $L "WhatItDoes" "What it does"
 Add-NoteField   $L "HowToStart" "How to start"
 Add-HubField    $L "Champion" "Champion" "Text"

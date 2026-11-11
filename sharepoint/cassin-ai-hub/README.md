@@ -10,7 +10,7 @@ A SharePoint communication site for Cassin & Cassin's Microsoft 365 Copilot prog
 |---|---|---|
 | **Home** | Welcome band, links to every section, news, this week's tip, featured prompts | |
 | **Get Started** | First five minutes, where Copilot lives, how to write a prompt. Menu also has *Use AI responsibly* and *FAQ* | page text |
-| **Prompt Library** | 25 starter prompts written for commercial real estate lending work, grouped by category, with search and filters. Staff can **submit** prompts, which wait for approval | `Prompt Library` list (content approval on) |
+| **Prompt Library** | Starter prompts written for commercial real estate lending work plus prompts shared by the team (for example Eric Kaden's agency prompts), grouped by category, with search, category and **Team** filters (Agency team first). Every Friday tip's prompt is included. Staff can **submit** prompts, which wait for approval | `Prompt Library` list (content approval on) |
 | **Friday Tips** | Every tip sent so far (Oct 2–23), newest first, with steps, prompt and video | `Friday Tips` list |
 | **Demo Videos** | Microsoft how-to videos plus anything recorded at Cassin | `Demo Videos` list + `Recordings` library |
 | **Agents & Tools** | **Use these now** (live agents, with how to start) and a short **Coming next** (in pilot or up next, with rough timing). Proposed agents aren't shown | `AI Agents` list |
@@ -134,6 +134,7 @@ How it fits together:
 | Task | How |
 |---|---|
 | Add this week's Friday tip | Friday Tips → **+ New**. Fill in Tip #, Sent on, prompt and video. Home shows the newest tip automatically, and its prompt appears in the Prompt Library under **From Friday Tips** (no need to add it there too) |
+| Add a prompt someone shared (with credit) | Prompt Library → **+ New**: set **Team** (for example Agency team) and **Source** to their name; it shows as "Shared by …". Or add it to `content/prompt-additions.json` and run the deploy script, which adds and approves it once. Start the *Check before you rely on it* text with "Being tested" to show the Being tested label |
 | Approve a submitted prompt | Prompt Library → view **Approve/reject items** → select → **Approve** |
 | Feature a prompt on Home | Edit the prompt and tick **Featured** (Home shows up to six) |
 | Answer feedback | Hub Feedback → set **Status** and **Our response**. The submitter sees both |
@@ -163,5 +164,6 @@ assets/                  Cassin logo (white, for the navy header)
 preview/                 clickable preview: build_preview.py turns template.html + content into index.html
 package/                 cassin-ai-hub-webpart.sppkg, the built web part to upload (step 3)
 webpart/                 the web part's source (SharePoint Framework); see webpart/README.md to rebuild
+updates/                 one-off scripts that apply working group decisions to the live lists (run once each)
 ```
 After editing `content/`, run `python3 preview/build_preview.py` to refresh the preview, and re-run the deploy script to load new list content. The deploy script only seeds **empty** lists, so add rows to an existing list in SharePoint itself.

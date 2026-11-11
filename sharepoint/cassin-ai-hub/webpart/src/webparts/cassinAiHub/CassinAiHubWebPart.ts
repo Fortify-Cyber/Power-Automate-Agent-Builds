@@ -56,7 +56,7 @@ const STATUS_PAGE = 'Program-Status';
 export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiHubWebPartProps> {
   private _data!: HubData;
   private _prompts: IPrompt[] = [];
-  private _filter: R.IPromptFilter = { q: '', cat: 'All' };
+  private _filter: R.IPromptFilter = { q: '', cat: 'All', team: 'All' };
   private _toastTimer: number | undefined;
   private _adoption: AdoptionView | undefined;
   private _status: ProgramStatusView | undefined;
@@ -218,6 +218,26 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     const target = e.target as HTMLElement;
     const copy = target.closest<HTMLElement>('[data-copy]');
     if (copy) { this._copy(copy.getAttribute('data-copy') || ''); return; }
+    const expand = target.closest<HTMLElement>('[data-expand]');
+    if (expand) {
+      const clamp = expand.closest('.card')?.querySelector('.clamp');
+      const open = !clamp?.classList.contains('open');
+      clamp?.classList.toggle('open', open);
+      expand.textContent = open ? 'Show less' : 'Show full prompt';
+      expand.setAttribute('aria-expanded', String(open));
+      return;
+    }
+    const team = target.closest<HTMLElement>('[data-team]');
+    if (team) {
+      this._filter.team = team.getAttribute('data-team') || 'All';
+      this.domElement.querySelectorAll<HTMLElement>('[data-team]').forEach(b => {
+        const on = b === team;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      this._redrawResults();
+      return;
+    }
     const cat = target.closest<HTMLElement>('[data-cat]');
     if (cat) {
       this._filter.cat = cat.getAttribute('data-cat') || 'All';
