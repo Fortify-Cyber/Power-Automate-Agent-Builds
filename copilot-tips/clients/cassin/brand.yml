@@ -1,0 +1,16 @@
+# Cassin & Cassin LLP branding for the Friday Copilot Tip email.
+# Colors and fonts are taken from cassinllp.com (Elementor global colors and typography);
+# logo.png is their "Cassin Logo with blue square" SVG rendered at 3x on the primary navy.
+#
+# Flow settings (Solutions > Friday Copilot Tips > Environment variables > Current value):
+#   Friday Tips - Organization name : Cassin & Cassin LLP
+#   Friday Tips - Brand color       : #021D3C
+#   Friday Tips - Heading font      : Georgia,'Times New Roman',serif
+#   Friday Tips - Logo file         : /Shared Documents/Friday Tips/cassin-logo.png
+# and upload logo.png to that path on the tips SharePoint site (named cassin-logo.png).
+org_name: Cassin & Cassin LLP
+sign_off: The Fortify Cyber Team
+brand_color: "#021D3C"          # primary navy (logo designed for this background)
+accent_color: "#00426C"         # secondary blue (the square in the logo)
+heading_font: "Georgia,'Times New Roman',serif"   # site uses Roboto Serif; Georgia is the email-safe match
+logo: logo.png

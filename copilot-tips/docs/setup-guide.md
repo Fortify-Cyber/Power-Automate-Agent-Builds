@@ -144,5 +144,19 @@ pac solution create-settings --solution-zip out/FridayCopilotTips_1_0_0_0.zip --
 pac solution import --path out/FridayCopilotTips_1_0_0_0.zip --settings-file tips-settings.json
 ```
 
+## Branding: logo, colors and fonts
+Each client's email can carry its own logo, color and heading font. Nothing needs rebuilding.
+
+1. **Logo:** a PNG or JPG designed for the brand color, about 216 x 216 px (it is shown at 72 px; the extra resolution keeps it sharp). Upload it to the tips SharePoint site, e.g. **Documents > Friday Tips > logo.png**.
+2. **Settings:** set **Friday Tips - Logo file** to the file's path from the site, e.g. `/Shared Documents/Friday Tips/logo.png`, plus **Brand color** and **Heading font**.
+3. Turn the flow off and on, then **Run** it and check the preview. Reject that test preview so it doesn't send twice.
+
+The flow embeds the logo inside the email, so it shows straight away instead of behind Outlook's "download pictures" prompt. If the file can't be read, the email simply goes out without a logo.
+
+Per-client values and logo files live in `clients/<client>/brand.yml`. To preview a client's branding locally:
+```bash
+python3 copilot-tips/build/build_tips_solution.py --previews --brand clients/cassin/brand.yml
+```
+
 ## Changing the schedule or time zone
 Friday **send time** is a setting. The **Thursday 10 AM preview** and the **Eastern** time zone are set in the build (`solution.yml → flow.weeklyPreview`, and `TIME_ZONE` in the build script). Change them there and re-import, or edit the flow's trigger directly in the designer.

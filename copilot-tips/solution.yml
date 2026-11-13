@@ -2,7 +2,7 @@
 uniqueName: FridayCopilotTips
 displayName: Friday Copilot Tips
 description: Weekly Microsoft Copilot tip email. Previews each tip to a reviewer for approval, then sends it to the organization on Friday morning.
-version: 1.0.1.0
+version: 1.0.2.0
 publisher:
   uniqueName: FortifyCyber
   displayName: Fortify Cyber
@@ -82,6 +82,16 @@ environmentVariables:
     description: "Header and button color as a hex code, e.g. #1b2a4a"
     type: String
     default: "#1b2a4a"
+  - schemaName: fc_FCT_HeadingFont
+    displayName: Friday Tips - Heading font
+    description: "CSS font list for the email's headings, e.g. Georgia,'Times New Roman',serif for a serif look."
+    type: String
+    default: "'Segoe UI',Calibri,Arial,sans-serif"
+  - schemaName: fc_FCT_LogoPath
+    displayName: Friday Tips - Logo file
+    description: "Optional PNG or JPG on the tips SharePoint site, as a path from the site, e.g. /Shared Documents/Friday Tips/logo.png. Shown in the email header on the brand color. none = no logo."
+    type: String
+    default: none
   - schemaName: fc_FCT_SendTime
     displayName: Friday Tips - Friday send time
     description: 24-hour Eastern time the approved tip goes out on Friday, e.g. 09:00

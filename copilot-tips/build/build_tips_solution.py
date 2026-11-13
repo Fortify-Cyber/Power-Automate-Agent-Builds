@@ -16,6 +16,7 @@ Template syntax: {{Field}} is replaced with a tip field (HTML-escaped) or a sett
 "<!--IF Field-->...<!--ENDIF-->" keeps the block only when Field is not blank.
 """
 import argparse
+import base64
 import csv
 import json
 import pathlib
@@ -245,6 +246,8 @@ def build_flow(cfg, parts):
         "OrgName": f"@{esc(P('fc_FCT_OrgName'))}",
         "SignOff": f"@{esc(P('fc_FCT_SignOff'))}",
         "BrandColor": f"@{esc(P('fc_FCT_BrandColor'))}",
+        "HeadingFont": f"@{esc(P('fc_FCT_HeadingFont'))}",
+        "LogoSrc": "@outputs('Logo_src')",
         "IssueDate": "@formatDateTime(outputs('Send_at_local'), 'MMMM d, yyyy')",
     }
 
@@ -370,6 +373,25 @@ def build_flow(cfg, parts):
             "where": "@and(contains(item(), '@'), not(contains(item(), ' ')))"}}),
     ]
 
+
+    # Optional logo: read the image from the tips site and embed it in the email as a data URI,
+    # so it shows without Outlook's "download pictures" prompt. Any problem -> send without a logo.
+    logo_path = P("fc_FCT_LogoPath")
+    logo_body = "actions('Get_logo')?['outputs']?['body']"
+    logo_steps = [
+        ("Load_logo", {"type": "Scope", "actions": {"Has_logo": {
+            "type": "If",
+            "expression": {"and": [{"contains": [f"@{logo_path}", "."]}]},
+            "actions": {"Get_logo": api_action("sharepoint", "GetFileContentByPath", {
+                "dataset": SITE, "path": f"@{{trim({logo_path})}}", "inferContentType": True})},
+            "else": {"actions": {}},
+            "runAfter": {}}}}),
+        ("Logo_src", {"type": "Compose", "inputs": (
+            f"@{{if(empty(coalesce({logo_body}?['$content'], '')), '', concat('data:', "
+            f"coalesce({logo_body}?['$content-type'], 'image/png'), ';base64,', coalesce({logo_body}?['$content'], '')))}}"),
+            "runAfter": {"Load_logo": ["Succeeded", "Failed", "Skipped", "TimedOut"]}}),
+    ]
+
     main = chain(
         # Next Friday (today if it's Friday) at the configured send time, Eastern.
         ("Send_at_local", {"type": "Compose", "inputs": (
@@ -400,6 +422,7 @@ def build_flow(cfg, parts):
         *recipients,
         ("Current_tip", {"type": "Compose", "inputs": "@first(body('Get_queued_tips')?['value'])"}),
         ("Low_queue_warning", {"type": "Compose", "inputs": low_queue}),
+        *logo_steps,
         ("Tip", {"type": "Compose", "inputs": tip_fields}),
         ("Email_HTML", {"type": "Compose", "inputs": compile_flow(parts, field_expr("''"))}),
         ("Preview_banner", {"type": "Compose", "inputs": banner_html}),
@@ -780,10 +803,26 @@ def build(version=None):
     return zip_path
 
 
-def previews(lib, org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Tips Team"):
+def load_brand(path):
+    """Client branding (clients/<name>/brand.yml) for previews: name, colors, font, logo."""
+    brand = load_yaml(path)
+    logo = brand.get("logo")
+    if logo:
+        data = (pathlib.Path(path).parent / logo).read_bytes()
+        kind = "jpeg" if logo.lower().endswith((".jpg", ".jpeg")) else "png"
+        brand["logo_src"] = f"data:image/{kind};base64,{base64.b64encode(data).decode()}"
+    return brand
+
+
+DEFAULT_FONT = "'Segoe UI',Calibri,Arial,sans-serif"
+
+
+def previews(lib, org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Tips Team", brand=None):
     """Render every tip as it will look in the inbox, for review before loading the list."""
     parts = template_parts(read_template())
-    folder = OUT / "previews" / lib.stem
+    brand = brand or {}
+    org, color, sign_off = brand.get("org_name", org), brand.get("brand_color", color), brand.get("sign_off", sign_off)
+    folder = OUT / "previews" / (lib.stem + (f"-{brand['slug']}" if brand.get("slug") else ""))
     shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True)
     tips = load_tips(lib)
@@ -792,7 +831,8 @@ def previews(lib, org="Fortify Cyber", color="#1b2a4a", sign_off="The Copilot Ti
         e = lambda s: esc_html(s.strip())
         values = {k: e(t[k]) for k in TIP_COLUMNS if k != "TipSteps"}
         values.update(StepsHtml=steps_html(t["TipSteps"]), OrgName=e(org), SignOff=e(sign_off),
-                      BrandColor=color, IssueDate=f"Week {n}", PreviewBanner="")
+                      BrandColor=color, IssueDate=f"Week {n}", PreviewBanner="",
+                      HeadingFont=esc_html(brand.get("heading_font", DEFAULT_FONT)), LogoSrc=brand.get("logo_src", ""))
         name = f"{n:02d}-{re.sub(r'[^a-z0-9]+', '-', t['Title'].lower()).strip('-')}.html"
         page = render_local(parts, values)
         (folder / name).write_text(page, encoding="utf-8")
@@ -853,6 +893,7 @@ if __name__ == "__main__":
     ap.add_argument("--check", action="store_true", help="validate with `pac solution unpack`")
     ap.add_argument("--previews", action="store_true", help="render every tip to out/previews/")
     ap.add_argument("--verify-links", action="store_true", help="check every tip link still resolves")
+    ap.add_argument("--brand", help="also render previews with a client's branding, e.g. clients/cassin/brand.yml")
     args = ap.parse_args()
     z = build(args.version)
     if args.check:
@@ -860,5 +901,10 @@ if __name__ == "__main__":
     if args.previews:
         for lib in libraries():
             previews(lib, *(("Your Law Firm", "#1b2a4a", "The Fortify Cyber Team") if "legal" in lib.stem else ()))
+    if args.brand:
+        brand = load_brand(ROOT / args.brand if not pathlib.Path(args.brand).is_absolute() else args.brand)
+        brand["slug"] = pathlib.Path(args.brand).parent.name
+        for lib in libraries():
+            previews(lib, brand=brand)
     if args.verify_links:
         verify_links()
