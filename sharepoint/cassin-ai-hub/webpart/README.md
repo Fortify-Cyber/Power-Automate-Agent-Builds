@@ -38,5 +38,6 @@ Copy the new `.sppkg` to `../package/` and bump `version` in `config/package-sol
 - `src/webparts/cassinAiHub/styles.ts`: the Cassin styles, scoped under `.cah`
 - `src/webparts/cassinAiHub/adoptionModel.ts`: parses the Copilot reports and works out stages, changes, roles and prompt totals (pure functions)
 - `src/webparts/cassinAiHub/adoptionData.ts`: Microsoft Graph reads and the monthly snapshot
+- `src/webparts/cassinAiHub/creditsModel.ts`: Copilot credits (Cowork etc.) from the Cost Management API, for the Cowork & credits tab (pure functions)
 - `src/webparts/cassinAiHub/adoptionView.ts`: the adoption page (from `../preview/adoption-preview.html`)
 - `src/webparts/cassinAiHub/programStatus.ts`: the working group's AI Program status page (roadmap boards, Waiting on Cassin, feedback)

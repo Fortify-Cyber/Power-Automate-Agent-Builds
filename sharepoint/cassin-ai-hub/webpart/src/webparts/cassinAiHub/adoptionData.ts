@@ -5,12 +5,17 @@ import {
   buildAdoption, cleanStored, makeSnapshot, parseCsv, parseTrend, parseUsage,
   type IAdoption, type IDirectoryUser, type ISnapshot, type IStoredAdoption, type IUsageReport, type ITrendPoint, type Row
 } from './adoptionModel';
+import { parseBalance, parseServiceRecords, parseUserRecords, sumUsers, type ICreditsRaw } from './creditsModel';
 
 // Everything the adoption page reads, all inside Cassin's Microsoft 365:
 //  - Microsoft Graph, as the signed-in person: the Copilot usage reports (Reports.Read.All)
 //    and names and job titles from Entra ID (User.Read.All). Both permissions are approved
 //    once by a SharePoint admin (SharePoint admin center → Advanced → API access). Microsoft
 //    only answers the reports call for accounts with a reports role in Entra ID.
+//  - Microsoft Graph (beta) Copilot Cost Management API, as the signed-in person: Copilot
+//    credits per service per day (Cowork, Work IQ, ...), per person, and the credit balance
+//    (CopilotCostManagement.Read.All, approved the same way). Optional: if it fails, only the
+//    Credits tab says so.
 //  - The admin-only "Copilot Adoption History" list on this site (owners and AI Hub Admins):
 //    one snapshot a month, so the month-by-month views fill in over time, and a "latest" item
 //    whose attachment holds the current figures. When someone whose account can read the
@@ -45,7 +50,25 @@ export interface IAdoptionLoad {
   shared: boolean;
 }
 
-interface ILive { usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[]; directory: IDirectoryUser[] }
+interface ILive { usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[]; directory: IDirectoryUser[]; credits: ICreditsRaw | null }
+
+const COST = '/copilot/costManagement';
+const CREDIT_DAYS = 56;      // service usage: this 28 days and the 28 before
+const CREDIT_USER_DAYS = 28; // per person: the last 28 days
+/** Completed UTC days, oldest first, ending yesterday. */
+function lastDays(n: number): string[] {
+  const out: string[] = [];
+  const today = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+  for (let i = n; i >= 1; i--) out.push(new Date(today - i * 864e5).toISOString().slice(0, 10));
+  return out;
+}
+const nextDay = (d: string): string => new Date(Date.parse(`${d}T00:00:00Z`) + 864e5).toISOString().slice(0, 10);
+/** Runs `fn` over `items`, a few at a time, keeping Graph happy. */
+async function pool<T, R>(items: T[], size: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += size) out.push(...await Promise.all(items.slice(i, i + size).map(fn)));
+  return out;
+}
 
 export class AdoptionData {
   private _graph: MSGraphClientV3 | undefined;
@@ -91,21 +114,70 @@ export class AdoptionData {
   }
 
   private async _live(): Promise<ILive> {
-    const [usage28, usage180, trend, directory] = await Promise.all([
+    const [usage28, usage180, trend, directory, credits] = await Promise.all([
       this._report(`${REPORTS}/getMicrosoft365CopilotUsageUserDetail(period='D28')`).then(r => parseUsage(r, 28)),
       // Only for "who moved"; the page still works without it.
       this._report(`${REPORTS}/getMicrosoft365CopilotUsageUserDetail(period='D180')`).then(r => parseUsage(r, 180)).catch(() => null),
       this._report(`${REPORTS}/getMicrosoft365CopilotUserCountTrend(period='D180')`).then(parseTrend).catch(() => []),
-      this._directory().catch(() => [] as IDirectoryUser[])
+      this._directory().catch(() => [] as IDirectoryUser[]),
+      this._credits()
     ]);
-    return { usage28, usage180, trend, directory };
+    return { usage28, usage180, trend, directory, credits };
   }
 
-  private async _latestItem(): Promise<{ Id: number; RefreshDate: string | null } | null> {
-    const res = await this._http.get(`${this._listApi()}/items?$select=Id,Title,RefreshDate&$filter=Title eq '${LATEST}'&$top=1`,
+  // Copilot credits. Never throws: a failure is recorded so the Credits tab can explain it.
+  private async _credits(): Promise<ICreditsRaw> {
+    const empty = (error: ICreditsRaw['error']): ICreditsRaw => ({ days: [], users: [], userDays: 0, balance: null, error });
+    const days = lastDays(CREDIT_DAYS);
+    const svcUrl = (d: string): string => `${COST}/usageReports/serviceUsageRecords?startDate=${d}&endDate=${nextDay(d)}&$top=100`;
+    let first: Row[];
+    try {
+      // One call first: if the permission isn't approved, stop here rather than fail 56 times.
+      first = await this._rows(svcUrl(days[days.length - 1]));
+      if (/[?&]adoptionDebug=1/.test(window.location.search)) console.info('Cassin AI Hub credits: service usage for', days[days.length - 1], first);
+    } catch (err) {
+      const e = err as AdoptionError;
+      return empty(e && e.isAdoptionError && (e.kind === 'consent' || e.kind === 'role') ? e.kind : 'other');
+    }
+    try {
+      const rest = await pool(days.slice(0, -1), 6, d => this._rows(svcUrl(d)).catch(() => [] as Row[]));
+      const byDay = [...rest, first].map((rows, i) => ({ date: days[i], byService: parseServiceRecords(rows) }));
+      const userDays = days.slice(-CREDIT_USER_DAYS);
+      const users = await pool(userDays, 6, d =>
+        this._rows(`${COST}/usageReports/userUsageRecords?startDate=${d}&endDate=${nextDay(d)}&$top=100`).then(parseUserRecords).catch(() => []));
+      const client = await this._client();
+      const balance = await client.api(`${COST}/getTenantCreditBalance`).version('beta').get().then(parseBalance).catch(() => null);
+      return { days: byDay, users: sumUsers(users), userDays: CREDIT_USER_DAYS, balance, error: null };
+    } catch {
+      return empty('other');
+    }
+  }
+
+  // All rows of a beta list endpoint, following paging.
+  private async _rows(path: string): Promise<Row[]> {
+    const client = await this._client();
+    const rows: Row[] = [];
+    let next: string | undefined = path;
+    let first = true;
+    while (next) {
+      let page: { value?: Row[]; '@odata.nextLink'?: string };
+      try {
+        page = first ? await client.api(next).version('beta').get() : await client.api(next).get();
+      } catch (err) {
+        throw this._explain(err);
+      }
+      first = false;
+      rows.push(...(page.value || []));
+      next = page['@odata.nextLink'];
+    }
+    return rows;
+  }
+
+  private async _latestItem(): Promise<{ Id: number; RefreshDate: string | null; Modified?: string } | null> {
+    const res = await this._http.get(`${this._listApi()}/items?$select=Id,Title,RefreshDate,Modified&$filter=Title eq '${LATEST}'&$top=1`,
       Http.configurations.v1, { headers: { Accept: 'application/json;odata=nometadata' } });
     if (!res.ok) return null;
-    const body = await res.json() as { value: Array<{ Id: number; RefreshDate: string | null }> };
+    const body = await res.json() as { value: Array<{ Id: number; RefreshDate: string | null; Modified?: string }> };
     return body.value[0] || null;
   }
 
@@ -123,14 +195,18 @@ export class AdoptionData {
   // are kept from the directory.
   private async _saveLatest(live: ILive, refresh: string): Promise<boolean> {
     let item = await this._latestItem();
-    if (item && item.RefreshDate === refresh) return false;
+    // Rewrite when Microsoft has newer usage data, or at least every 6 hours (credits move daily).
+    const fresh = item?.Modified && Date.now() - Date.parse(item.Modified) < 6 * 3600e3;
+    if (item && item.RefreshDate === refresh && fresh) return false;
     const wanted = new Set(live.usage28.rows.map(r => r.upn.toLowerCase()));
+    const creditIds = new Set((live.credits?.users || []).map(u => u.userId));
     const data: IStoredAdoption = {
       v: 1, savedAt: new Date().toISOString(),
       usage28: { ...live.usage28, fields: [] },
       usage180: live.usage180 ? { ...live.usage180, fields: [] } : null,
       trend: live.trend,
-      directory: live.directory.filter(d => wanted.has(d.upn.toLowerCase()))
+      directory: live.directory.filter(d => wanted.has(d.upn.toLowerCase()) || (!!d.id && creditIds.has(d.id))),
+      credits: live.credits
     };
     const json = JSON.stringify(data);
     const headers: Record<string, string> = { Accept: 'application/json;odata=nometadata', 'Content-Type': 'application/json;odata=nometadata' };
@@ -138,7 +214,7 @@ export class AdoptionData {
       const res = await this._http.post(`${this._listApi()}/items`, Http.configurations.v1,
         { headers, body: JSON.stringify({ Title: LATEST, RefreshDate: refresh }) });
       if (!res.ok) return false;
-      item = await res.json() as { Id: number; RefreshDate: string | null };
+      item = await res.json() as { Id: number; RefreshDate: string | null; Modified?: string };
     }
     const file = `${this._listApi()}/items(${item.Id})/AttachmentFiles`;
     let res = await this._http.post(`${file}('${LATEST_FILE}')/$value`, Http.configurations.v1,
@@ -186,11 +262,11 @@ export class AdoptionData {
   private async _directory(): Promise<IDirectoryUser[]> {
     const client = await this._client();
     const out: IDirectoryUser[] = [];
-    let next: string | undefined = '/users?$select=userPrincipalName,displayName,jobTitle&$top=999';
+    let next: string | undefined = '/users?$select=id,userPrincipalName,displayName,jobTitle&$top=999';
     while (next) {
       const page = await client.api(next).get() as { value: Array<Record<string, string | null>>; '@odata.nextLink'?: string };
       page.value.forEach(u => out.push({
-        upn: u.userPrincipalName || '', name: u.displayName || '', title: (u.jobTitle || '').trim()
+        upn: u.userPrincipalName || '', name: u.displayName || '', title: (u.jobTitle || '').trim(), id: (u.id || '').toLowerCase()
       }));
       next = page['@odata.nextLink'];
     }

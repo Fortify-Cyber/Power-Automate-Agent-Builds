@@ -142,6 +142,7 @@ export const CSS = `
 .cah .ad-tile.accent .s { color:#E3ECF3; }
 .cah .ad .delta { font-weight:600; font-size:13px; color:var(--faint); }
 .cah .ad .delta.up { color:var(--good); } .cah .ad .delta.down { color:var(--bad); }
+.cah .ad .ad-tile.accent .delta { color:#C7D5DF; } .cah .ad .ad-tile.accent .delta.up { color:#9FE0B8; }
 .cah .ad-panel { border:1px solid var(--line); background:#fff; padding:18px 20px; margin-bottom:16px; min-width:0; }
 .cah .ad-panel h3 { margin:0 0 2px; }
 .cah .ad-panel h4 { font:600 12px var(--sans); letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin:18px 0 8px; }

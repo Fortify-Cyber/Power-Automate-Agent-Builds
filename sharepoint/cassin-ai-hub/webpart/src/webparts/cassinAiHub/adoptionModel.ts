@@ -7,6 +7,8 @@
 // If Microsoft's report doesn't carry them, `hasDays` / `hasPrompts` are false and the page
 // says so instead of showing zeros.
 
+import { buildCredits, cleanCredits, type ICreditsRaw, type ICreditsView } from './creditsModel';
+
 export type Row = Record<string, unknown>;
 export type Move = 'new' | 'ramped_up' | 'steady' | 'cooled' | 'lapsed';
 
@@ -198,7 +200,7 @@ export function steadyEnabled(trend: ITrendPoint[]): ITrendPoint[] {
   return trend.map((t, i) => ({ ...t, enabled: Math.max(...carried.slice(Math.max(0, i - 6), i + 1)) }));
 }
 
-export interface IDirectoryUser { upn: string; name: string; title: string }
+export interface IDirectoryUser { upn: string; name: string; title: string; /** Entra object id, to name people in the credit reports. */ id?: string }
 
 /** One saved month: active days and prompts per person over the 28 days ending `refresh`. */
 export interface ISnapshot {
@@ -240,6 +242,8 @@ export interface IAdoption {
    * 180-day report), and each saved month's total. Null when the report has no prompt counts. */
   promptsNow: number | null; promptsBefore: number | null; monthPrompts: number[];
   hasDailyPrompts: boolean;
+  /** Copilot credits (Cowork and other usage-billed services); null when not read. */
+  credits: ICreditsView | null;
   fields: string[];
 }
 
@@ -303,6 +307,7 @@ function cleanSnapshot(s: ISnapshot): ISnapshot | null {
  */
 export interface IStoredAdoption {
   v: 1; savedAt: string; usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[]; directory: IDirectoryUser[];
+  credits?: ICreditsRaw | null;
 }
 
 const APP_BY_KEY: Record<string, IApp> = {};
@@ -332,13 +337,14 @@ export function cleanStored(raw: unknown): IStoredAdoption | null {
     const date = asDate(t?.date), active = num(t?.active);
     return date && active !== null ? { date, active, enabled: num(t?.enabled) ?? 0, prompts: num(t?.prompts) } : null;
   }).filter((t): t is ITrendPoint => !!t);
-  const directory = (Array.isArray(x.directory) ? x.directory : []).map(d => ({ upn: str(d?.upn), name: str(d?.name), title: str(d?.title) })).filter(d => d.upn);
-  return { v: 1, savedAt: str(x.savedAt), usage28, usage180: cleanReport(x.usage180), trend, directory };
+  const directory = (Array.isArray(x.directory) ? x.directory : []).map(d => ({ upn: str(d?.upn), name: str(d?.name), title: str(d?.title), id: str(d?.id) }))
+    .filter(d => d.upn);
+  return { v: 1, savedAt: str(x.savedAt), usage28, usage180: cleanReport(x.usage180), trend, directory, credits: cleanCredits(x.credits) };
 }
 
 export interface IAdoptionInput {
   usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[];
-  directory: IDirectoryUser[]; snapshots: ISnapshot[]; maxMonths?: number;
+  directory: IDirectoryUser[]; snapshots: ISnapshot[]; maxMonths?: number; credits?: ICreditsRaw | null;
 }
 
 export function buildAdoption(input: IAdoptionInput): IAdoption {
@@ -413,6 +419,7 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
     moves, promptsNow, promptsBefore,
     monthPrompts: snaps.map(sn => Object.keys(sn.people).reduce((t, k) => t + sn.people[k][1], 0)),
     hasDailyPrompts: trend.some(t => t.prompts !== null),
+    credits: buildCredits(input.credits, directory),
     fields: usage28.fields
   };
 }

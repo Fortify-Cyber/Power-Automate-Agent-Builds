@@ -1,11 +1,13 @@
 import { MOVES, STAGES, stageOf, daysBetween, type IAdoption, type IGroupRow, type IPerson, type Move } from './adoptionModel';
 import { esc } from './render';
+import type { ICreditsView } from './creditsModel';
 
 // The admin "Copilot adoption" page, laid out as in preview/adoption-preview.html. Every value
 // that comes from Graph or Entra ID goes through esc().
 
-type Tab = 'overview' | 'habits' | 'roles' | 'people';
-const TABS: Array<[Tab, string]> = [['overview', 'Overview'], ['habits', 'Habits'], ['roles', 'Roles'], ['people', 'People']];
+type Tab = 'overview' | 'habits' | 'roles' | 'people' | 'credits';
+const TABS: Array<[Tab, string]> = [['overview', 'Overview'], ['habits', 'Habits'], ['roles', 'Roles'], ['people', 'People'], ['credits', 'Cowork & credits']];
+const SERVICE_COLORS = ['#00426C', '#6FA9D6', '#B87A1F', '#2F8A5B', '#9FBFDB', '#B4463A', '#7E6BA8'];
 const MOVE_COLOR: Record<Move, string> = { new: '#0077CE', ramped_up: '#2F8A5B', steady: '#C7D5DF', cooled: '#B87A1F', lapsed: '#B4463A' };
 const MOVE_RANK: Record<Move, number> = { ramped_up: 0, new: 1, steady: 2, cooled: 3, lapsed: 4 };
 const PAGE = 15;
@@ -34,7 +36,7 @@ export class AdoptionView {
     return `<div class="ad">
       <div class="ad-head">
         <div class="ad-lock">🔒 Visible to AI Hub Admins only</div>
-        <div class="ad-tabs" role="tablist">${TABS.map(([k, l]) =>
+        <div class="ad-tabs" role="tablist">${TABS.filter(([k]) => k !== 'credits' || !!m.credits).map(([k, l]) =>
           `<button type="button" role="tab" data-ad-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('')}</div>
       </div>
       ${m.namesHidden ? `<div class="ad-warn"><b>Names are hidden in Microsoft's reports.</b> Microsoft 365 is set to conceal user names in usage reports, so people can't be matched to names or job titles. A Global Admin can change this in the Microsoft 365 admin center: <b>Settings → Org settings → Services → Reports</b>, then clear <b>Display concealed user, group, and site names in all reports</b>. Monthly history isn't saved while names are hidden.</div>` : ''}
@@ -43,6 +45,7 @@ export class AdoptionView {
       <section data-ad-view="habits" ${this._tab === 'habits' ? '' : 'hidden'}>${this._habits()}</section>
       <section data-ad-view="roles" ${this._tab === 'roles' ? '' : 'hidden'}>${this._roles()}</section>
       <section data-ad-view="people" ${this._tab === 'people' ? '' : 'hidden'}>${this._peopleShell()}</section>
+      ${m.credits ? `<section data-ad-view="credits" ${this._tab === 'credits' ? '' : 'hidden'}>${this._creditsTab(m.credits)}</section>` : ''}
       <p class="ad-note">Source: Microsoft 365 Copilot usage reports and Entra ID (names and job titles) through Microsoft Graph, ${this._src.source === 'live' ? `read as you${this._src.shared ? ' and saved for the other admins' : ''}` : 'as saved for admins'}.
         ${m.refresh ? `Microsoft's data is up to ${longDate(m.refresh)}.` : ''}
         Monthly history is saved to the admin-only Copilot Adoption History list on this site${this._saved ? ' (this month\'s was just saved)' : ''}.
@@ -336,6 +339,7 @@ export class AdoptionView {
     const mini = [
       m.hasDays ? [String(p.days), 'Active days (28)'] : [p.last ? shortDate(p.last) : '–', 'Last used'],
       m.hasPrompts ? [String(p.prompts), 'Prompts (28)'] : null,
+      this._personCredits(p.upn),
       [String(p.appsRecent.length), 'Apps used (28)']
     ].filter((x): x is string[] => !!x);
     pd.querySelector('aside')!.innerHTML = `
@@ -369,7 +373,81 @@ export class AdoptionView {
     this._drawCharts();
   }
 
+  // ---------------------------------------------------------------- Cowork & credits
+  private _creditsTab(c: ICreditsView): string {
+    if (c.error) {
+      const why = c.error === 'consent'
+        ? "The web part's access to Microsoft's Copilot cost reports hasn't been approved yet. A SharePoint admin approves it in SharePoint admin center → Advanced → API access (CopilotCostManagement.Read.All)."
+        : c.error === 'role'
+        ? "Microsoft didn't share the Copilot cost reports with the account that refreshes this page. It needs billing read access in Microsoft 365 (for example Billing Administrator or Global Reader)."
+        : "Microsoft's Copilot cost reports couldn't be read. They're a preview from Microsoft; this tab tries again the next time the page is refreshed by AI Admin.";
+      return `<div class="ad-warn">${why}</div>`;
+    }
+    if (!c.hasUsage) return '<div class="ad-info">No Copilot credits used in the last 56 days. Cowork and the other pay-as-you-go Copilot services appear here once they are used.</div>';
+    const n = (v: number): string => Math.round(v).toLocaleString('en-US');
+    const delta = (now: number, before: number | null): string => {
+      if (before === null) return '';
+      if (!before) return now ? '<div class="delta up">New in the last 28 days</div>' : '';
+      const ch = Math.round(100 * (now - before) / before);
+      // Neutral colour: more credits can mean more cost or more adoption.
+      return `<div class="delta">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch)}% vs the 28 days before</div>`;
+    };
+    const tiles = [
+      `<div class="ad-tile accent"><div class="k">Cowork credits, last 28 days</div><div class="v">${n(c.coworkLast28)}</div><div class="s">${c.allLast28 ? Math.round(100 * c.coworkLast28 / c.allLast28) : 0}% of all Copilot credits</div>${delta(c.coworkLast28, c.coworkPrev28)}</div>`,
+      `<div class="ad-tile"><div class="k">All Copilot credits, last 28 days</div><div class="v">${n(c.allLast28)}</div><div class="s">${c.services.length} service${c.services.length === 1 ? '' : 's'}</div>${delta(c.allLast28, c.allPrev28)}</div>`,
+      `<div class="ad-tile"><div class="k">People using credits</div><div class="v">${c.people.length}</div><div class="s">Last ${c.userDays} days</div></div>`,
+      c.balance && c.balance.remaining !== null
+        ? `<div class="ad-tile"><div class="k">Credits remaining</div><div class="v">${n(c.balance.remaining)}</div><div class="s">${c.balance.purchased !== null ? `of ${n(c.balance.purchased)} purchased` : 'Prepaid balance'}</div></div>`
+        : `<div class="ad-tile"><div class="k">Average per day</div><div class="v">${n(c.allLast28 / 28)}</div><div class="s">Credits, last 28 days</div></div>`
+    ].join('');
+    const people = c.people.slice(0, 25).map(p => {
+      const i = p.upn ? this._m.people.findIndex(x => x.upn.toLowerCase() === p.upn!.toLowerCase()) : -1;
+      return `<tr${i >= 0 ? ` class="click" data-ad-person="${i}"` : ''}><td>${esc(p.name)}</td><td>${esc(p.role)}</td><td class="n">${n(p.credits)}</td><td class="n">${n(p.sessions)}</td><td class="n">${p.share}%</td></tr>`;
+    }).join('');
+    return `<div class="ad-tiles">${tiles}</div>
+      <div class="ad-panel"><h3>Copilot credits per day</h3>
+        <p class="hint">Credits used each day, by service, over the last 8 weeks. Microsoft reports credits, not dollars.</p>
+        <div class="ad-legend">${c.services.map((sv, i) => `<span><i style="background:${SERVICE_COLORS[i % SERVICE_COLORS.length]}"></i>${esc(sv.name)} <span class="faint">${n(sv.last28)}</span></span>`).join('')}</div>
+        <div data-ad-chart="credits"></div></div>
+      <div class="ad-panel"><h3>Who uses credits <span class="count">(${c.people.length})</span></h3>
+        <p class="hint">Copilot credits per person over the last ${c.userDays} days, all services together.${c.people.length > 25 ? ' Top 25 shown.' : ''}</p>
+        ${c.people.length ? `<div class="scroll"><table><thead><tr><th>Name</th><th>Role</th><th class="n">Credits</th><th class="n">Sessions</th><th class="n">Share</th></tr></thead><tbody>${people}</tbody></table></div>` : '<p class="faint">No per-person usage reported.</p>'}</div>
+      <p class="ad-note">From Microsoft's Copilot Cost Management reports (a Microsoft preview), read when AI Admin opens this page and saved with the other figures.</p>`;
+  }
+
+  private _personCredits(upn: string): string[] | null {
+    const c = this._m.credits;
+    if (!c || c.error) return null;
+    const p = c.people.find(x => x.upn && x.upn.toLowerCase() === upn.toLowerCase());
+    return p ? [Math.round(p.credits).toLocaleString('en-US'), `Copilot credits (${c.userDays})`] : null;
+  }
+
+  private _creditsSvg(W: number): string {
+    const c = this._m.credits;
+    if (!c || !c.days.length) return '';
+    const H = 220, P = { l: 48, r: 8, t: 14, b: 26 };
+    const top = Math.max(1, ...c.days.map(d => d.total)) * 1.1;
+    const slot = (W - P.l - P.r) / c.days.length, bw = Math.max(2, slot * 0.72);
+    const y = (v: number): number => P.t + (H - P.t - P.b) * (1 - v / top);
+    const ticks = [0, 0.5, 1].map(f => top / 1.1 * f);
+    let out = ticks.map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#E4E1DD"/><text x="${P.l - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="#6E7C8C">${Math.round(v).toLocaleString('en-US')}</text>`).join('');
+    c.days.forEach((d, i) => {
+      const x = P.l + slot * i + (slot - bw) / 2;
+      let acc = 0;
+      c.services.forEach((sv, k) => {
+        const v = d.byService[sv.id] || 0;
+        if (!v) return;
+        out += `<rect x="${x.toFixed(1)}" y="${y(acc + v).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, y(acc) - y(acc + v)).toFixed(1)}" fill="${SERVICE_COLORS[k % SERVICE_COLORS.length]}"><title>${shortDate(d.date)}: ${esc(sv.name)} ${Math.round(v).toLocaleString('en-US')}</title></rect>`;
+        acc += v;
+      });
+      if (i % 7 === 0 || i === c.days.length - 1) out += `<text x="${x + bw / 2}" y="${H - 8}" font-size="11" text-anchor="${i === c.days.length - 1 ? 'end' : 'middle'}" fill="#6E7C8C">${shortDate(d.date)}</text>`;
+    });
+    return `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="Copilot credits per day">${out}</svg>`;
+  }
+
   private _drawCharts(): void {
+    const credits = this._root?.querySelector<HTMLElement>('[data-ad-chart="credits"]');
+    if (credits && credits.offsetParent) credits.innerHTML = this._creditsSvg(credits.clientWidth || 700);
     const trend = this._root?.querySelector<HTMLElement>('[data-ad-chart="trend"]');
     if (trend && trend.offsetParent) trend.innerHTML = this._trendSvg(trend.clientWidth || 700);
     const prompts = this._root?.querySelector<HTMLElement>('[data-ad-chart="prompts"]');

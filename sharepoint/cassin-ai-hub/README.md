@@ -115,6 +115,11 @@ Optional, if Cassin's IT can provide Entra ID groups (security groups, or the gr
 
 Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn't published the exact field names for active days and prompts per person in its updated report, so the page finds them by name. If the Habits tab says active days aren't included yet, the rest of the page still works; open the page with `?adoptionDebug=1` at the end of the address and send Fortify the field list it writes to the browser console (F12 → Console).
 
+**Cowork & credits tab (Copilot credits).** The adoption page also shows Copilot credits used by Cowork and the other pay-as-you-go Copilot services: credits per day by service for the last 8 weeks, credits per person for the last 28 days, and the remaining prepaid balance. It comes from Microsoft's Copilot Cost Management API (a Microsoft preview, in credits, not dollars), read when AI Admin opens the page and saved with the other figures.
+- The web part (1.7 or later) asks for one more Graph permission: approve **Microsoft Graph, CopilotCostManagement.Read.All** in SharePoint admin center → Advanced → API access.
+- The account that refreshes the page (AI Admin) needs billing read access in Microsoft 365; Microsoft's examples name Billing Administrator and Global Reader. If it can't read the reports, only this tab says so.
+- To check what Microsoft returns, open the page with `?adoptionDebug=1` and look in the browser console (F12) for *Cassin AI Hub credits*.
+
 ### 9. AI Program status for the working group (5 min, once)
 The roadmap that lived in Notion ("Cassin & Cassin × Fortify — AI Program Status") is now on the hub, for the AI Working Group only. The firm keeps seeing only what's ready on Agents & Tools.
 
