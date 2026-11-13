@@ -15,6 +15,8 @@ export interface ICreditBalance { purchased: number | null; consumed: number | n
 /** What the page reads (and saves for other admins). */
 export interface ICreditsRaw {
   days: ICreditDay[]; users: ICreditUser[]; userDays: number; balance: ICreditBalance | null; error: CreditsError | null;
+  /** Microsoft's own wording when it refused, to pass on to an administrator. */
+  detail?: string;
 }
 
 type Row = Record<string, unknown>;
@@ -77,7 +79,7 @@ export function cleanCredits(raw: unknown): ICreditsRaw | null {
   const b = x.balance as ICreditBalance | null | undefined;
   const balance = b ? { purchased: num(b.purchased), consumed: num(b.consumed), remaining: num(b.remaining) } : null;
   const error = x.error === 'consent' || x.error === 'role' || x.error === 'other' ? x.error : null;
-  return { days, users, userDays: Math.min(num(x.userDays) ?? 0, 60), balance, error };
+  return { days, users, userDays: Math.min(num(x.userDays) ?? 0, 60), balance, error, detail: str(x.detail).slice(0, 300) };
 }
 
 // ---- what the Credits tab shows ----------------------------------------------
@@ -96,6 +98,7 @@ export function serviceName(id: string): string {
 export interface ICreditPerson { userId: string; upn: string | null; name: string; role: string; credits: number; sessions: number; share: number }
 export interface ICreditsView {
   error: CreditsError | null;
+  detail: string;
   /** Services seen, most credits first; Cowork first if present. */
   services: Array<{ id: string; name: string; last28: number }>;
   days: Array<{ date: string; byService: Record<string, number>; total: number }>;
@@ -124,7 +127,7 @@ export function buildCredits(raw: ICreditsRaw | null | undefined,
   }).sort((a, b) => b.credits - a.credits || a.name.localeCompare(b.name));
   const allLast28 = sum(last);
   return {
-    error: raw.error, services, days,
+    error: raw.error, detail: raw.detail || '', services, days,
     coworkLast28: sum(last, 'cowork'), coworkPrev28: prev.length >= 28 ? sum(prev, 'cowork') : null,
     allLast28, allPrev28: prev.length >= 28 ? sum(prev) : null,
     people, userDays: raw.userDays, balance: raw.balance,

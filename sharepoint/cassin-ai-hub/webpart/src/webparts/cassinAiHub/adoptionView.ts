@@ -381,7 +381,7 @@ export class AdoptionView {
         : c.error === 'role'
         ? "Microsoft didn't share the Copilot cost reports with the account that refreshes this page. It needs billing read access in Microsoft 365 (for example Billing Administrator or Global Reader)."
         : "Microsoft's Copilot cost reports couldn't be read. They're a preview from Microsoft; this tab tries again the next time the page is refreshed by AI Admin.";
-      return `<div class="ad-warn">${why}</div>`;
+      return `<div class="ad-warn">${why}${c.detail ? `<p class="detail">Microsoft's reply: <code>${esc(c.detail)}</code></p>` : ''}</div>`;
     }
     if (!c.hasUsage) return '<div class="ad-info">No Copilot credits used in the last 56 days. Cowork and the other pay-as-you-go Copilot services appear here once they are used.</div>';
     const n = (v: number): string => Math.round(v).toLocaleString('en-US');

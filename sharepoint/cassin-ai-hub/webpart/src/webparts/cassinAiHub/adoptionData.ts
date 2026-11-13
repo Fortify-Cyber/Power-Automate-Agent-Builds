@@ -127,7 +127,7 @@ export class AdoptionData {
 
   // Copilot credits. Never throws: a failure is recorded so the Credits tab can explain it.
   private async _credits(): Promise<ICreditsRaw> {
-    const empty = (error: ICreditsRaw['error']): ICreditsRaw => ({ days: [], users: [], userDays: 0, balance: null, error });
+    const empty = (error: ICreditsRaw['error'], detail = ''): ICreditsRaw => ({ days: [], users: [], userDays: 0, balance: null, error, detail: detail.slice(0, 300) });
     const days = lastDays(CREDIT_DAYS);
     const svcUrl = (d: string): string => `${COST}/usageReports/serviceUsageRecords?startDate=${d}&endDate=${nextDay(d)}&$top=100`;
     let first: Row[];
@@ -137,7 +137,8 @@ export class AdoptionData {
       if (/[?&]adoptionDebug=1/.test(window.location.search)) console.info('Cassin AI Hub credits: service usage for', days[days.length - 1], first);
     } catch (err) {
       const e = err as AdoptionError;
-      return empty(e && e.isAdoptionError && (e.kind === 'consent' || e.kind === 'role') ? e.kind : 'other');
+      console.warn('Cassin AI Hub credits: Microsoft refused the cost report', e?.message);
+      return empty(e && e.isAdoptionError && (e.kind === 'consent' || e.kind === 'role') ? e.kind : 'other', String(e?.message || '').trim());
     }
     try {
       const rest = await pool(days.slice(0, -1), 6, d => this._rows(svcUrl(d)).catch(() => [] as Row[]));
