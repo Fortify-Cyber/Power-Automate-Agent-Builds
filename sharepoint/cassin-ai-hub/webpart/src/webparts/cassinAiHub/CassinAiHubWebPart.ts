@@ -10,6 +10,7 @@ import { SPPermission } from '@microsoft/sp-page-context';
 import { HubData, LISTS, ListNotFoundError, type IPrompt } from './data';
 import { AdoptionData, AdoptionError, HISTORY_LIST } from './adoptionData';
 import { AdoptionView } from './adoptionView';
+import type { ICreditsView } from './creditsModel';
 import { ProgramStatusView } from './programStatus';
 import * as R from './render';
 import { ensureStyles } from './styles';
@@ -59,6 +60,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   private _filter: R.IPromptFilter = { q: '', cat: 'All', team: 'All' };
   private _toastTimer: number | undefined;
   private _adoption: AdoptionView | undefined;
+  /** Copilot credits still being read after the adoption page is shown. */
+  private _adoptionCredits: Promise<ICreditsView | null> | undefined;
   private _status: ProgramStatusView | undefined;
 
   protected onInit(): Promise<void> {
@@ -89,7 +92,12 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
       .then(html => {
         this.domElement.innerHTML = `<div class="cah">${html}${this._manageLink()}</div>`;
         const root = this.domElement.querySelector<HTMLElement>('.cah');
-        if (this._adoption && root) this._adoption.mount(root);
+        if (this._adoption && root) {
+          const view = this._adoption, credits = this._adoptionCredits;
+          this._adoptionCredits = undefined;
+          view.mount(root);
+          if (credits) credits.then(c => { if (this._adoption === view) view.setCredits(c); }, () => view.setCredits(null));
+        }
         if (this._status && root) this._status.mount(root);
         const sec = this.properties.section;
         if (root && (sec === 'latestTip' || sec === 'programStatus' || sec === 'adoption')) this._addRestrictedNav(root, sec);
@@ -143,8 +151,9 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
       case 'adoption': {
         const web = this.context.pageContext.web;
         return new AdoptionData(this.context.msGraphClientFactory, this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl)
-          .load().then(({ model, saved, source, savedAt, shared }) => {
-            this._adoption = new AdoptionView(model, saved, { source, savedAt, shared });
+          .load().then(({ model, saved, source, savedAt, shared, credits }) => {
+            this._adoption = new AdoptionView(model, saved, { source, savedAt, shared, creditsPending: !!credits });
+            this._adoptionCredits = credits;
             return this._adoption.html();
           });
       }

@@ -27,17 +27,45 @@ export class AdoptionView {
   private _daily = false;
   private _root: HTMLElement | undefined;
   private readonly _onResize = (): void => this._drawCharts();
+  /** Copilot credits are still being read from Microsoft (they arrive after the rest of the page). */
+  private _creditsPending = false;
 
   public constructor(private readonly _m: IAdoption, private readonly _saved: boolean,
-                     private readonly _src: { source: 'live' | 'stored'; savedAt?: string; shared: boolean } = { source: 'live', shared: false }) {}
+                     private readonly _src: { source: 'live' | 'stored'; savedAt?: string; shared: boolean; creditsPending?: boolean } = { source: 'live', shared: false }) {
+    this._creditsPending = !!_src.creditsPending;
+  }
+
+  /** The credits read in the background, once Microsoft has answered (null: keep what's shown). */
+  public setCredits(c: ICreditsView | null): void {
+    this._creditsPending = false;
+    if (c) this._m.credits = c;
+    const tabs = this._root?.querySelector<HTMLElement>('.ad-tabs');
+    if (tabs) tabs.innerHTML = this._tabButtons();
+    const sec = this._root?.querySelector<HTMLElement>('[data-ad-view="credits"]');
+    if (sec) sec.innerHTML = this._creditsContent();
+    if (!this._m.credits && this._tab === 'credits') this._setTab('overview');
+    this._drawCharts();
+  }
+
+  private _tabButtons(): string {
+    return TABS.filter(([k]) => k !== 'credits' || !!this._m.credits || this._creditsPending).map(([k, l]) =>
+      `<button type="button" role="tab" data-ad-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('');
+  }
+
+  private _creditsContent(): string {
+    const c = this._m.credits;
+    const wait = this._creditsPending
+      ? `<div class="ad-info">${c ? 'Showing the credits saved earlier while the latest are read from Microsoft.' : 'Reading Copilot credits from Microsoft.'} This can take a minute; the other tabs are ready to use.</div>`
+      : '';
+    return wait + (c ? this._creditsTab(c) : '');
+  }
 
   public html(): string {
     const m = this._m;
     return `<div class="ad">
       <div class="ad-head">
         <div class="ad-lock">🔒 Visible to AI Hub Admins only</div>
-        <div class="ad-tabs" role="tablist">${TABS.filter(([k]) => k !== 'credits' || !!m.credits).map(([k, l]) =>
-          `<button type="button" role="tab" data-ad-tab="${k}" aria-selected="${k === this._tab}" class="${k === this._tab ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="ad-tabs" role="tablist">${this._tabButtons()}</div>
       </div>
       ${m.namesHidden ? `<div class="ad-warn"><b>Names are hidden in Microsoft's reports.</b> Microsoft 365 is set to conceal user names in usage reports, so people can't be matched to names or job titles. A Global Admin can change this in the Microsoft 365 admin center: <b>Settings → Org settings → Services → Reports</b>, then clear <b>Display concealed user, group, and site names in all reports</b>. Monthly history isn't saved while names are hidden.</div>` : ''}
       ${this._src.source === 'stored' ? `<div class="ad-info">Microsoft's figures up to ${m.refresh ? longDate(m.refresh) : 'the last saved date'}${this._src.savedAt && /^\d{4}-\d{2}-\d{2}/.test(this._src.savedAt) ? `, saved ${longDate(this._src.savedAt.slice(0, 10))}` : ''}. They're refreshed whenever an account that can read Microsoft's usage reports (such as AI Admin) opens this page.</div>` : ''}
@@ -45,7 +73,7 @@ export class AdoptionView {
       <section data-ad-view="habits" ${this._tab === 'habits' ? '' : 'hidden'}>${this._habits()}</section>
       <section data-ad-view="roles" ${this._tab === 'roles' ? '' : 'hidden'}>${this._roles()}</section>
       <section data-ad-view="people" ${this._tab === 'people' ? '' : 'hidden'}>${this._peopleShell()}</section>
-      ${m.credits ? `<section data-ad-view="credits" ${this._tab === 'credits' ? '' : 'hidden'}>${this._creditsTab(m.credits)}</section>` : ''}
+      <section data-ad-view="credits" ${this._tab === 'credits' ? '' : 'hidden'}>${this._creditsContent()}</section>
       <p class="ad-note">Source: Microsoft 365 Copilot usage reports and Entra ID (names and job titles) through Microsoft Graph, ${this._src.source === 'live' ? `read as you${this._src.shared ? ' and saved for the other admins' : ''}` : 'as saved for admins'}.
         ${m.refresh ? `Microsoft's data is up to ${longDate(m.refresh)}.` : ''}
         Monthly history is saved to the admin-only Copilot Adoption History list on this site${this._saved ? ' (this month\'s was just saved)' : ''}.

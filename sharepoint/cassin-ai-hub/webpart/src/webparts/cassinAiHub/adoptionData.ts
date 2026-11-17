@@ -5,7 +5,7 @@ import {
   buildAdoption, cleanStored, makeSnapshot, parseCsv, parseTrend, parseUsage,
   type IAdoption, type IDirectoryUser, type ISnapshot, type IStoredAdoption, type IUsageReport, type ITrendPoint, type Row
 } from './adoptionModel';
-import { parseBalance, parseServiceRecords, parseUserRecords, sumUsers, type ICreditsRaw } from './creditsModel';
+import { buildCredits, parseBalance, parseServiceRecords, parseUserRecords, sumUsers, type ICreditsRaw, type ICreditsView } from './creditsModel';
 
 // Everything the adoption page reads, all inside Cassin's Microsoft 365:
 //  - Microsoft Graph, as the signed-in person: the Copilot usage reports (Reports.Read.All)
@@ -48,9 +48,25 @@ export interface IAdoptionLoad {
   /** When the copy was saved (stored), or whether this visit refreshed it (live). */
   savedAt?: string;
   shared: boolean;
+  /** Live only: the Copilot credits, read after the rest of the page is shown (they take
+   *  dozens of calls). Resolves to null when there's nothing newer to show; never rejects. */
+  credits?: Promise<ICreditsView | null>;
 }
 
 interface ILive { usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[]; directory: IDirectoryUser[]; credits: ICreditsRaw | null }
+
+// Time limits, so a slow or stuck answer from Microsoft can never leave the page on "Loading…".
+const CALL_MS = 45e3;        // one Graph call
+const REPORTS_MS = 90e3;     // the usage reports and directory together (else: the saved copy)
+const CREDITS_MS = 150e3;    // all the credit calls together
+const MAX_PAGES = 50;        // paging guard for any one list
+
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = window.setTimeout(() => reject(new AdoptionError(`${what} took longer than ${Math.round(ms / 1000)} seconds to answer`, 'other')), ms);
+    p.then(v => { window.clearTimeout(t); resolve(v); }, e => { window.clearTimeout(t); reject(e); });
+  });
+}
 
 const COST = '/copilot/costManagement';
 const CREDIT_DAYS = 56;      // service usage: this 28 days and the 28 before
@@ -77,14 +93,16 @@ export class AdoptionData {
                      private readonly _webUrl: string, private readonly _webRelUrl: string) {}
 
   public async load(): Promise<IAdoptionLoad> {
-    const snapshots = await this._snapshots().catch(() => [] as ISnapshot[]);
+    const storedP = withTimeout(this._readLatest(), 30e3, 'SharePoint').catch(() => null);
+    const snapshots = await withTimeout(this._snapshots(), 30e3, 'SharePoint').catch(() => [] as ISnapshot[]);
     let live: ILive;
     try {
-      live = await this._live();
+      live = await withTimeout(this._live(), REPORTS_MS, "Microsoft's Copilot usage reports");
     } catch (err) {
-      // This account can't read Microsoft's reports (or the call failed): show the copy saved
-      // for admins when there is one.
-      const stored = await this._readLatest().catch(() => null);
+      // This account can't read Microsoft's reports (or the call failed or timed out): show the
+      // copy saved for admins when there is one.
+      console.warn('Cassin AI Hub adoption: reading Microsoft live failed, using the saved copy', (err as Error)?.message);
+      const stored = await storedP;
       if (stored) {
         const model = buildAdoption({ ...stored, snapshots });
         return { model, saved: false, source: 'stored', savedAt: stored.savedAt, shared: false };
@@ -93,16 +111,20 @@ export class AdoptionData {
       if (e && e.isAdoptionError && (e.kind === 'role' || e.kind === 'consent')) throw new AdoptionError(e.message, 'nodata');
       throw err;
     }
+    // Credits come later (see `credits` below); meanwhile the Credits tab shows the saved ones.
+    const stored = await storedP;
+    live.credits = stored?.credits || null;
     const model = buildAdoption({ ...live, snapshots });
     let saved = false, shared = false;
-    if (model.refresh && model.hasDays && !model.namesHidden) {
-      saved = await this._saveSnapshot(makeSnapshot(live.usage28.rows, model.refresh, model.licensed), snapshots).catch(err => {
+    const canSave = !!model.refresh && !model.namesHidden;
+    if (canSave && model.hasDays) {
+      saved = await withTimeout(this._saveSnapshot(makeSnapshot(live.usage28.rows, model.refresh as string, model.licensed), snapshots), 30e3, 'SharePoint').catch(err => {
         console.warn('Cassin AI Hub: could not save this month\'s adoption snapshot', err);
         return false;
       });
     }
-    if (model.refresh && !model.namesHidden) {
-      shared = await this._saveLatest(live, model.refresh).catch(err => {
+    if (canSave) {
+      shared = await withTimeout(this._saveLatest(live, model.refresh as string), 30e3, 'SharePoint').catch(err => {
         console.warn('Cassin AI Hub: could not save the figures for other admins', err);
         return false;
       });
@@ -110,23 +132,41 @@ export class AdoptionData {
     if (/[?&]adoptionDebug=1/.test(window.location.search)) {
       console.info('Cassin AI Hub adoption: report fields', model.fields, 'daily prompts in trend:', model.hasDailyPrompts, model);
     }
-    return { model, saved, source: 'live', shared };
+    const credits = this._credits().then(async raw => {
+      // A slow or failed read keeps the last good figures rather than replacing them with an error.
+      if (raw.error === 'other' && stored?.credits && !stored.credits.error) return null;
+      if (canSave) {
+        await withTimeout(this._saveLatest({ ...live, credits: raw }, model.refresh as string, true), 30e3, 'SharePoint').catch(err => {
+          console.warn('Cassin AI Hub: could not save the credits for other admins', err);
+        });
+      }
+      return buildCredits(raw, live.directory);
+    }).catch(err => { console.warn('Cassin AI Hub credits', err); return null; });
+    return { model, saved, source: 'live', shared, credits };
   }
 
   private async _live(): Promise<ILive> {
-    const [usage28, usage180, trend, directory, credits] = await Promise.all([
+    const [usage28, usage180, trend, directory] = await Promise.all([
       this._report(`${REPORTS}/getMicrosoft365CopilotUsageUserDetail(period='D28')`).then(r => parseUsage(r, 28)),
       // Only for "who moved"; the page still works without it.
       this._report(`${REPORTS}/getMicrosoft365CopilotUsageUserDetail(period='D180')`).then(r => parseUsage(r, 180)).catch(() => null),
       this._report(`${REPORTS}/getMicrosoft365CopilotUserCountTrend(period='D180')`).then(parseTrend).catch(() => []),
-      this._directory().catch(() => [] as IDirectoryUser[]),
-      this._credits()
+      this._directory().catch(() => [] as IDirectoryUser[])
     ]);
-    return { usage28, usage180, trend, directory, credits };
+    return { usage28, usage180, trend, directory, credits: null };
   }
 
   // Copilot credits. Never throws: a failure is recorded so the Credits tab can explain it.
   private async _credits(): Promise<ICreditsRaw> {
+    const started = Date.now();
+    const empty = (error: ICreditsRaw['error'], detail = ''): ICreditsRaw => ({ days: [], users: [], userDays: 0, balance: null, error, detail: detail.slice(0, 300) });
+    const raw = await withTimeout(this._readCredits(), CREDITS_MS, "Microsoft's Copilot cost reports")
+      .catch(err => empty('other', String((err as Error)?.message || '')));
+    console.info(`Cassin AI Hub credits: read in ${Math.round((Date.now() - started) / 1000)} s${raw.error ? ` (${raw.error}: ${raw.detail})` : ''}`);
+    return raw;
+  }
+
+  private async _readCredits(): Promise<ICreditsRaw> {
     const empty = (error: ICreditsRaw['error'], detail = ''): ICreditsRaw => ({ days: [], users: [], userDays: 0, balance: null, error, detail: detail.slice(0, 300) });
     const days = lastDays(CREDIT_DAYS);
     const svcUrl = (d: string): string => `${COST}/usageReports/serviceUsageRecords?startDate=${d}&endDate=${nextDay(d)}&$top=100`;
@@ -137,17 +177,17 @@ export class AdoptionData {
       if (/[?&]adoptionDebug=1/.test(window.location.search)) console.info('Cassin AI Hub credits: service usage for', days[days.length - 1], first);
     } catch (err) {
       const e = err as AdoptionError;
-      console.warn('Cassin AI Hub credits: Microsoft refused the cost report', e?.message);
+      console.warn('Cassin AI Hub credits: could not read the cost report', e?.message);
       return empty(e && e.isAdoptionError && (e.kind === 'consent' || e.kind === 'role') ? e.kind : 'other', String(e?.message || '').trim());
     }
     try {
-      const rest = await pool(days.slice(0, -1), 6, d => this._rows(svcUrl(d)).catch(() => [] as Row[]));
+      const rest = await pool(days.slice(0, -1), 4, d => this._rows(svcUrl(d)).catch(() => [] as Row[]));
       const byDay = [...rest, first].map((rows, i) => ({ date: days[i], byService: parseServiceRecords(rows) }));
       const userDays = days.slice(-CREDIT_USER_DAYS);
-      const users = await pool(userDays, 6, d =>
+      const users = await pool(userDays, 4, d =>
         this._rows(`${COST}/usageReports/userUsageRecords?startDate=${d}&endDate=${nextDay(d)}&$top=100`).then(parseUserRecords).catch(() => []));
       const client = await this._client();
-      const balance = await client.api(`${COST}/getTenantCreditBalance`).version('beta').get().then(parseBalance).catch(() => null);
+      const balance = await this._get(client, `${COST}/getTenantCreditBalance`, true).then(parseBalance).catch(() => null);
       return { days: byDay, users: sumUsers(users), userDays: CREDIT_USER_DAYS, balance, error: null };
     } catch {
       return empty('other');
@@ -159,15 +199,15 @@ export class AdoptionData {
     const client = await this._client();
     const rows: Row[] = [];
     let next: string | undefined = path;
-    let first = true;
-    while (next) {
+    const seen = new Set<string>();
+    while (next && !seen.has(next) && seen.size < MAX_PAGES) {
+      seen.add(next);
       let page: { value?: Row[]; '@odata.nextLink'?: string };
       try {
-        page = first ? await client.api(next).version('beta').get() : await client.api(next).get();
+        page = await this._get(client, next, seen.size === 1) as typeof page;
       } catch (err) {
         throw this._explain(err);
       }
-      first = false;
       rows.push(...(page.value || []));
       next = page['@odata.nextLink'];
     }
@@ -194,11 +234,11 @@ export class AdoptionData {
   // Saves the current figures for admins who can't read Microsoft's reports themselves; only
   // when Microsoft has newer data than the saved copy. Only the people in the saved report
   // are kept from the directory.
-  private async _saveLatest(live: ILive, refresh: string): Promise<boolean> {
+  private async _saveLatest(live: ILive, refresh: string, force = false): Promise<boolean> {
     let item = await this._latestItem();
     // Rewrite when Microsoft has newer usage data, or at least every 6 hours (credits move daily).
     const fresh = item?.Modified && Date.now() - Date.parse(item.Modified) < 6 * 3600e3;
-    if (item && item.RefreshDate === refresh && fresh) return false;
+    if (!force && item && item.RefreshDate === refresh && fresh) return false;
     const wanted = new Set(live.usage28.rows.map(r => r.upn.toLowerCase()));
     const creditIds = new Set((live.credits?.users || []).map(u => u.userId));
     const data: IStoredAdoption = {
@@ -243,15 +283,15 @@ export class AdoptionData {
     const client = await this._client();
     const rows: Row[] = [];
     let next: string | undefined = path;
-    let first = true;
-    while (next) {
+    const seen = new Set<string>();
+    while (next && !seen.has(next) && seen.size < MAX_PAGES) {
+      seen.add(next);
       let body: unknown;
       try {
-        body = first ? await client.api(next).version('beta').get() : await client.api(next).get();
+        body = await this._get(client, next, seen.size === 1);
       } catch (err) {
         throw this._explain(err);
       }
-      first = false;
       if (typeof body === 'string') { rows.push(...parseCsv(body)); break; }
       const page = body as { value?: Row[]; '@odata.nextLink'?: string };
       rows.push(...(page.value || []));
@@ -264,8 +304,10 @@ export class AdoptionData {
     const client = await this._client();
     const out: IDirectoryUser[] = [];
     let next: string | undefined = '/users?$select=id,userPrincipalName,displayName,jobTitle&$top=999';
-    while (next) {
-      const page = await client.api(next).get() as { value: Array<Record<string, string | null>>; '@odata.nextLink'?: string };
+    const seen = new Set<string>();
+    while (next && !seen.has(next) && seen.size < MAX_PAGES) {
+      seen.add(next);
+      const page = await this._get(client, next, false) as { value: Array<Record<string, string | null>>; '@odata.nextLink'?: string };
       page.value.forEach(u => out.push({
         upn: u.userPrincipalName || '', name: u.displayName || '', title: (u.jobTitle || '').trim(), id: (u.id || '').toLowerCase()
       }));
@@ -307,7 +349,15 @@ export class AdoptionData {
     return res.ok;
   }
 
+  // One Graph call with a time limit. Only the first page of a beta list needs .version('beta');
+  // later pages are full nextLink URLs.
+  private _get(client: MSGraphClientV3, url: string, beta: boolean): Promise<unknown> {
+    const req = beta ? client.api(url).version('beta') : client.api(url);
+    return withTimeout(req.get() as Promise<unknown>, CALL_MS, 'Microsoft Graph');
+  }
+
   private _explain(err: unknown): AdoptionError {
+    if ((err as AdoptionError)?.isAdoptionError) return err as AdoptionError;
     const e = err as { statusCode?: number; code?: string; message?: string };
     const msg = `${e?.code || ''} ${e?.message || String(err)}`;
     if (/AADSTS65001|consent|AADSTS650057|invalid_resource|has not been approved/i.test(msg)) {
