@@ -200,7 +200,37 @@ export function steadyEnabled(trend: ITrendPoint[]): ITrendPoint[] {
   return trend.map((t, i) => ({ ...t, enabled: Math.max(...carried.slice(Math.max(0, i - 6), i + 1)) }));
 }
 
-export interface IDirectoryUser { upn: string; name: string; title: string; /** Entra object id, to name people in the credit reports. */ id?: string }
+export interface IDirectoryUser {
+  upn: string; name: string; title: string;
+  /** Entra object id, to name people in the credit reports. */
+  id?: string;
+  /** false when the account is disabled in Entra ID (usually someone who has left). */
+  enabled?: boolean;
+}
+
+/**
+ * People in Microsoft's report who have left the firm: their account is disabled in Entra ID
+ * ("disabled") or no longer there ("removed"). Only applied when the directory clearly lines
+ * up with the report (most people found), so a failed directory read or concealed names
+ * never hide anyone.
+ */
+export function formerStaff(rows: IUsage[], directory: IDirectoryUser[]): { disabled: Set<string>; removed: Set<string> } {
+  const dir = new Map(directory.map(d => [d.upn.toLowerCase(), d]));
+  const disabled = new Set<string>(), removed = new Set<string>();
+  const found = rows.filter(r => dir.has(r.upn.toLowerCase())).length;
+  if (!rows.length || found < rows.length * 0.8) return { disabled, removed };
+  rows.forEach(r => {
+    const k = r.upn.toLowerCase(), d = dir.get(k);
+    if (!d) removed.add(k); else if (d.enabled === false) disabled.add(k);
+  });
+  return { disabled, removed };
+}
+
+/** The report's rows without the people who have left (see formerStaff). */
+export function currentRows(rows: IUsage[], directory: IDirectoryUser[]): IUsage[] {
+  const f = formerStaff(rows, directory);
+  return rows.filter(r => !f.disabled.has(r.upn.toLowerCase()) && !f.removed.has(r.upn.toLowerCase()));
+}
 
 /** One saved month: active days and prompts per person over the 28 days ending `refresh`. */
 export interface ISnapshot {
@@ -234,6 +264,8 @@ export interface IGroupRow {
 
 export interface IAdoption {
   refresh: string | null; licensed: number; people: IPerson[]; apps: IApp[];
+  /** People left out because they have left the firm (account disabled or removed in Entra ID). */
+  leftOut: number;
   hasDays: boolean; hasPrompts: boolean; hasMoves: boolean; namesHidden: boolean;
   trend: ITrendPoint[]; months: string[]; monthStages: number[][]; nowStages: number[];
   appCounts: Array<{ app: IApp; users: number }>;
@@ -337,7 +369,7 @@ export function cleanStored(raw: unknown): IStoredAdoption | null {
     const date = asDate(t?.date), active = num(t?.active);
     return date && active !== null ? { date, active, enabled: num(t?.enabled) ?? 0, prompts: num(t?.prompts) } : null;
   }).filter((t): t is ITrendPoint => !!t);
-  const directory = (Array.isArray(x.directory) ? x.directory : []).map(d => ({ upn: str(d?.upn), name: str(d?.name), title: str(d?.title), id: str(d?.id) }))
+  const directory = (Array.isArray(x.directory) ? x.directory : []).map(d => ({ upn: str(d?.upn), name: str(d?.name), title: str(d?.title), id: str(d?.id), ...(d?.enabled === false ? { enabled: false } : {}) }))
     .filter(d => d.upn);
   return { v: 1, savedAt: str(x.savedAt), usage28, usage180: cleanReport(x.usage180), trend, directory, credits: cleanCredits(x.credits) };
 }
@@ -348,7 +380,12 @@ export interface IAdoptionInput {
 }
 
 export function buildAdoption(input: IAdoptionInput): IAdoption {
-  const { usage28, usage180, directory } = input;
+  const { directory } = input;
+  // People who have left are left out everywhere (their history in saved months stays as it was).
+  const gone = formerStaff(input.usage28.rows, directory);
+  const here = (r: IUsage): boolean => !gone.disabled.has(r.upn.toLowerCase()) && !gone.removed.has(r.upn.toLowerCase());
+  const usage28 = { ...input.usage28, rows: input.usage28.rows.filter(here) };
+  const usage180 = input.usage180 ? { ...input.usage180, rows: input.usage180.rows.filter(here) } : null;
   const trend = steadyEnabled(input.trend);
   const refresh = usage28.refresh;
   const dir = new Map(directory.map(d => [d.upn.toLowerCase(), d]));
@@ -386,7 +423,8 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
   const namesHidden = people.length > 0 && hashed / people.length > 0.5;
 
   const latestTrend = trend.length ? trend[trend.length - 1] : null;
-  const licensed = Math.max(people.length, latestTrend?.enabled || 0);
+  // Microsoft's licence count still includes disabled accounts that keep their licence.
+  const licensed = Math.max(people.length, (latestTrend?.enabled || 0) - gone.disabled.size);
 
   const monthStages = snaps.map(s => {
     const counts = [0, 0, 0, 0, 0];
@@ -409,7 +447,7 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
   people.forEach(p => { if (p.move) moves[p.move]++; });
 
   return {
-    refresh, licensed, people, apps: usage28.apps,
+    refresh, licensed, people, apps: usage28.apps, leftOut: gone.disabled.size + gone.removed.size,
     hasDays: usage28.hasDays, hasPrompts: usage28.hasPrompts, hasMoves, namesHidden,
     trend, months: snaps.map(s => s.month), monthStages, nowStages,
     // Apps nobody used in the window (Loop, Edge, ...) are left out.

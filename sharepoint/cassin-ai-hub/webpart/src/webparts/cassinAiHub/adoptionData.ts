@@ -2,7 +2,7 @@ import type { MSGraphClientFactory, MSGraphClientV3, SPHttpClient } from '@micro
 import { SPHttpClient as Http } from '@microsoft/sp-http';
 
 import {
-  buildAdoption, cleanStored, makeSnapshot, parseCsv, parseTrend, parseUsage,
+  buildAdoption, cleanStored, currentRows, makeSnapshot, parseCsv, parseTrend, parseUsage,
   type IAdoption, type IDirectoryUser, type ISnapshot, type IStoredAdoption, type IUsageReport, type ITrendPoint, type Row
 } from './adoptionModel';
 import { buildCredits, parseBalance, parseServiceRecords, parseUserRecords, sumUsers, type ICreditsRaw, type ICreditsView } from './creditsModel';
@@ -118,7 +118,7 @@ export class AdoptionData {
     let saved = false, shared = false;
     const canSave = !!model.refresh && !model.namesHidden;
     if (canSave && model.hasDays) {
-      saved = await withTimeout(this._saveSnapshot(makeSnapshot(live.usage28.rows, model.refresh as string, model.licensed), snapshots), 30e3, 'SharePoint').catch(err => {
+      saved = await withTimeout(this._saveSnapshot(makeSnapshot(currentRows(live.usage28.rows, live.directory), model.refresh as string, model.licensed), snapshots), 30e3, 'SharePoint').catch(err => {
         console.warn('Cassin AI Hub: could not save this month\'s adoption snapshot', err);
         return false;
       });
@@ -303,13 +303,15 @@ export class AdoptionData {
   private async _directory(): Promise<IDirectoryUser[]> {
     const client = await this._client();
     const out: IDirectoryUser[] = [];
-    let next: string | undefined = '/users?$select=id,userPrincipalName,displayName,jobTitle&$top=999';
+    let next: string | undefined = '/users?$select=id,userPrincipalName,displayName,jobTitle,accountEnabled&$top=999';
     const seen = new Set<string>();
     while (next && !seen.has(next) && seen.size < MAX_PAGES) {
       seen.add(next);
-      const page = await this._get(client, next, false) as { value: Array<Record<string, string | null>>; '@odata.nextLink'?: string };
+      const page = await this._get(client, next, false) as { value: Array<Record<string, string | boolean | null>>; '@odata.nextLink'?: string };
+      const s = (v: unknown): string => (typeof v === 'string' ? v : '');
       page.value.forEach(u => out.push({
-        upn: u.userPrincipalName || '', name: u.displayName || '', title: (u.jobTitle || '').trim(), id: (u.id || '').toLowerCase()
+        upn: s(u.userPrincipalName), name: s(u.displayName), title: s(u.jobTitle).trim(), id: s(u.id).toLowerCase(),
+        ...(u.accountEnabled === false ? { enabled: false } : {})
       }));
       next = page['@odata.nextLink'];
     }

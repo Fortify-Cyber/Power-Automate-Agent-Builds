@@ -174,9 +174,6 @@ export const CSS = `
 .cah .ad .mv.new { color:var(--blue); } .cah .ad .mv.ramped_up { color:var(--good); } .cah .ad .mv.steady { color:var(--faint); font-weight:500; }
 .cah .ad .mv.cooled { color:var(--warn); } .cah .ad .mv.lapsed { color:var(--bad); }
 .cah .ad button.link { background:none; border:0; padding:0; cursor:pointer; text-align:left; text-decoration:underline; text-underline-offset:3px; }
-.cah .ad .apps { display:flex; gap:3px; }
-.cah .ad .apps b { font:600 10.5px var(--sans); min-width:22px; height:20px; padding:0 3px; display:inline-flex; align-items:center; justify-content:center; border-radius:3px; background:var(--soft); color:var(--soft-line); }
-.cah .ad .apps b.on { background:var(--primary); color:#fff; }
 .cah .ad .stack { display:flex; height:16px; min-width:120px; }
 .cah .ad .stack span { height:16px; }
 .cah .ad-filters { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }

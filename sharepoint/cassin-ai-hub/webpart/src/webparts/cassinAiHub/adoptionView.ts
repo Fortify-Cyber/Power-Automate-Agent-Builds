@@ -265,7 +265,7 @@ export class AdoptionView {
     const roles = Array.from(new Set(m.people.map(p => p.role).filter(Boolean))).sort();
     const opt = (v: string, l: string): string => `<option value="${esc(v)}">${esc(l)}</option>`;
     return `<div class="ad-panel"><h3>People <span class="count" data-ad-count></span></h3>
-      <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.</p>
+      <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.${m.leftOut ? ` ${m.leftOut} ${m.leftOut === 1 ? 'person who has' : 'people who have'} left (account disabled or removed in Entra ID) ${m.leftOut === 1 ? "isn't" : "aren't"} shown.` : ''}</p>
       <div class="ad-filters">
         <input data-ad-f="q" placeholder="Search by name" aria-label="Search by name">
         <select data-ad-f="role" aria-label="Role">${opt('', 'All roles')}${roles.map(r => opt(r, r)).join('')}</select>
@@ -277,7 +277,7 @@ export class AdoptionView {
         ${m.hasDays ? '<th data-ad-sort="stage" class="sort">Stage</th><th data-ad-sort="days" class="sort n">Active days</th>' : '<th data-ad-sort="last" class="sort">Last used</th>'}
         ${m.hasPrompts ? '<th data-ad-sort="prompts" class="sort n">Prompts</th>' : ''}
         ${m.months.length && m.hasDays ? `<th>${monthName(m.months[0])} → now</th>` : ''}
-        <th>Apps</th><th data-ad-sort="move" class="sort">Change</th>
+        <th data-ad-sort="move" class="sort">Change</th>
       </tr></thead><tbody data-ad-rows></tbody></table></div>
       <p><button type="button" class="btn ghost" data-ad-more hidden></button></p></div>`;
   }
@@ -309,7 +309,7 @@ export class AdoptionView {
         ${m.hasDays ? `<td>${this._stage(p.stage)}</td><td class="n">${p.days}</td>` : `<td>${p.last ? shortDate(p.last) : '–'}</td>`}
         ${m.hasPrompts ? `<td class="n">${p.prompts}</td>` : ''}
         ${m.months.length && m.hasDays ? `<td>${this._spark(p)}</td>` : ''}
-        <td>${this._chips(p)}</td><td>${this._move(p.move)}</td></tr>`).join('') ||
+        <td>${this._move(p.move)}</td></tr>`).join('') ||
         `<tr><td colspan="${cols}" class="faint">No one matches.</td></tr>`;
     }
     const count = root.querySelector('[data-ad-count]');
@@ -323,9 +323,6 @@ export class AdoptionView {
   }
   private _move(mv: Move | null): string {
     return mv ? `<span class="mv ${mv}">${MOVES[mv]}</span>` : '<span class="faint">–</span>';
-  }
-  private _chips(p: IPerson): string {
-    return `<span class="apps">${this._m.apps.map(a => `<b class="${p.appsRecent.indexOf(a.key) >= 0 ? 'on' : ''}" title="${esc(a.label)}">${a.letter}</b>`).join('')}</span>`;
   }
   private _spark(p: IPerson): string {
     const vals = [...p.monthly, p.days];
