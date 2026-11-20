@@ -170,6 +170,7 @@ export const CSS = `
 .cah .ad .pill { background:var(--sand-2); font-weight:400; white-space:nowrap; }
 .cah .ad .stg { display:inline-flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
 .cah .ad .stg i { width:10px; height:10px; border-radius:2px; background:var(--c); }
+.cah .ad .via { font-size:11px; color:var(--primary); background:var(--soft); border-radius:3px; padding:1px 5px; margin-left:4px; white-space:nowrap; cursor:help; }
 .cah .ad .mv { font-size:12.5px; font-weight:600; white-space:nowrap; }
 .cah .ad .mv.new { color:var(--blue); } .cah .ad .mv.ramped_up { color:var(--good); } .cah .ad .mv.steady { color:var(--faint); font-weight:500; }
 .cah .ad .mv.cooled { color:var(--warn); } .cah .ad .mv.lapsed { color:var(--bad); }

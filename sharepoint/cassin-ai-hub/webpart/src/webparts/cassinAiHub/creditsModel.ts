@@ -9,7 +9,11 @@
 export type CreditsError = 'consent' | 'role' | 'other';
 
 export interface ICreditDay { date: string; byService: Record<string, number> }
-export interface ICreditUser { userId: string; credits: number; sessions: number }
+export interface ICreditUser {
+  userId: string; credits: number; sessions: number;
+  /** Days with any credits or sessions (per-person records come one day at a time). */
+  activeDays?: number;
+}
 export interface ICreditBalance { purchased: number | null; consumed: number | null; remaining: number | null }
 
 /** What the page reads (and saves for other admins). */
@@ -40,16 +44,18 @@ export function parseServiceRecords(rows: Row[]): Record<string, number> {
 
 /** One day's per-person records. */
 export function parseUserRecords(rows: Row[]): ICreditUser[] {
-  return rows.map(r => ({ userId: (str(r.userId) || str(r.id)).toLowerCase(), credits: num(r.consumedQuantity ?? r.quantity) ?? 0, sessions: num(r.sessionCount) ?? 0 }))
-    .filter(u => u.userId);
+  return rows.map(r => {
+    const credits = num(r.consumedQuantity ?? r.quantity) ?? 0, sessions = num(r.sessionCount) ?? 0;
+    return { userId: (str(r.userId) || str(r.id)).toLowerCase(), credits, sessions, activeDays: credits > 0 || sessions > 0 ? 1 : 0 };
+  }).filter(u => u.userId);
 }
 
 /** Adds up the per-person records of several days. */
 export function sumUsers(days: ICreditUser[][]): ICreditUser[] {
   const m = new Map<string, ICreditUser>();
   days.forEach(d => d.forEach(u => {
-    const t = m.get(u.userId) || { userId: u.userId, credits: 0, sessions: 0 };
-    t.credits += u.credits; t.sessions += u.sessions; m.set(u.userId, t);
+    const t = m.get(u.userId) || { userId: u.userId, credits: 0, sessions: 0, activeDays: 0 };
+    t.credits += u.credits; t.sessions += u.sessions; t.activeDays = (t.activeDays || 0) + (u.activeDays || 0); m.set(u.userId, t);
   }));
   return Array.from(m.values()).filter(u => u.credits > 0 || u.sessions > 0);
 }
@@ -74,7 +80,7 @@ export function cleanCredits(raw: unknown): ICreditsRaw | null {
     Object.keys(d.byService || {}).forEach(k => { const v = num((d.byService as Record<string, unknown>)[k]); if (/^[\w.-]{1,40}$/.test(k) && v !== null) byService[k.toLowerCase()] = v; });
     return { date: d.date, byService };
   });
-  const users = (Array.isArray(x.users) ? x.users : []).map(u => ({ userId: str(u?.userId).toLowerCase(), credits: num(u?.credits) ?? 0, sessions: num(u?.sessions) ?? 0 }))
+  const users = (Array.isArray(x.users) ? x.users : []).map(u => ({ userId: str(u?.userId).toLowerCase(), credits: num(u?.credits) ?? 0, sessions: num(u?.sessions) ?? 0, activeDays: Math.min(num(u?.activeDays) ?? 0, 31) }))
     .filter(u => /^[0-9a-f-]{36}$/.test(u.userId));
   const b = x.balance as ICreditBalance | null | undefined;
   const balance = b ? { purchased: num(b.purchased), consumed: num(b.consumed), remaining: num(b.remaining) } : null;

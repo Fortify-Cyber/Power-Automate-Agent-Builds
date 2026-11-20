@@ -30,20 +30,28 @@ export class AdoptionView {
   /** Copilot credits are still being read from Microsoft (they arrive after the rest of the page). */
   private _creditsPending = false;
 
-  public constructor(private readonly _m: IAdoption, private readonly _saved: boolean,
+  public constructor(private _m: IAdoption, private readonly _saved: boolean,
                      private readonly _src: { source: 'live' | 'stored'; savedAt?: string; shared: boolean; creditsPending?: boolean } = { source: 'live', shared: false }) {
     this._creditsPending = !!_src.creditsPending;
   }
 
-  /** The credits read in the background, once Microsoft has answered (null: keep what's shown). */
-  public setCredits(c: ICreditsView | null): void {
+  /** The page rebuilt with the credits read in the background, once Microsoft has answered
+   *  (null: keep what's shown). Credits change people's stages, so everything is redrawn,
+   *  keeping the tab, filters and sort. */
+  public setModel(m: IAdoption | null): void {
     this._creditsPending = false;
-    if (c) this._m.credits = c;
-    const tabs = this._root?.querySelector<HTMLElement>('.ad-tabs');
-    if (tabs) tabs.innerHTML = this._tabButtons();
-    const sec = this._root?.querySelector<HTMLElement>('[data-ad-view="credits"]');
-    if (sec) sec.innerHTML = this._creditsContent();
-    if (!this._m.credits && this._tab === 'credits') this._setTab('overview');
+    if (m) this._m = m;
+    if (!this._m.credits && this._tab === 'credits') this._tab = 'overview';
+    const el = this._root?.querySelector<HTMLElement>('.ad');
+    if (!this._root || !el) return;
+    const focused = (document.activeElement as HTMLElement | null)?.getAttribute('data-ad-f');
+    el.outerHTML = this.html();
+    (Object.keys(this._filter) as Array<keyof IFilter>).forEach(k => {
+      const f = this._root?.querySelector<HTMLInputElement>(`[data-ad-f="${k}"]`);
+      if (f) f.value = this._filter[k];
+    });
+    if (focused) this._root.querySelector<HTMLElement>(`[data-ad-f="${focused}"]`)?.focus();
+    this._renderPeople();
     this._drawCharts();
   }
 
@@ -265,7 +273,7 @@ export class AdoptionView {
     const roles = Array.from(new Set(m.people.map(p => p.role).filter(Boolean))).sort();
     const opt = (v: string, l: string): string => `<option value="${esc(v)}">${esc(l)}</option>`;
     return `<div class="ad-panel"><h3>People <span class="count" data-ad-count></span></h3>
-      <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.${m.leftOut ? ` ${m.leftOut} ${m.leftOut === 1 ? 'person who has' : 'people who have'} left (account disabled or removed in Entra ID) ${m.leftOut === 1 ? "isn't" : "aren't"} shown.` : ''}</p>
+      <p class="hint">Last 28 days. Select a person for their history, apps and a suggested next step.${m.hasCreditPeople ? ` Stage includes Cowork: each day someone used Copilot credits counts as an active day${m.powerCredits !== null ? `, and anyone using ${Math.round(m.powerCredits).toLocaleString('en-US')}+ credits (the top quarter of credit users) counts as Power` : ''}, even with few prompts.` : ''}${m.leftOut ? ` ${m.leftOut} ${m.leftOut === 1 ? 'person who has' : 'people who have'} left (account disabled or removed in Entra ID) ${m.leftOut === 1 ? "isn't" : "aren't"} shown.` : ''}</p>
       <div class="ad-filters">
         <input data-ad-f="q" placeholder="Search by name" aria-label="Search by name">
         <select data-ad-f="role" aria-label="Role">${opt('', 'All roles')}${roles.map(r => opt(r, r)).join('')}</select>
@@ -274,8 +282,9 @@ export class AdoptionView {
       </div>
       <div class="scroll"><table><thead><tr>
         <th data-ad-sort="name" class="sort">Name</th><th>Role</th>
-        ${m.hasDays ? '<th data-ad-sort="stage" class="sort">Stage</th><th data-ad-sort="days" class="sort n">Active days</th>' : '<th data-ad-sort="last" class="sort">Last used</th>'}
+        ${m.hasDays ? `<th data-ad-sort="stage" class="sort">Stage</th><th data-ad-sort="days" class="sort n">${m.hasCreditPeople ? 'Copilot days' : 'Active days'}</th>` : '<th data-ad-sort="last" class="sort">Last used</th>'}
         ${m.hasPrompts ? '<th data-ad-sort="prompts" class="sort n">Prompts</th>' : ''}
+        ${m.hasCreditPeople ? '<th data-ad-sort="credits" class="sort n" title="Copilot credits, last 28 days: Cowork and the other pay-as-you-go services">Cowork credits</th>' : ''}
         ${m.months.length && m.hasDays ? `<th>${monthName(m.months[0])} → now</th>` : ''}
         <th data-ad-sort="move" class="sort">Change</th>
       </tr></thead><tbody data-ad-rows></tbody></table></div>
@@ -294,6 +303,7 @@ export class AdoptionView {
         case 'name': return p.name.toLowerCase();
         case 'stage': return (p.stage ?? -1) * 100 + (p.days ?? 0);
         case 'prompts': return p.prompts ?? -1;
+        case 'credits': return p.credits ?? -1;
         case 'last': return p.last || '';
         case 'move': return p.move ? -MOVE_RANK[p.move] : -9;
         default: return p.days ?? -1;
@@ -301,13 +311,14 @@ export class AdoptionView {
     };
     rows.sort((a, b) => { const x = val(a), y = val(b); return x > y ? this._sort.dir : x < y ? -this._sort.dir : a.name.localeCompare(b.name); });
     const shown = this._showAll ? rows : rows.slice(0, PAGE);
-    const cols = 4 + (m.hasPrompts ? 1 : 0) + (m.months.length && m.hasDays ? 1 : 0) + (m.hasDays ? 1 : 0);
+    const cols = 4 + (m.hasPrompts ? 1 : 0) + (m.hasCreditPeople ? 1 : 0) + (m.months.length && m.hasDays ? 1 : 0) + (m.hasDays ? 1 : 0);
     const tbody = root.querySelector('[data-ad-rows]');
     if (tbody) {
       tbody.innerHTML = shown.map(p => `<tr class="click" data-ad-person="${m.people.indexOf(p)}">
         <td>${esc(p.name)}</td><td>${esc(p.role)}</td>
-        ${m.hasDays ? `<td>${this._stage(p.stage)}</td><td class="n">${p.days}</td>` : `<td>${p.last ? shortDate(p.last) : '–'}</td>`}
+        ${m.hasDays ? `<td>${this._stage(p.stage)}${p.viaCredits ? this._viaTag(p) : ''}</td><td class="n">${p.days}</td>` : `<td>${p.last ? shortDate(p.last) : '–'}</td>`}
         ${m.hasPrompts ? `<td class="n">${p.prompts}</td>` : ''}
+        ${m.hasCreditPeople ? `<td class="n">${p.credits !== null ? Math.round(p.credits).toLocaleString('en-US') : '<span class="faint">–</span>'}</td>` : ''}
         ${m.months.length && m.hasDays ? `<td>${this._spark(p)}</td>` : ''}
         <td>${this._move(p.move)}</td></tr>`).join('') ||
         `<tr><td colspan="${cols}" class="faint">No one matches.</td></tr>`;
@@ -320,6 +331,10 @@ export class AdoptionView {
 
   private _stage(s: number | null): string {
     return s === null ? '–' : `<span class="stg" style="--c:${STAGES[s].color}"><i></i>${STAGES[s].label}</span>`;
+  }
+  private _viaTag(p: IPerson): string {
+    const why = `Raised by Cowork: ${p.creditDays ? `${p.creditDays} day${p.creditDays === 1 ? '' : 's'} with Copilot credits` : 'Copilot credits'}${p.credits !== null ? `, ${Math.round(p.credits).toLocaleString('en-US')} credits` : ''} in the last 28 days`;
+    return ` <span class="via" title="${esc(why)}">via Cowork</span>`;
   }
   private _move(mv: Move | null): string {
     return mv ? `<span class="mv ${mv}">${MOVES[mv]}</span>` : '<span class="faint">–</span>';
@@ -339,6 +354,7 @@ export class AdoptionView {
     const has = (k: string): boolean => this._m.apps.some(a => a.key === k);
     if (p.status === 'never') return 'Hasn\'t tried Copilot yet. Send the Get Started page, or offer 15 minutes with someone from the AI Working Group.';
     if (p.status === 'lapsed') return `Last used ${p.last ? shortDate(p.last) : 'a while ago'}. A quick check-in often finds a blocker. Share this week's Friday Tip as a reason to try it again.`;
+    if (p.stage === 4 && p.viaCredits) return 'A heavy Cowork user, even if they rarely prompt Copilot directly. A good person to show the AI Working Group how they use Cowork.';
     if (p.stage === 4) return 'Uses Copilot most working days. A good candidate to share prompts in the Prompt Library or join the AI Working Group.';
     if (has('word') && !used('word')) return 'Not using Copilot in Word yet. Point them to the drafting and summarizing prompts in the Prompt Library.';
     if (has('outlook') && !used('outlook')) return 'Not using Copilot in Outlook yet. Summarizing long threads is the quickest win for most people at the firm.';
@@ -362,7 +378,8 @@ export class AdoptionView {
       .map(a => `<tr><td>${esc(a.label)}</td><td class="n">${shortDate(p.apps[a.key])}${m.refresh && daysBetween(p.apps[a.key], m.refresh) > 28 ? ' <span class="faint">(over 28 days)</span>' : ''}</td></tr>`).join('') ||
       '<tr><td colspan="2" class="faint">No Copilot activity</td></tr>';
     const mini = [
-      m.hasDays ? [String(p.days), 'Active days (28)'] : [p.last ? shortDate(p.last) : '–', 'Last used'],
+      m.hasDays ? [String(p.days), p.credits !== null ? 'Copilot active days (28)' : 'Active days (28)'] : [p.last ? shortDate(p.last) : '–', 'Last used'],
+      p.creditDays ? [String(p.creditDays), 'Days using Cowork (28)'] : null,
       m.hasPrompts ? [String(p.prompts), 'Prompts (28)'] : null,
       this._personCredits(p.upn),
       [String(p.appsRecent.length), 'Apps used (28)']
@@ -370,7 +387,7 @@ export class AdoptionView {
     pd.querySelector('aside')!.innerHTML = `
       <div class="hd"><button type="button" class="x" data-ad-close aria-label="Close">×</button>
         <h3>${esc(p.name)}</h3><p>${esc(p.role)}</p>
-        <div class="tags">${p.stage !== null ? `<span>${this._stage(p.stage)}</span>` : ''}${p.move ? `<span>${this._move(p.move)}</span>` : ''}</div></div>
+        <div class="tags">${p.stage !== null ? `<span>${this._stage(p.stage)}${p.viaCredits ? this._viaTag(p) : ''}</span>` : ''}${p.move ? `<span>${this._move(p.move)}</span>` : ''}</div></div>
       <div class="bd">
         <div class="mini">${mini.map(([v, k]) => `<div><div class="v">${v}</div><div class="k">${k}</div></div>`).join('')}</div>
         ${chart}

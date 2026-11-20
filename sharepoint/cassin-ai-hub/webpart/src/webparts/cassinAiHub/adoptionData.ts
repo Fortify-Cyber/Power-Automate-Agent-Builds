@@ -5,7 +5,7 @@ import {
   buildAdoption, cleanStored, currentRows, makeSnapshot, parseCsv, parseTrend, parseUsage,
   type IAdoption, type IDirectoryUser, type ISnapshot, type IStoredAdoption, type IUsageReport, type ITrendPoint, type Row
 } from './adoptionModel';
-import { buildCredits, parseBalance, parseServiceRecords, parseUserRecords, sumUsers, type ICreditsRaw, type ICreditsView } from './creditsModel';
+import { parseBalance, parseServiceRecords, parseUserRecords, sumUsers, type ICreditsRaw } from './creditsModel';
 
 // Everything the adoption page reads, all inside Cassin's Microsoft 365:
 //  - Microsoft Graph, as the signed-in person: the Copilot usage reports (Reports.Read.All)
@@ -48,9 +48,10 @@ export interface IAdoptionLoad {
   /** When the copy was saved (stored), or whether this visit refreshed it (live). */
   savedAt?: string;
   shared: boolean;
-  /** Live only: the Copilot credits, read after the rest of the page is shown (they take
-   *  dozens of calls). Resolves to null when there's nothing newer to show; never rejects. */
-  credits?: Promise<ICreditsView | null>;
+  /** Live only: the page rebuilt with fresh Copilot credits, read after the rest of the page
+   *  is shown (they take dozens of calls, and change people's stages). Resolves to null when
+   *  there's nothing newer to show; never rejects. */
+  credits?: Promise<IAdoption | null>;
 }
 
 interface ILive { usage28: IUsageReport; usage180: IUsageReport | null; trend: ITrendPoint[]; directory: IDirectoryUser[]; credits: ICreditsRaw | null }
@@ -140,7 +141,7 @@ export class AdoptionData {
           console.warn('Cassin AI Hub: could not save the credits for other admins', err);
         });
       }
-      return buildCredits(raw, live.directory);
+      return buildAdoption({ ...live, credits: raw, snapshots });
     }).catch(err => { console.warn('Cassin AI Hub credits', err); return null; });
     return { model, saved, source: 'live', shared, credits };
   }

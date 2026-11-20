@@ -250,6 +250,10 @@ export function makeSnapshot(rows: IUsage[], refresh: string, licensed: number):
 
 export interface IPerson {
   upn: string; name: string; role: string;
+  /** Copilot credits (Cowork and other pay-as-you-go services) and the days they were used, last 28 days; null when none. */
+  credits: number | null; creditDays: number | null;
+  /** The stage is higher than Copilot alone gives, because of Cowork / credits use. */
+  viaCredits: boolean;
   days: number | null; prompts: number | null; last: string | null; apps: Record<string, string>;
   appsRecent: string[]; stage: number | null; move: Move | null;
   status: 'active' | 'never' | 'lapsed';
@@ -266,6 +270,8 @@ export interface IAdoption {
   refresh: string | null; licensed: number; people: IPerson[]; apps: IApp[];
   /** People left out because they have left the firm (account disabled or removed in Entra ID). */
   leftOut: number;
+  /** Someone in the list used Copilot credits; `powerCredits` is the credits that count as Power (null: too few users to say). */
+  hasCreditPeople: boolean; powerCredits: number | null;
   hasDays: boolean; hasPrompts: boolean; hasMoves: boolean; namesHidden: boolean;
   trend: ITrendPoint[]; months: string[]; monthStages: number[][]; nowStages: number[];
   appCounts: Array<{ app: IApp; users: number }>;
@@ -285,16 +291,24 @@ const median = (a: number[]): number => {
   return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
 };
 
-function moveOf(d28: number | null, d180: number | null): Move | null {
+function moveOf(d28: number | null, d180: number | null, nowStage?: number): Move | null {
   if (d28 === null || d180 === null) return null;
   // The 180-day figure includes the last 28 days; compare against the 152 days before,
   // scaled to a 28-day month.
   const before = stageOf(Math.round(Math.max(0, d180 - d28) * 28 / 152));
-  const now = stageOf(d28);
+  const now = nowStage ?? stageOf(d28);
   if (before === 0 && now === 0) return null;
   if (before === 0) return 'new';
   if (now === 0) return 'lapsed';
   return now > before ? 'ramped_up' : now < before ? 'cooled' : 'steady';
+}
+
+/** The credits at which someone is in the top quarter of the firm's credit users; null with
+ *  fewer than 4 users, where "top quarter" would mean little. */
+function topQuarter(credits: number[]): number | null {
+  if (credits.length < 4) return null;
+  const s = [...credits].sort((a, b) => a - b);
+  return s[Math.min(s.length - 1, Math.ceil(s.length * 0.75))];
 }
 
 function groupRows(people: IPerson[], key: (p: IPerson) => string): IGroupRow[] {
@@ -401,18 +415,33 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
   const snaps = input.snapshots.map(cleanSnapshot).filter((s): s is ISnapshot => !!s && s.month < current).sort((a, b) => a.month.localeCompare(b.month))
     .slice(-(input.maxMonths ?? 6));
 
+  // Copilot credits per person (Cowork and the other pay-as-you-go services), matched to the
+  // report by Entra object id. Cowork work isn't in Microsoft's prompt counts, so it counts
+  // towards the stage on its own: each day with credits is an active day, and the top quarter
+  // of the firm's credit users (by credits) count as Power.
+  const creditUsers = new Map((input.credits && !input.credits.error ? input.credits.users : []).map(u => [u.userId, u]));
+  const idOf = new Map(directory.filter(d => d.id).map(d => [d.upn.toLowerCase(), String(d.id).toLowerCase()]));
+  const powerCredits = topQuarter(Array.from(creditUsers.values()).map(u => u.credits).filter(c => c > 0));
+
   const people: IPerson[] = usage28.rows.map(u => {
     const key = u.upn.toLowerCase();
     const d = dir.get(key);
+    const cu = creditUsers.get(idOf.get(key) || '');
+    const usedCredits = !!cu && (cu.credits > 0 || cu.sessions > 0);
     const appsRecent = Object.keys(u.apps).filter(a => !refresh || daysBetween(u.apps[a], refresh) <= 28);
     const recent = !!u.last && (!refresh || daysBetween(u.last, refresh) <= 28);
-    const status: IPerson['status'] = !u.last ? 'never' : recent ? 'active' : 'lapsed';
+    const status: IPerson['status'] = usedCredits || recent ? 'active' : !u.last ? 'never' : 'lapsed';
     const days = usage28.hasDays ? (u.days ?? 0) : null;
+    const copilotStage = days === null ? null : stageOf(days);
+    const creditStage = cu ? Math.max(stageOf(Math.min(cu.activeDays || 0, 28)), powerCredits !== null && cu.credits >= powerCredits ? 4 : 0) : 0;
+    const viaCredits = copilotStage !== null && creditStage > copilotStage;
+    const stage = viaCredits ? creditStage : copilotStage;
     return {
       upn: u.upn, name: d?.name || u.name || u.upn, role: d?.title || '',
+      credits: usedCredits ? cu!.credits : null, creditDays: usedCredits ? (cu!.activeDays ?? null) : null, viaCredits,
       days, prompts: usage28.hasPrompts ? (u.prompts ?? 0) : null, last: u.last, apps: u.apps, appsRecent,
-      stage: days === null ? null : stageOf(days),
-      move: hasMoves ? moveOf(days, d180.get(key) ?? 0) : (status === 'lapsed' ? 'lapsed' : null),
+      stage,
+      move: hasMoves ? moveOf(days, d180.get(key) ?? 0, stage ?? undefined) : (status === 'lapsed' ? 'lapsed' : null),
       status,
       monthly: snaps.map(s => (s.people[key] ? s.people[key][0] : 0))
     };
@@ -448,6 +477,7 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
 
   return {
     refresh, licensed, people, apps: usage28.apps, leftOut: gone.disabled.size + gone.removed.size,
+    hasCreditPeople: people.some(p => p.credits !== null), powerCredits,
     hasDays: usage28.hasDays, hasPrompts: usage28.hasPrompts, hasMoves, namesHidden,
     trend, months: snaps.map(s => s.month), monthStages, nowStages,
     // Apps nobody used in the window (Loop, Edge, ...) are left out.

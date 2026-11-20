@@ -10,7 +10,7 @@ import { SPPermission } from '@microsoft/sp-page-context';
 import { HubData, LISTS, ListNotFoundError, type IPrompt } from './data';
 import { AdoptionData, AdoptionError, HISTORY_LIST } from './adoptionData';
 import { AdoptionView } from './adoptionView';
-import type { ICreditsView } from './creditsModel';
+import type { IAdoption } from './adoptionModel';
 import { ProgramStatusView } from './programStatus';
 import * as R from './render';
 import { ensureStyles } from './styles';
@@ -61,7 +61,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   private _toastTimer: number | undefined;
   private _adoption: AdoptionView | undefined;
   /** Copilot credits still being read after the adoption page is shown. */
-  private _adoptionCredits: Promise<ICreditsView | null> | undefined;
+  private _adoptionCredits: Promise<IAdoption | null> | undefined;
   private _status: ProgramStatusView | undefined;
 
   protected onInit(): Promise<void> {
@@ -96,7 +96,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
           const view = this._adoption, credits = this._adoptionCredits;
           this._adoptionCredits = undefined;
           view.mount(root);
-          if (credits) credits.then(c => { if (this._adoption === view) view.setCredits(c); }, () => view.setCredits(null));
+          if (credits) credits.then(m => { if (this._adoption === view) view.setModel(m); }, () => view.setModel(null));
         }
         if (this._status && root) this._status.mount(root);
         const sec = this.properties.section;
