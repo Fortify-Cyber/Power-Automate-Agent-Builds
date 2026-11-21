@@ -524,6 +524,28 @@ Add-NoteField $L "Snapshot" "Snapshot (JSON)"
 Set-HubView $L "All months" @("LinkTitle", "RefreshDate", "Modified") `
     "<OrderBy><FieldRef Name=`"Title`" Ascending=`"FALSE`" /></OrderBy>" -RowLimit 60 -Default
 
+# ---- Agent time savings (admins only) -----------------------------------------
+# For the Agent usage page: who built each Copilot agent and the minutes one run saves.
+# Starting estimates come from content/agent-time-savings.json; admins change them in the
+# list. The page adds agents it sees for the first time, for admins to fill in.
+Write-Step "Agent Time Savings"
+$L = "Lists/AgentTimeSavings"
+New-HubList "Agent Time Savings" $L "Agent" "Who built each Copilot agent and the minutes one run saves, used by the Agent usage page. Estimates: change them here. Admins only."
+Add-HubField  $L "BuiltBy" "Built by" "Text"
+Add-HubField  $L "MinutesPerRun" "Minutes saved per run" "Number" "Min=`"0`" Decimals=`"0`""
+Add-NoteField $L "SavingsNotes" "How the estimate was made"
+Add-HubField  $L "AgentId" "Agent ID (from Microsoft)" "Text"
+Set-HubView $L "All agents" @("LinkTitle", "BuiltBy", "MinutesPerRun", "SavingsNotes", "AgentId") `
+    "<OrderBy><FieldRef Name=`"Title`" /></OrderBy>" -Default
+# Added once, by name: changes made in the list are kept on later runs.
+foreach ($a in (Read-Content "agent-time-savings.json")) {
+    $t = [System.Security.SecurityElement]::Escape($a.Title)
+    $found = Get-PnPListItem -List $L -Query "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>$t</Value></Eq></Where></Query></View>" | Select-Object -First 1
+    if ($found) { continue }
+    Add-PnPListItem -List $L -Values @{ Title = $a.Title; BuiltBy = $a.BuiltBy; MinutesPerRun = $a.MinutesPerRun; SavingsNotes = $a.SavingsNotes } | Out-Null
+    Write-Host "  added $($a.Title): $($a.MinutesPerRun) min per run"
+}
+
 # ---------------------------------------------------------------------------
 # 4. Permissions: Visitors read the site and can submit prompts and feedback
 # ---------------------------------------------------------------------------
@@ -556,7 +578,7 @@ Write-Host "  AI Roadmap and Waiting on Cassin: owners and members (the AI Worki
 # AI Hub Admins: who, besides the site owners, can open the Copilot adoption page.
 $adminGroup = "AI Hub Admins"
 if (-not (Find-Object { Get-PnPGroup -Identity $adminGroup })) {
-    New-PnPGroup -Title $adminGroup -Description "Can open the Copilot adoption page on the AI Hub." | Out-Null
+    New-PnPGroup -Title $adminGroup -Description "Can open the Copilot adoption and Agent usage pages on the AI Hub." | Out-Null
     Write-Host "  created the '$adminGroup' group"
 }
 # A mistyped or unknown address is reported and skipped, not a reason to stop the run.
@@ -590,20 +612,21 @@ function Add-EntraGroupTo([string] $SpGroup, [string] $ObjectId) {
 }
 Add-EntraGroupTo $wgGroup $WorkingGroupAudience
 Add-EntraGroupTo $adminGroup $AdminAudience
-$L = "Lists/CopilotAdoptionHistory"
-# Start from no access (not a copy of the site's), then grant only owners and AI Hub Admins,
-# so it doesn't matter what level visitors or members have on the site.
-Set-PnPList -Identity $L -BreakRoleInheritance | Out-Null
-Set-PnPListPermission -Identity $L -Group $owners.Title -AddRole "Full Control" | Out-Null
-Set-PnPListPermission -Identity $L -Group $adminGroup -AddRole "Contribute" | Out-Null
-# On a re-run the list already has its own permissions: take visitors and members off it if
-# someone added them by hand (it's fine if they were never there).
-foreach ($g in $visitors.Title, $members.Title) {
-    foreach ($role in "Read", "Contribute", "Edit", "Full Control") {
-        try { Set-PnPListPermission -Identity $L -Group $g -RemoveRole $role | Out-Null } catch { }
+foreach ($L in "Lists/CopilotAdoptionHistory", "Lists/AgentTimeSavings") {
+    # Start from no access (not a copy of the site's), then grant only owners and AI Hub Admins,
+    # so it doesn't matter what level visitors or members have on the site.
+    Set-PnPList -Identity $L -BreakRoleInheritance | Out-Null
+    Set-PnPListPermission -Identity $L -Group $owners.Title -AddRole "Full Control" | Out-Null
+    Set-PnPListPermission -Identity $L -Group $adminGroup -AddRole "Contribute" | Out-Null
+    # On a re-run the list already has its own permissions: take visitors and members off it if
+    # someone added them by hand (it's fine if they were never there).
+    foreach ($g in $visitors.Title, $members.Title) {
+        foreach ($role in "Read", "Contribute", "Edit", "Full Control") {
+            try { Set-PnPListPermission -Identity $L -Group $g -RemoveRole $role | Out-Null } catch { }
+        }
     }
 }
-Write-Host "  Copilot Adoption History: owners and '$adminGroup' only"
+Write-Host "  Copilot Adoption History and Agent Time Savings: owners and '$adminGroup' only"
 foreach ($L in "Lists/AIRoadmap", "Lists/WaitingOnCassin") {
     Set-PnPListPermission -Identity $L -Group $wgGroup -AddRole "Read" | Out-Null
 }
@@ -826,6 +849,7 @@ foreach ($loc in "TopNavigationBar", "QuickLaunch") {
     $adoptAud  = & $aud @($AdminAudience)
     Add-PnPNavigationNode -Location $loc -Title "AI Program status" -Url "$siteRel/SitePages/Program-Status.aspx" -Parent $wg @statusAud | Out-Null
     Add-PnPNavigationNode -Location $loc -Title "Copilot adoption (admins)" -Url "$siteRel/SitePages/Copilot-Adoption.aspx" -Parent $wg @adoptAud | Out-Null
+    Add-PnPNavigationNode -Location $loc -Title "Agent usage (admins)" -Url "$siteRel/SitePages/Agent-Usage.aspx" -Parent $wg @adoptAud | Out-Null
     $titles = (Get-PnPNavigationNode -Location $loc | ForEach-Object Title) -join " | "
     Write-Host "  $loc`: $titles"
 }
@@ -847,6 +871,7 @@ Write-Step "Done"
 Write-Host "Open $siteUrl" -ForegroundColor Green
 Write-Host "Program status (owners and members only): $siteUrl/SitePages/Program-Status.aspx"
 Write-Host "Copilot adoption (owners and '$adminGroup' only): $siteUrl/SitePages/Copilot-Adoption.aspx"
+Write-Host "Agent usage (owners and '$adminGroup' only): $siteUrl/SitePages/Agent-Usage.aspx"
 if (-not $ShareWithEveryone) {
     Write-Host "The site is not shared with the firm yet. Add pilot users to '$($visitors.Title)', or re-run with -ShareWithEveryone at launch."
 }

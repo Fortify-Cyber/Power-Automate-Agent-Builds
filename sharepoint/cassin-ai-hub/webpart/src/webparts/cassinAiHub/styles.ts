@@ -167,6 +167,12 @@ export const CSS = `
 .cah .ad td { border-bottom:1px solid var(--line); padding:8px 6px; vertical-align:middle; }
 .cah .ad .n { text-align:right; font-variant-numeric:tabular-nums; }
 .cah .ad tr.click { cursor:pointer; } .cah .ad tr.click:hover td { background:#F7F9FB; }
+.cah .ag th.sort.on { color:var(--navy); }
+.cah .ag .caret { display:inline-block; width:12px; color:var(--muted); }
+.cah .ag tr.ag-detail td { background:#F7F9FB; padding:10px 14px 14px 30px; }
+.cah .ag .ag-people ul { list-style:none; margin:8px 0 0; padding:0; columns:2; column-gap:32px; }
+.cah .ag .ag-people li { display:flex; justify-content:space-between; gap:12px; padding:3px 0; break-inside:avoid; font-size:13.5px; }
+@media (max-width: 700px) { .cah .ag .ag-people ul { columns:1; } }
 .cah .ad .pill { background:var(--sand-2); font-weight:400; white-space:nowrap; }
 .cah .ad .stg { display:inline-flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
 .cah .ad .stg i { width:10px; height:10px; border-radius:2px; background:var(--c); }

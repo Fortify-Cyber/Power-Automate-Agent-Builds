@@ -477,6 +477,26 @@
     "Access": "admins"
   },
   {
+    "Name": "Agent-Usage",
+    "Title": "Agent usage",
+    "Layout": "Article",
+    "Sections": [
+      {
+        "Template": "OneColumn",
+        "Emphasis": 0,
+        "Columns": [
+          [
+            {
+              "Type": "Hub",
+              "Section": "agentUsage"
+            }
+          ]
+        ]
+      }
+    ],
+    "Access": "admins"
+  },
+  {
     "Name": "Program-Status",
     "Title": "AI Program status",
     "Layout": "Article",

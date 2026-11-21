@@ -62,7 +62,7 @@ const REPORTS_MS = 90e3;     // the usage reports and directory together (else: 
 const CREDITS_MS = 150e3;    // all the credit calls together
 const MAX_PAGES = 50;        // paging guard for any one list
 
-function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+export function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = window.setTimeout(() => reject(new AdoptionError(`${what} took longer than ${Math.round(ms / 1000)} seconds to answer`, 'other')), ms);
     p.then(v => { window.clearTimeout(t); resolve(v); }, e => { window.clearTimeout(t); reject(e); });

@@ -120,6 +120,19 @@ Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn
 - The account that refreshes the page (AI Admin) needs billing read access in Microsoft 365; Microsoft's examples name Billing Administrator and Global Reader. If it can't read the reports, only this tab says so.
 - To check what Microsoft returns, open the page with `?adoptionDebug=1` and look in the browser console (F12) for *Cassin AI Hub credits*.
 
+### 8b. Turn on the Agent usage page (10 min, once)
+An admin-only page (**AI Working Group → Agent usage (admins)**) showing which Copilot agents people use, how often, who built each one, and a running total of the time they save. It covers every agent: Fortify's (Daily Digest), agents people build themselves, and Microsoft's own (Researcher, Analyst).
+
+1. **Update the web part** to 1.8 or later (app catalog, as in step 8.1) and **run the deploy script**. It adds the **Agent Time Savings** list (owners and AI Hub Admins only), the **Agent usage** page (same access as Copilot adoption) and the menu link.
+2. **Approve the API access:** SharePoint admin center → Advanced → API access → approve **Microsoft Graph, AuditLogsQuery.Read.All** for *Cassin AI Hub web part*.
+3. **Let the AI Admin account search the audit log.** The counts come from Microsoft Purview's audit log (the record Microsoft keeps of each Copilot interaction: who, which agent, when; the page reads no prompt text). The account that refreshes the page needs audit search rights in Purview, such as the **Audit Reader** role group (Microsoft Purview portal → Settings → Roles and scopes → Role groups → Audit Reader → add the account). Nobody else needs anything: other admins see the counts AI Admin last saved.
+4. **Open the page as AI Admin.** The first visit starts a search of the last 30 days. Microsoft takes from a few minutes to an hour; the page waits a few minutes, and if it isn't done the results appear on the next visit. After that, each AI Admin visit adds the days since the last count (Microsoft's log runs a day or two behind, so the newest two days are left for the next visit).
+
+How it counts:
+- **A run** is one conversation with an agent: several messages in the same conversation count once. It counts once the agent has answered; Microsoft doesn't record whether an agent's task was finished.
+- **Time saved** is runs × the agent's **Minutes saved per run** in the Agent Time Savings list, labelled as an estimate. Fortify's starting estimates (`content/agent-time-savings.json`): Daily Digest 15, Email Filing Assistant 5, Closing Checklist Builder 60, Deal Intake and Issues List Builder 30, Researcher 30, Analyst 20, Writing Coach 5, Prompt Coach 3. Change a figure in the list and the page uses it for every run counted, past and future.
+- **Built by** comes from the same list. Microsoft's log says which agent was used, not who made it, so agents the page sees for the first time are added to the list with *Built by* and *Minutes* blank for you to fill in (the page shows them as *Not set* and *Add minutes* until then). If Microsoft names an agent differently from the list (for example "Daily Digest Agent"), the page adds a new row; copy the minutes to it and delete the old one.
+
 ### 9. AI Program status for the working group (5 min, once)
 The roadmap that lived in Notion ("Cassin & Cassin × Fortify — AI Program Status") is now on the hub, for the AI Working Group only. The firm keeps seeing only what's ready on Agents & Tools.
 
@@ -152,13 +165,14 @@ How it fits together:
 | Log something Fortify needs from Cassin | Waiting on Cassin list → **+ New**, with an Owner and Due date. Set Status to Done when it arrives |
 | Show an agent to the firm | Add or edit it in **AI Agents** (Status *Live*, *Pilot* or *Up next*, plus *Expected*), then paste the Agents & Tools link into the roadmap item's **Published on hub** |
 | Add or remove a working group member | **Settings → Site permissions → Advanced permissions settings → AI Working Group** (read only), or in the Entra group if you set up the menu |
+| Change an agent's time saved or author | **Agent Time Savings** list (link at the bottom of the Agent usage page): edit **Minutes saved per run** or **Built by**. Applies to every run counted |
 | Add or remove an adoption admin | **Settings → Site permissions → Advanced permissions settings → AI Hub Admins**, then **New → Add users** (or remove). Nothing else is needed: they see the figures last saved by the AI Admin account |
 | Move or replace the AI policy document | Change `policyUrl` in `content/settings.json`, then run the script with `-RebuildPage Hub-Home, Use-AI-Responsibly, Client-AI-Opt-Outs` (the menu updates on every run) |
 
 **Friday Tip automation.** The weekly tip flow currently runs from Fortify's tenant (`fortifycyber.sharepoint.com/sites/AI`), so it can't write to Cassin's site directly. Either add each tip to the hub by hand (about 2 minutes), or later move the flow into Cassin's tenant and have it add a row to **Friday Tips** when it sends.
 
 ## Rolling back
-Delete the site in **SharePoint admin center → Active sites**. It stays restorable from *Deleted sites* for 93 days. To remove the theme as well: `Remove-PnPTenantTheme -Identity Cassin`. To remove the web part, delete *Cassin AI Hub web part* from the app catalog's **Manage apps**, and remove its two Microsoft Graph permissions in **SharePoint admin center → Advanced → API access**.
+Delete the site in **SharePoint admin center → Active sites**. It stays restorable from *Deleted sites* for 93 days. To remove the theme as well: `Remove-PnPTenantTheme -Identity Cassin`. To remove the web part, delete *Cassin AI Hub web part* from the app catalog's **Manage apps**, and remove its Microsoft Graph permissions in **SharePoint admin center → Advanced → API access**.
 
 ## Files
 ```

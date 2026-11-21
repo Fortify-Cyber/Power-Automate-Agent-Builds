@@ -1,0 +1,50 @@
+[
+  {
+    "Title": "Daily Digest",
+    "BuiltBy": "Fortify Cyber",
+    "MinutesPerRun": 15,
+    "SavingsNotes": "Starting estimate. Replaces the morning pass through the inbox to find what's urgent and what's waiting on a reply, usually 15 to 20 minutes."
+  },
+  {
+    "Title": "Email Filing Assistant",
+    "BuiltBy": "Fortify Cyber",
+    "MinutesPerRun": 5,
+    "SavingsNotes": "Starting estimate. Filing a batch of handled emails to the right client or matter folder by hand."
+  },
+  {
+    "Title": "Closing Checklist Builder",
+    "BuiltBy": "Fortify Cyber",
+    "MinutesPerRun": 60,
+    "SavingsNotes": "Starting estimate. A first-draft closing checklist from a commitment letter and loan documents typically takes an associate one to two hours."
+  },
+  {
+    "Title": "Deal Intake and Issues List Builder",
+    "BuiltBy": "Fortify Cyber",
+    "MinutesPerRun": 30,
+    "SavingsNotes": "Starting estimate. Pulling a new deal's key facts together and updating the issues list from the email traffic."
+  },
+  {
+    "Title": "Researcher",
+    "BuiltBy": "Microsoft",
+    "MinutesPerRun": 30,
+    "SavingsNotes": "Starting estimate. A sourced research brief across email, files and the web that would take 30 to 60 minutes to put together."
+  },
+  {
+    "Title": "Analyst",
+    "BuiltBy": "Microsoft",
+    "MinutesPerRun": 20,
+    "SavingsNotes": "Starting estimate. Working through a spreadsheet or data set and summarizing what it shows."
+  },
+  {
+    "Title": "Writing Coach",
+    "BuiltBy": "Microsoft",
+    "MinutesPerRun": 5,
+    "SavingsNotes": "Starting estimate. Editing a draft for tone and clarity."
+  },
+  {
+    "Title": "Prompt Coach",
+    "BuiltBy": "Microsoft",
+    "MinutesPerRun": 3,
+    "SavingsNotes": "Starting estimate. Rewriting a prompt so Copilot gets it right the first time."
+  }
+]

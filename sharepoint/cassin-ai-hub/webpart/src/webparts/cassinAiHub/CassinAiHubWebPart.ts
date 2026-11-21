@@ -10,6 +10,8 @@ import { SPPermission } from '@microsoft/sp-page-context';
 import { HubData, LISTS, ListNotFoundError, type IPrompt } from './data';
 import { AdoptionData, AdoptionError, HISTORY_LIST } from './adoptionData';
 import { AdoptionView } from './adoptionView';
+import { AgentsData, SAVINGS_LIST, type IAgentsLoad } from './agentsData';
+import { AgentsView } from './agentsView';
 import type { IAdoption } from './adoptionModel';
 import { ProgramStatusView } from './programStatus';
 import * as R from './render';
@@ -26,11 +28,15 @@ import { ensureStyles } from './styles';
  * (adoptionData.ts); the page itself is restricted to owners and AI Hub Admins by the
  * deploy script.
  *
+ * The "agentUsage" section is the admin-only Agent usage page (agentsData.ts): which Copilot
+ * agents people use, how often, who built them and the time they save, counted from
+ * Microsoft Purview's audit log through Microsoft Graph.
+ *
  * The "programStatus" section is the AI Working Group's roadmap page (programStatus.ts), read
  * from lists only site owners and members can open.
  */
 export type Section = 'latestTip' | 'featuredPrompts' | 'promptLibrary' | 'fridayTips' |
-  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption' | 'programStatus' | 'restrictedNav';
+  'videos' | 'agents' | 'faq' | 'myFeedback' | 'adoption' | 'agentUsage' | 'programStatus' | 'restrictedNav';
 
 export interface ICassinAiHubWebPartProps {
   section: Section;
@@ -47,11 +53,13 @@ const SECTIONS: Array<{ key: Section; text: string; list: string }> = [
   { key: 'faq', text: 'FAQ', list: LISTS.faq },
   { key: 'myFeedback', text: 'My feedback', list: LISTS.feedback },
   { key: 'adoption', text: 'Copilot adoption (admins only)', list: HISTORY_LIST },
+  { key: 'agentUsage', text: 'Agent usage (admins only)', list: SAVINGS_LIST },
   { key: 'programStatus', text: 'Program status (working group)', list: LISTS.roadmap },
   { key: 'restrictedNav', text: 'Links to the restricted pages (top of Home)', list: LISTS.roadmap }
 ];
 
 const ADOPTION_PAGE = 'Copilot-Adoption';
+const AGENTS_PAGE = 'Agent-Usage';
 const STATUS_PAGE = 'Program-Status';
 
 export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiHubWebPartProps> {
@@ -60,6 +68,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   private _filter: R.IPromptFilter = { q: '', cat: 'All', team: 'All' };
   private _toastTimer: number | undefined;
   private _adoption: AdoptionView | undefined;
+  private _agents: AgentsView | undefined;
+  private _agentsRefresh: IAgentsLoad['refresh'];
   /** Copilot credits still being read after the adoption page is shown. */
   private _adoptionCredits: Promise<IAdoption | null> | undefined;
   private _status: ProgramStatusView | undefined;
@@ -87,6 +97,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
     this.domElement.innerHTML = '<div class="cah"><div class="loading">Loading…</div></div>';
     this._adoption?.dispose();
     this._adoption = undefined;
+    this._agents = undefined;
     this._status = undefined;
     this._load()
       .then(html => {
@@ -99,8 +110,14 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
           if (credits) credits.then(m => { if (this._adoption === view) view.setModel(m); }, () => view.setModel(null));
         }
         if (this._status && root) this._status.mount(root);
+        if (this._agents && root) {
+          const view = this._agents, refresh = this._agentsRefresh;
+          this._agentsRefresh = undefined;
+          view.mount(root);
+          if (refresh) refresh.then(r => { if (this._agents === view) view.update(r.view, r.problem); }, () => view.update(null, null));
+        }
         const sec = this.properties.section;
-        if (root && (sec === 'latestTip' || sec === 'programStatus' || sec === 'adoption')) this._addRestrictedNav(root, sec);
+        if (root && (sec === 'latestTip' || sec === 'programStatus' || sec === 'adoption' || sec === 'agentUsage')) this._addRestrictedNav(root, sec);
       })
       .catch(err => {
         const section = SECTIONS.find(s => s.key === this.properties.section);
@@ -157,6 +174,15 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
             return this._adoption.html();
           });
       }
+      case 'agentUsage': {
+        const web = this.context.pageContext.web;
+        return new AgentsData(this.context.msGraphClientFactory, this.context.spHttpClient, web.absoluteUrl, web.serverRelativeUrl)
+          .load().then(({ view, problem, refresh, savingsUrl, savingsMissing }) => {
+            this._agents = new AgentsView(view, problem, { savingsUrl, savingsMissing }, !!refresh);
+            this._agentsRefresh = refresh;
+            return this._agents.html();
+          });
+      }
       default:
         return Promise.resolve(R.empty('Pick a section in this web part’s settings.'));
     }
@@ -165,7 +191,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   // Site owners get a link to the underlying list, where content is added and edited.
   private _manageLink(): string {
     const section = SECTIONS.find(s => s.key === this.properties.section);
-    if (!section || section.key === 'adoption' || section.key === 'programStatus' || section.key === 'restrictedNav' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
+    if (!section || section.key === 'adoption' || section.key === 'agentUsage' || section.key === 'programStatus' || section.key === 'restrictedNav' || !this.context.pageContext.web.permissions.hasPermission(SPPermission.manageLists)) return '';
     return `<p class="manage"><a href="${R.esc(this._data.listUrl(section.list))}">Owners: add or edit items in the list →</a></p>`;
   }
 
@@ -183,7 +209,8 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         if (section === 'latestTip' && document.querySelector('[data-restricted-host]')) return;
         const pages: Array<[boolean, string, string, Section]> = [
           [wg, STATUS_PAGE, 'AI Program status', 'programStatus'],
-          [admin, ADOPTION_PAGE, 'Copilot adoption', 'adoption']
+          [admin, ADOPTION_PAGE, 'Copilot adoption', 'adoption'],
+          [admin, AGENTS_PAGE, 'Agent usage', 'agentUsage']
         ];
         const links = pages.filter(([ok]) => ok).map(([, page, label, sec]) => sec === section
           ? `<span class="on" aria-current="page">${label}</span>`
@@ -191,7 +218,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
         const onHome = section === 'latestTip' || section === 'restrictedNav';
         // With the audience-targeted "AI Working Group" menu in place (deploy script,
         // -WorkingGroupAudience/-AdminAudience), Home doesn't need the bar as well.
-        const inMenu = Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href*="/SitePages/${STATUS_PAGE}.aspx"], a[href*="/SitePages/${ADOPTION_PAGE}.aspx"]`))
+        const inMenu = Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href*="/SitePages/${STATUS_PAGE}.aspx"], a[href*="/SitePages/${ADOPTION_PAGE}.aspx"], a[href*="/SitePages/${AGENTS_PAGE}.aspx"]`))
           .some(a => !a.closest('.cah'));
         if (onHome && inMenu) return;
         // On a restricted page, a bar with only that page in it adds nothing.
@@ -223,6 +250,7 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
 
   private _onClick(e: Event): void {
     if (this._adoption?.onClick(e)) return;
+    if (this._agents?.onClick(e)) return;
     if (this._status?.onClick(e)) return;
     const target = e.target as HTMLElement;
     const copy = target.closest<HTMLElement>('[data-copy]');
