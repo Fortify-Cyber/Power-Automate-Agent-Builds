@@ -133,6 +133,15 @@ export class HubData {
       { headers: { Accept: 'application/json;odata=nometadata' } }).then(res => res.ok);
   }
 
+  /** Whether a site page exists and the signed-in person can open it. */
+  public pageExists(name: string): Promise<boolean> {
+    const path = `${this._webRelUrl.replace(/\/$/, '')}/SitePages/${name}.aspx`.replace(/'/g, "''");
+    return this._http.get(`${this._webUrl}/_api/web/GetFileByServerRelativePath(decodedurl='${encodeURIComponent(path)}')?$select=Exists`, SPHttpClient.configurations.v1,
+      { headers: { Accept: 'application/json;odata=nometadata' } })
+      .then(res => (res.ok ? res.json() : { Exists: false }))
+      .then((body: { Exists?: boolean }) => body.Exists === true);
+  }
+
   private _items<T>(list: string, select: string, filter: string, orderBy: string, expand = ''): Promise<T[]> {
     const path = `${this._webRelUrl.replace(/\/$/, '')}/${list}`.replace(/'/g, "''");
     let url = `${this._webUrl}/_api/web/GetList('${encodeURIComponent(path)}')/items?$select=${select}&$top=500&$orderby=${orderBy}`;

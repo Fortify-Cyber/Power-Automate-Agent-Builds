@@ -202,15 +202,18 @@ export default class CassinAiHubWebPart extends BaseClientSideWebPart<ICassinAiH
   // AI Roadmap (owners and members) and Copilot Adoption History (owners and AI Hub Admins).
   private _addRestrictedNav(root: HTMLElement, section: Section): void {
     const web = this.context.pageContext.web.absoluteUrl;
-    Promise.all([this._data.canRead(LISTS.roadmap).catch(() => false), this._data.canRead(HISTORY_LIST).catch(() => false)])
-      .then(([wg, admin]) => {
+    // A link only for pages that exist and this person can open (a page is added by the deploy
+    // script, which can run after a new web part version is uploaded).
+    Promise.all([this._data.canRead(LISTS.roadmap).catch(() => false), this._data.canRead(HISTORY_LIST).catch(() => false),
+      this._data.pageExists(AGENTS_PAGE).catch(() => false)])
+      .then(([wg, admin, agentsPage]) => {
         if (root.querySelector('.restricted-nav')) return;
         // Home has the bar at the top (restrictedNav); older Home pages only have it here.
         if (section === 'latestTip' && document.querySelector('[data-restricted-host]')) return;
         const pages: Array<[boolean, string, string, Section]> = [
           [wg, STATUS_PAGE, 'AI Program status', 'programStatus'],
           [admin, ADOPTION_PAGE, 'Copilot adoption', 'adoption'],
-          [admin, AGENTS_PAGE, 'Agent usage', 'agentUsage']
+          [admin && agentsPage, AGENTS_PAGE, 'Agent usage', 'agentUsage']
         ];
         const links = pages.filter(([ok]) => ok).map(([, page, label, sec]) => sec === section
           ? `<span class="on" aria-current="page">${label}</span>`
