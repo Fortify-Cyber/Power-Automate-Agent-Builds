@@ -90,6 +90,9 @@ export class AgentsView {
   }
 
   private _empty(): string {
+    if (!this._v.through && this._v.recountFrom) {
+      return `<div class="ad-info">Agent use is being recounted from ${longDate(this._v.recountFrom)}, with agents that Microsoft lists under more than one id combined and conversations Microsoft logs twice counted once. The figures appear when Microsoft's audit search finishes: on this visit if it's quick, otherwise the next time an account that can search the audit log (such as AI Admin) opens this page.</div>`;
+    }
     if (!this._v.through) {
       return '<div class="ad-info">No agent use counted yet. The first count covers the last 30 days and starts the first time an account that can search Microsoft\'s audit log (such as AI Admin) opens this page.</div>';
     }

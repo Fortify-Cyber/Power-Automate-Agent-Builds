@@ -9,15 +9,27 @@
 // A "run" is one conversation with an agent: the records of one conversation (thread) on one
 // day count once. Microsoft doesn't record whether the agent's task finished, so a run counts
 // once the agent has answered.
+//
+// Agents are counted by name, not by Microsoft's agent id: the same agent can show up under
+// several ids (Microsoft logs some conversations once per id, and an agent republished or
+// used from another app gets another id). A conversation logged twice counts once: same
+// person, same agent name, and the same conversation id or the same second.
 
 export type Row = Record<string, unknown>;
 
 /** What one audit record says, for counting. */
-export interface IAgentHit { day: string; key: string; id: string; name: string; upn: string; thread: string }
+export interface IAgentHit { day: string; key: string; id: string; name: string; upn: string; thread: string; when: string }
+
+/** Agent names compared loosely: case, spaces and punctuation don't matter. */
+export const normName = (n: string): string => n.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** Counts per day, per agent, per person: runs. Kept in the hub's admin-only history list. */
 export interface IAgentStore {
   v: 1;
+  /** How runs are counted. Counts saved by an earlier version are thrown away and recounted. */
+  cv: 2;
+  /** Set when earlier counts were thrown away: the first new search starts here. */
+  recountFrom: string | null;
   /** The last UTC day counted, inclusive (YYYY-MM-DD); null before the first search. */
   through: string | null;
   /** The first day counted. */
@@ -28,7 +40,7 @@ export interface IAgentStore {
   days: Record<string, Record<string, Record<string, number>>>;
 }
 
-export const emptyStore = (): IAgentStore => ({ v: 1, through: null, since: null, pending: null, agents: {}, days: {} });
+export const emptyStore = (): IAgentStore => ({ v: 1, cv: 2, recountFrom: null, through: null, since: null, pending: null, agents: {}, days: {} });
 
 const DAY = 864e5;
 const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -65,7 +77,8 @@ export function parseAuditRecord(rec: Row): IAgentHit | null {
   const msgs = find(data, 'Messages');
   if (Array.isArray(msgs) && msgs.length && msgs.every(m => m && (m as Row).isPrompt === true)) return null;
   const thread = s(find(data, 'ThreadId')) || s(rec.id) || `${upn}|${when}`;
-  return { day, key: (id || `name:${name}`).toLowerCase(), id, name: name || id, upn, thread };
+  const key = name && normName(name) ? `name:${normName(name)}` : id.toLowerCase();
+  return { day, key, id, name: name || id, upn, thread, when: when.slice(0, 19) };
 }
 
 /** Puts a search's results for [start, end] into the store, replacing those days (so a repeat is harmless). */
@@ -76,9 +89,10 @@ export function mergeHits(store: IAgentStore, start: string, end: string, hits: 
   const agents = { ...store.agents };
   hits.forEach(h => {
     if (h.day < start || h.day > end) return;
-    const t = `${h.day}|${h.key}|${h.upn}|${h.thread}`;
-    if (seen.has(t)) return;
-    seen.add(t);
+    const byThread = `${h.day}|${h.key}|${h.upn}|t|${h.thread}`, byTime = `${h.key}|${h.upn}|w|${h.when}`;
+    const dup = seen.has(byThread) || (h.when.length >= 19 && seen.has(byTime));
+    seen.add(byThread); if (h.when.length >= 19) seen.add(byTime);
+    if (dup) return;
     const day = days[h.day] || (days[h.day] = {});
     const agent = day[h.key] || (day[h.key] = {});
     agent[h.upn] = (agent[h.upn] || 0) + 1;
@@ -87,7 +101,7 @@ export function mergeHits(store: IAgentStore, start: string, end: string, hits: 
   });
   const through = !store.through || end > store.through ? end : store.through;
   const since = !store.since || start < store.since ? start : store.since;
-  return { ...store, days, agents, through, since };
+  return { ...store, days, agents, through, since, recountFrom: null };
 }
 
 /** The saved store comes back from a list admins can edit: keep only well-formed values. */
@@ -95,6 +109,12 @@ export function cleanStore(raw: unknown): IAgentStore {
   const x = raw as Partial<IAgentStore> | null;
   const out = emptyStore();
   if (!x || typeof x !== 'object' || x.v !== 1) return out;
+  if ((x as { cv?: unknown }).cv !== 2) {
+    // Counted the old way (by agent id, so repeats): start again from the same first day.
+    out.recountFrom = isDate(x.since) ? x.since : null;
+    return out;
+  }
+  out.recountFrom = isDate(x.recountFrom) ? x.recountFrom : null;
   out.through = isDate(x.through) ? x.through : null;
   out.since = isDate(x.since) ? x.since : null;
   const p = x.pending;
@@ -141,13 +161,13 @@ export interface IAgentRow {
 
 export interface IAgentsView {
   through: string | null; since: string | null; pending: IAgentStore['pending'];
+  /** Earlier counts were thrown away and are being recounted from this day. */
+  recountFrom: string | null;
   rows: IAgentRow[];
   runs28: number; people28: number; agents28: number; saved28: number; savedAll: number; runsAll: number;
   /** Agents with runs but no minutes figure yet. */
   noMinutes: number;
 }
-
-export const normName = (n: string): string => n.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: Map<string, string>): IAgentsView {
   const through = store.through;
@@ -194,7 +214,7 @@ export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: M
   const people28 = new Set<string>();
   rows.forEach(r => r.users.forEach(u => { if (u.runs28) people28.add(u.upn); }));
   return {
-    through, since: store.since, pending: store.pending, rows,
+    through, since: store.since, pending: store.pending, recountFrom: store.recountFrom, rows,
     runs28: rows.reduce((t, r) => t + r.runs28, 0), runsAll: rows.reduce((t, r) => t + r.runsAll, 0),
     people28: people28.size, agents28: rows.filter(r => r.runs28 > 0).length,
     saved28: rows.reduce((t, r) => t + (r.saved28 || 0), 0), savedAll: rows.reduce((t, r) => t + (r.savedAll || 0), 0),

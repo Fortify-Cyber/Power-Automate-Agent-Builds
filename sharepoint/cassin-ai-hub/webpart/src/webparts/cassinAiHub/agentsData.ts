@@ -76,7 +76,8 @@ export class AgentsData {
     let s = store;
     const lastFull = addDays(todayUtc(), -SETTLE_DAYS);
     if (!s.pending) {
-      const start = s.through ? addDays(s.through, 1) : addDays(lastFull, -(FIRST_DAYS - 1));
+      // A recount picks up from the old first day (30 days at a time, like any catch-up).
+      const start = s.through ? addDays(s.through, 1) : (s.recountFrom && s.recountFrom <= lastFull ? s.recountFrom : addDays(lastFull, -(FIRST_DAYS - 1)));
       if (start > lastFull) return null;
       const end = addDays(start, MAX_WINDOW - 1) < lastFull ? addDays(start, MAX_WINDOW - 1) : lastFull;
       const queryId = await this._startSearch(start, end);
