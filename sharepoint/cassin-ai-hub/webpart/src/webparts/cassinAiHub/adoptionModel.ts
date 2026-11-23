@@ -279,6 +279,9 @@ export interface IAdoption {
   /** Prompts in the last 28 days, the monthly average over the five months before (from the
    * 180-day report), and each saved month's total. Null when the report has no prompt counts. */
   promptsNow: number | null; promptsBefore: number | null; monthPrompts: number[];
+  /** Change in prompts, last 28 days against the 28 days before (%), from Microsoft's daily
+   *  prompt counts; null when the report doesn't carry 56 days of them. */
+  promptsChange28: number | null;
   hasDailyPrompts: boolean;
   /** Copilot credits (Cowork and other usage-billed services); null when not read. */
   credits: ICreditsView | null;
@@ -309,6 +312,15 @@ function topQuarter(credits: number[]): number | null {
   if (credits.length < 4) return null;
   const s = [...credits].sort((a, b) => a - b);
   return s[Math.min(s.length - 1, Math.ceil(s.length * 0.75))];
+}
+
+/** Prompts in the last 28 days of the trend against the 28 days before, as a % change. */
+function change28(trend: ITrendPoint[]): number | null {
+  const daily = trend.filter(t => t.prompts !== null);
+  if (daily.length < 56) return null;
+  const sum = (a: ITrendPoint[]): number => a.reduce((t, p) => t + (p.prompts as number), 0);
+  const now = sum(daily.slice(-28)), before = sum(daily.slice(-56, -28));
+  return before > 0 ? Math.round(100 * (now - before) / before) : null;
 }
 
 function groupRows(people: IPerson[], key: (p: IPerson) => string): IGroupRow[] {
@@ -484,7 +496,7 @@ export function buildAdoption(input: IAdoptionInput): IAdoption {
     appCounts: usage28.apps.map(app => ({ app, users: people.filter(p => p.appsRecent.indexOf(app.key) >= 0).length }))
       .filter(a => a.users > 0).sort((a, b) => b.users - a.users),
     roles: groupRows(people, p => p.role),
-    moves, promptsNow, promptsBefore,
+    moves, promptsNow, promptsBefore, promptsChange28: change28(trend),
     monthPrompts: snaps.map(sn => Object.keys(sn.people).reduce((t, k) => t + sn.people[k][1], 0)),
     hasDailyPrompts: trend.some(t => t.prompts !== null),
     credits: buildCredits(input.credits, directory),

@@ -161,10 +161,13 @@ export class AdoptionView {
     const n = (v: number): string => v.toLocaleString('en-US');
     let promptsTile = { accent: false, label: 'Licensed', value: String(m.licensed), sub: 'Microsoft 365 Copilot licenses assigned', delta: '' };
     if (m.promptsNow !== null) {
-      const change = m.promptsBefore ? Math.round(100 * (m.promptsNow - m.promptsBefore) / m.promptsBefore) : null;
+      // Against the 28 days before (Microsoft's daily counts, as in the chart below); without
+      // those, against the monthly average of the five months before (180-day report).
+      const vsPrev = m.promptsChange28 !== null;
+      const change = vsPrev ? m.promptsChange28 : m.promptsBefore ? Math.round(100 * (m.promptsNow - m.promptsBefore) / m.promptsBefore) : null;
       promptsTile = {
         accent: false, label: 'Prompts, last 28 days', value: n(m.promptsNow), sub: `About ${active ? n(Math.round(m.promptsNow / active)) : 0} per active person`,
-        delta: change === null ? '' : `<div class="delta ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change)}% vs the monthly average before</div>`
+        delta: change === null ? '' : `<div class="delta ${change >= 0 ? 'up' : 'down'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change)}% vs ${vsPrev ? 'the 28 days before' : 'the monthly average before'}</div>`
       };
     }
     const tiles: Array<{ accent: boolean; label: string; value: string; sub: string; delta: string }> = [
