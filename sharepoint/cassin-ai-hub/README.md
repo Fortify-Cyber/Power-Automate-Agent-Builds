@@ -121,7 +121,7 @@ Microsoft's data runs 2 to 3 days behind. **Check on first use:** Microsoft hasn
 - To check what Microsoft returns, open the page with `?adoptionDebug=1` and look in the browser console (F12) for *Cassin AI Hub credits*.
 
 ### 8b. Turn on the Agent usage page (10 min, once)
-An admin-only page (**AI Working Group → Agent usage (admins)**) showing which Copilot agents people use, how often, who built each one, and a running total of the time they save. It covers every agent: Fortify's (Daily Digest), agents people build themselves, and Microsoft's own (Researcher, Analyst).
+An admin-only page (**AI Working Group → Agent usage (admins)**) showing which Copilot agents people use, how often, who built each one, and a running total of the time they save. It covers every agent: Fortify's (Daily Digest), agents people build themselves, and Microsoft's own (Researcher, Analyst). Apps built in Copilot Studio count too: Microsoft can log them without a name (only an id), so they first appear as *Copilot Studio app (…id)*; rename that row in the Agent Time Savings list to give it its name. Only use in Teams or Microsoft 365 Copilot is logged; Copilot Studio's test pane and demo website aren't.
 
 1. **Update the web part** to 1.8 or later (app catalog, as in step 8.1) and **run the deploy script**. It adds the **Agent Time Savings** list (owners and AI Hub Admins only), the **Agent usage** page (same access as Copilot adoption) and the menu link.
 2. **Approve the API access:** SharePoint admin center → Advanced → API access → approve **Microsoft Graph, AuditLogsQuery.Read.All** for *Cassin AI Hub web part*.

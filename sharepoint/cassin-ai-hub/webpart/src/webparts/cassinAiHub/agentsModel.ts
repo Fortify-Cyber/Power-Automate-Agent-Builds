@@ -10,6 +10,11 @@
 // day count once. Microsoft doesn't record whether the agent's task finished, so a run counts
 // once the agent has answered.
 //
+// Apps built in Copilot Studio can be logged without an agent name or id, identified only by
+// AppIdentity "Copilot.Studio.<app id>" (and possibly as ConnectedAIAppInteraction records):
+// those count too, named "Copilot Studio app (…id)" until an admin names them in the Agent
+// Time Savings list.
+//
 // Agents are counted by name, not by Microsoft's agent id: the same agent can show up under
 // several ids (Microsoft logs some conversations once per id, and an agent republished or
 // used from another app gets another id). A conversation logged twice counts once: same
@@ -27,7 +32,7 @@ export const normName = (n: string): string => n.toLowerCase().replace(/[^a-z0-9
 export interface IAgentStore {
   v: 1;
   /** How runs are counted. Counts saved by an earlier version are thrown away and recounted. */
-  cv: 2;
+  cv: 3;
   /** Set when earlier counts were thrown away: the first new search starts here. */
   recountFrom: string | null;
   /** The last UTC day counted, inclusive (YYYY-MM-DD); null before the first search. */
@@ -40,7 +45,7 @@ export interface IAgentStore {
   days: Record<string, Record<string, Record<string, number>>>;
 }
 
-export const emptyStore = (): IAgentStore => ({ v: 1, cv: 2, recountFrom: null, through: null, since: null, pending: null, agents: {}, days: {} });
+export const emptyStore = (): IAgentStore => ({ v: 1, cv: 3, recountFrom: null, through: null, since: null, pending: null, agents: {}, days: {} });
 
 const DAY = 864e5;
 const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -65,9 +70,15 @@ const s = (v: unknown, max = 200): string => (typeof v === 'string' ? v.trim().s
  */
 export function parseAuditRecord(rec: Row): IAgentHit | null {
   const data = (rec.auditData ?? rec.AuditData ?? rec) as Row;
-  const id = s(find(data, 'AgentId'));
+  let id = s(find(data, 'AgentId'));
   const name = s(find(data, 'AgentName'));
-  if (!id && !name) return null;
+  // A placeholder id (all ones) says nothing about which agent it was.
+  if (/^[1-]+$/.test(id)) id = '';
+  if (!id && !name) {
+    const app = s(find(data, 'AppIdentity'));
+    if (!/^Copilot\.Studio\./i.test(app)) return null;
+    id = app;
+  }
   const when = s(rec.createdDateTime) || s(find(data, 'CreationTime'));
   const day = when.slice(0, 10);
   if (!isDate(day)) return null;
@@ -78,7 +89,13 @@ export function parseAuditRecord(rec: Row): IAgentHit | null {
   if (Array.isArray(msgs) && msgs.length && msgs.every(m => m && (m as Row).isPrompt === true)) return null;
   const thread = s(find(data, 'ThreadId')) || s(rec.id) || `${upn}|${when}`;
   const key = name && normName(name) ? `name:${normName(name)}` : id.toLowerCase();
-  return { day, key, id, name: name || id, upn, thread, when: when.slice(0, 19) };
+  return { day, key, id, name: name || unnamed(id), upn, thread, when: when.slice(0, 19) };
+}
+
+/** A name for an agent or app Microsoft logs without one. */
+export function unnamed(id: string): string {
+  const tail = id.replace(/[^0-9a-z]/gi, '').slice(-6);
+  return /^Copilot\.Studio\./i.test(id) ? `Copilot Studio app (…${tail})` : id;
 }
 
 /** Puts a search's results for [start, end] into the store, replacing those days (so a repeat is harmless). */
@@ -109,8 +126,9 @@ export function cleanStore(raw: unknown): IAgentStore {
   const x = raw as Partial<IAgentStore> | null;
   const out = emptyStore();
   if (!x || typeof x !== 'object' || x.v !== 1) return out;
-  if ((x as { cv?: unknown }).cv !== 2) {
-    // Counted the old way (by agent id, so repeats): start again from the same first day.
+  if ((x as { cv?: unknown }).cv !== 3) {
+    // Counted an older way (by agent id, so repeats; or without Copilot Studio apps): start
+    // again from the same first day.
     out.recountFrom = isDate(x.since) ? x.since : null;
     return out;
   }
@@ -177,7 +195,8 @@ export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: M
   const weekStart = (i: number): string => (through ? addDays(through, -7 * (8 - i) + 1) : '');
   const rows = Object.keys(store.agents).map(key => {
     const a = store.agents[key];
-    const sv = (a.id && byId.get(a.id.toLowerCase())) || byName.get(normName(a.name));
+    const svById = a.id ? byId.get(a.id.toLowerCase()) : undefined;
+    const sv = svById || byName.get(normName(a.name));
     let runs28 = 0, runsAll = 0;
     let last: string | null = null;
     const weekly = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -201,7 +220,8 @@ export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: M
     });
     const minutes = sv && sv.minutes !== null && sv.minutes >= 0 ? sv.minutes : null;
     return {
-      key, name: a.name || sv?.name || key, builtBy: sv?.builtBy || '', minutes, listed: !!sv,
+      // The name an admin gave it in the list wins (for apps Microsoft logs without a name).
+      key, name: svById?.name || a.name || sv?.name || key, builtBy: sv?.builtBy || '', minutes, listed: !!sv,
       runs28, runsAll, lastUsed: last,
       people28: Array.from(users.values()).filter(u => u.runs28 > 0).length, peopleAll: users.size,
       saved28: minutes === null ? null : runs28 * minutes, savedAll: minutes === null ? null : runsAll * minutes,

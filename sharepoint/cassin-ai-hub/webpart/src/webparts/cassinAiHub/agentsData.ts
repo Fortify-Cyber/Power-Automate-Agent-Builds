@@ -114,10 +114,21 @@ export class AgentsData {
       displayName: `Cassin AI Hub agent usage ${start} to ${end}`,
       filterStartDateTime: `${start}T00:00:00Z`,
       filterEndDateTime: `${addDays(end, 1)}T00:00:00Z`,
-      recordTypeFilters: ['copilotInteraction']
+      // Copilot and agent use, and apps built in Copilot Studio (which Microsoft can log as
+      // "connected AI app" interactions).
+      recordTypeFilters: ['copilotInteraction', 'connectedAIAppInteraction']
     };
+    const post = (b: object): Promise<{ id?: string }> =>
+      withTimeout(client.api('/security/auditLog/queries').post(b) as Promise<{ id?: string }>, CALL_MS, 'Microsoft Graph');
     try {
-      const res = await withTimeout(client.api('/security/auditLog/queries').post(body) as Promise<{ id?: string }>, CALL_MS, 'Microsoft Graph');
+      let res: { id?: string };
+      try {
+        res = await post(body);
+      } catch (err) {
+        // A tenant whose Graph doesn't know the second record type: search Copilot use only.
+        if ((err as { statusCode?: number })?.statusCode !== 400) throw err;
+        res = await post({ ...body, recordTypeFilters: ['copilotInteraction'] });
+      }
       if (!res?.id) throw new Error('Microsoft returned no search id');
       return res.id;
     } catch (err) { throw this._explain(err); }
@@ -262,6 +273,7 @@ export class AgentsData {
         }
         continue;
       }
+      // Apps logged without a name get "Copilot Studio app (…id)": rename the row to name it.
       const res = await this._http.post(`${api}/items`, Http.configurations.v1, { headers, body: JSON.stringify({ Title: a.name.slice(0, 255), AgentId: a.id }) });
       if (res.ok) savings.push({ name: a.name, agentId: a.id, builtBy: '', minutes: null });
     }
