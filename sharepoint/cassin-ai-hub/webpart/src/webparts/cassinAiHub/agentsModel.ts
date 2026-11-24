@@ -172,6 +172,9 @@ export interface IAgentRow {
   runs28: number; people28: number; runsAll: number; peopleAll: number; lastUsed: string | null;
   /** Minutes saved: last 28 days and since counting began (null without a minutes figure). */
   saved28: number | null; savedAll: number | null;
+  /** Copilot credits in the same 28 days, for an agent that is itself a credit service
+   *  (Copilot Cowork); null for agents Microsoft's credit reports don't cover. */
+  credits28: number | null;
   /** Runs per week, oldest first, the last 8 weeks. */
   weekly: number[];
   users: Array<{ upn: string; name: string; runs28: number; runsAll: number }>;
@@ -183,11 +186,17 @@ export interface IAgentsView {
   recountFrom: string | null;
   rows: IAgentRow[];
   runs28: number; people28: number; agents28: number; saved28: number; savedAll: number; runsAll: number;
+  /** Whether Microsoft's credit figures were available to the page. */
+  hasCredits: boolean;
   /** Agents with runs but no minutes figure yet. */
   noMinutes: number;
 }
 
-export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: Map<string, string>): IAgentsView {
+/** Credits per service per day, as the adoption page saves them (Cost Management reports). */
+export type CreditDays = Array<{ date: string; byService: Record<string, number> }>;
+
+export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: Map<string, string>,
+                            credits: CreditDays | null = null, serviceAgents: Record<string, string[]> = {}): IAgentsView {
   const through = store.through;
   const from28 = through ? addDays(through, -27) : '';
   const byId = new Map(savings.filter(x => x.agentId).map(x => [x.agentId.toLowerCase(), x]));
@@ -219,12 +228,18 @@ export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: M
       }
     });
     const minutes = sv && sv.minutes !== null && sv.minutes >= 0 ? sv.minutes : null;
+    const service = Object.keys(serviceAgents).find(k => serviceAgents[k].indexOf(normName(a.name)) >= 0 ||
+      (!!sv && serviceAgents[k].indexOf(normName(sv.name)) >= 0));
+    const credits28 = service && credits && through
+      ? credits.filter(d => d.date >= from28 && d.date <= through).reduce((t, d) => t + (d.byService[service] || 0), 0)
+      : null;
     return {
       // The name an admin gave it in the list wins (for apps Microsoft logs without a name).
       key, name: svById?.name || a.name || sv?.name || key, builtBy: sv?.builtBy || '', minutes, listed: !!sv,
       runs28, runsAll, lastUsed: last,
       people28: Array.from(users.values()).filter(u => u.runs28 > 0).length, peopleAll: users.size,
       saved28: minutes === null ? null : runs28 * minutes, savedAll: minutes === null ? null : runsAll * minutes,
+      credits28,
       weekly,
       users: Array.from(users.entries()).map(([upn, u]) => ({ upn, name: names.get(upn) || upn, ...u }))
         .sort((x, y) => y.runs28 - x.runs28 || y.runsAll - x.runsAll || x.name.localeCompare(y.name))
@@ -238,6 +253,7 @@ export function buildAgents(store: IAgentStore, savings: ITimeSaving[], names: M
     runs28: rows.reduce((t, r) => t + r.runs28, 0), runsAll: rows.reduce((t, r) => t + r.runsAll, 0),
     people28: people28.size, agents28: rows.filter(r => r.runs28 > 0).length,
     saved28: rows.reduce((t, r) => t + (r.saved28 || 0), 0), savedAll: rows.reduce((t, r) => t + (r.savedAll || 0), 0),
-    noMinutes: rows.filter(r => r.minutes === null).length
+    noMinutes: rows.filter(r => r.minutes === null).length,
+    hasCredits: !!credits
   };
 }

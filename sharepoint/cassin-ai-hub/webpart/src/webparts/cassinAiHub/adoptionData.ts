@@ -223,6 +223,12 @@ export class AdoptionData {
     return body.value[0] || null;
   }
 
+  /** The Copilot credits last saved for admins (the Agent usage page uses them for Cowork). */
+  public async storedCredits(): Promise<ICreditsRaw | null> {
+    const stored = await this._readLatest();
+    return stored?.credits && !stored.credits.error ? stored.credits : null;
+  }
+
   private async _readLatest(): Promise<IStoredAdoption | null> {
     const item = await this._latestItem();
     if (!item) return null;

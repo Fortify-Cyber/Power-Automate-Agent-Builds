@@ -1,6 +1,6 @@
 import { MOVES, STAGES, stageOf, daysBetween, type IAdoption, type IGroupRow, type IPerson, type Move } from './adoptionModel';
 import { esc } from './render';
-import type { ICreditsView } from './creditsModel';
+import { CREDIT_PRICE, dollars, type ICreditsView } from './creditsModel';
 
 // The admin "Copilot adoption" page, laid out as in preview/adoption-preview.html. Every value
 // that comes from Graph or Entra ID goes through esc().
@@ -287,7 +287,7 @@ export class AdoptionView {
         <th data-ad-sort="name" class="sort">Name</th><th>Role</th>
         ${m.hasDays ? `<th data-ad-sort="stage" class="sort">Stage</th><th data-ad-sort="days" class="sort n">${m.hasCreditPeople ? 'Copilot days' : 'Active days'}</th>` : '<th data-ad-sort="last" class="sort">Last used</th>'}
         ${m.hasPrompts ? '<th data-ad-sort="prompts" class="sort n">Prompts</th>' : ''}
-        ${m.hasCreditPeople ? '<th data-ad-sort="credits" class="sort n" title="Copilot credits, last 28 days: Cowork and the other pay-as-you-go services">Cowork credits</th>' : ''}
+        ${m.hasCreditPeople ? `<th data-ad-sort="credits" class="sort n" title="Copilot credits, last 28 days: Cowork and the other pay-as-you-go services">Cowork credits</th><th data-ad-sort="credits" class="sort n" title="Credits x $${CREDIT_PRICE.toFixed(2)} per credit (estimate)">Cost</th>` : ''}
         ${m.months.length && m.hasDays ? `<th>${monthName(m.months[0])} → now</th>` : ''}
         <th data-ad-sort="move" class="sort">Change</th>
       </tr></thead><tbody data-ad-rows></tbody></table></div>
@@ -314,14 +314,14 @@ export class AdoptionView {
     };
     rows.sort((a, b) => { const x = val(a), y = val(b); return x > y ? this._sort.dir : x < y ? -this._sort.dir : a.name.localeCompare(b.name); });
     const shown = this._showAll ? rows : rows.slice(0, PAGE);
-    const cols = 4 + (m.hasPrompts ? 1 : 0) + (m.hasCreditPeople ? 1 : 0) + (m.months.length && m.hasDays ? 1 : 0) + (m.hasDays ? 1 : 0);
+    const cols = 4 + (m.hasPrompts ? 1 : 0) + (m.hasCreditPeople ? 2 : 0) + (m.months.length && m.hasDays ? 1 : 0) + (m.hasDays ? 1 : 0);
     const tbody = root.querySelector('[data-ad-rows]');
     if (tbody) {
       tbody.innerHTML = shown.map(p => `<tr class="click" data-ad-person="${m.people.indexOf(p)}">
         <td>${esc(p.name)}</td><td>${esc(p.role)}</td>
         ${m.hasDays ? `<td>${this._stage(p.stage)}${p.viaCredits ? this._viaTag(p) : ''}</td><td class="n">${p.days}</td>` : `<td>${p.last ? shortDate(p.last) : '–'}</td>`}
         ${m.hasPrompts ? `<td class="n">${p.prompts}</td>` : ''}
-        ${m.hasCreditPeople ? `<td class="n">${p.credits !== null ? Math.round(p.credits).toLocaleString('en-US') : '<span class="faint">–</span>'}</td>` : ''}
+        ${m.hasCreditPeople ? (p.credits !== null ? `<td class="n">${Math.round(p.credits).toLocaleString('en-US')}</td><td class="n">${dollars(p.credits)}</td>` : '<td class="n"><span class="faint">–</span></td><td class="n"><span class="faint">–</span></td>') : ''}
         ${m.months.length && m.hasDays ? `<td>${this._spark(p)}</td>` : ''}
         <td>${this._move(p.move)}</td></tr>`).join('') ||
         `<tr><td colspan="${cols}" class="faint">No one matches.</td></tr>`;
@@ -385,6 +385,7 @@ export class AdoptionView {
       p.creditDays ? [String(p.creditDays), 'Days using Cowork (28)'] : null,
       m.hasPrompts ? [String(p.prompts), 'Prompts (28)'] : null,
       this._personCredits(p.upn),
+      p.credits !== null ? [dollars(p.credits), 'Credit cost (28), est.'] : null,
       [String(p.appsRecent.length), 'Apps used (28)']
     ].filter((x): x is string[] => !!x);
     pd.querySelector('aside')!.innerHTML = `
@@ -438,26 +439,26 @@ export class AdoptionView {
       return `<div class="delta">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch)}% vs the 28 days before</div>`;
     };
     const tiles = [
-      `<div class="ad-tile accent"><div class="k">Cowork credits, last 28 days</div><div class="v">${n(c.coworkLast28)}</div><div class="s">${c.allLast28 ? Math.round(100 * c.coworkLast28 / c.allLast28) : 0}% of all Copilot credits</div>${delta(c.coworkLast28, c.coworkPrev28)}</div>`,
-      `<div class="ad-tile"><div class="k">All Copilot credits, last 28 days</div><div class="v">${n(c.allLast28)}</div><div class="s">${c.services.length} service${c.services.length === 1 ? '' : 's'}</div>${delta(c.allLast28, c.allPrev28)}</div>`,
+      `<div class="ad-tile accent"><div class="k">Cowork credits, last 28 days</div><div class="v">${n(c.coworkLast28)}</div><div class="s">≈ ${dollars(c.coworkLast28)} · ${c.allLast28 ? Math.round(100 * c.coworkLast28 / c.allLast28) : 0}% of all Copilot credits</div>${delta(c.coworkLast28, c.coworkPrev28)}</div>`,
+      `<div class="ad-tile"><div class="k">All Copilot credits, last 28 days</div><div class="v">${n(c.allLast28)}</div><div class="s">≈ ${dollars(c.allLast28)} · ${c.services.length} service${c.services.length === 1 ? '' : 's'}</div>${delta(c.allLast28, c.allPrev28)}</div>`,
       `<div class="ad-tile"><div class="k">People using credits</div><div class="v">${c.people.length}</div><div class="s">Last ${c.userDays} days</div></div>`,
       c.balance && c.balance.remaining !== null
-        ? `<div class="ad-tile"><div class="k">Credits remaining</div><div class="v">${n(c.balance.remaining)}</div><div class="s">${c.balance.purchased !== null ? `of ${n(c.balance.purchased)} purchased` : 'Prepaid balance'}</div></div>`
-        : `<div class="ad-tile"><div class="k">Average per day</div><div class="v">${n(c.allLast28 / 28)}</div><div class="s">Credits, last 28 days</div></div>`
+        ? `<div class="ad-tile"><div class="k">Credits remaining</div><div class="v">${n(c.balance.remaining)}</div><div class="s">≈ ${dollars(c.balance.remaining)}${c.balance.purchased !== null ? ` · of ${n(c.balance.purchased)} purchased` : ' · prepaid balance'}</div></div>`
+        : `<div class="ad-tile"><div class="k">Average per day</div><div class="v">${n(c.allLast28 / 28)}</div><div class="s">Credits a day ≈ ${dollars(c.allLast28 / 28)}</div></div>`
     ].join('');
     const people = c.people.slice(0, 25).map(p => {
       const i = p.upn ? this._m.people.findIndex(x => x.upn.toLowerCase() === p.upn!.toLowerCase()) : -1;
-      return `<tr${i >= 0 ? ` class="click" data-ad-person="${i}"` : ''}><td>${esc(p.name)}</td><td>${esc(p.role)}</td><td class="n">${n(p.credits)}</td><td class="n">${n(p.sessions)}</td><td class="n">${p.share}%</td></tr>`;
+      return `<tr${i >= 0 ? ` class="click" data-ad-person="${i}"` : ''}><td>${esc(p.name)}</td><td>${esc(p.role)}</td><td class="n">${n(p.credits)}</td><td class="n">${dollars(p.credits)}</td><td class="n">${n(p.sessions)}</td><td class="n">${p.share}%</td></tr>`;
     }).join('');
     return `<div class="ad-tiles">${tiles}</div>
       <div class="ad-panel"><h3>Copilot credits per day</h3>
-        <p class="hint">Credits used each day, by service, over the last 8 weeks. Microsoft reports credits, not dollars.</p>
+        <p class="hint">Credits used each day, by service, over the last 8 weeks. Microsoft reports credits, not dollars; costs on this page are credits × $${CREDIT_PRICE.toFixed(2)}.</p>
         <div class="ad-legend">${c.services.map((sv, i) => `<span><i style="background:${SERVICE_COLORS[i % SERVICE_COLORS.length]}"></i>${esc(sv.name)} <span class="faint">${n(sv.last28)}</span></span>`).join('')}</div>
         <div data-ad-chart="credits"></div></div>
       <div class="ad-panel"><h3>Who uses credits <span class="count">(${c.people.length})</span></h3>
         <p class="hint">Copilot credits per person over the last ${c.userDays} days, all services together.${c.people.length > 25 ? ' Top 25 shown.' : ''}</p>
-        ${c.people.length ? `<div class="scroll"><table><thead><tr><th>Name</th><th>Role</th><th class="n">Credits</th><th class="n">Sessions</th><th class="n">Share</th></tr></thead><tbody>${people}</tbody></table></div>` : '<p class="faint">No per-person usage reported.</p>'}</div>
-      <p class="ad-note">From Microsoft's Copilot Cost Management reports (a Microsoft preview), read when AI Admin opens this page and saved with the other figures.</p>`;
+        ${c.people.length ? `<div class="scroll"><table><thead><tr><th>Name</th><th>Role</th><th class="n">Credits</th><th class="n">Cost</th><th class="n">Sessions</th><th class="n">Share</th></tr></thead><tbody>${people}</tbody></table></div>` : '<p class="faint">No per-person usage reported.</p>'}</div>
+      <p class="ad-note">From Microsoft's Copilot Cost Management reports (a Microsoft preview), read when AI Admin opens this page and saved with the other figures. Costs are estimates: credits × $${CREDIT_PRICE.toFixed(2)}, the pay-as-you-go price per Copilot credit. Prepaid credit packs can cost less per credit, and Microsoft's invoice is the final word.</p>`;
   }
 
   private _personCredits(upn: string): string[] | null {

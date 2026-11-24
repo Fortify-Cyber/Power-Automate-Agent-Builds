@@ -88,6 +88,21 @@ export function cleanCredits(raw: unknown): ICreditsRaw | null {
   return { days, users, userDays: Math.min(num(x.userDays) ?? 0, 60), balance, error, detail: str(x.detail).slice(0, 300) };
 }
 
+// ---- cost -------------------------------------------------------------------
+
+/** Dollars per Copilot credit, the pay-as-you-go price. Microsoft's reports give credits only,
+ *  so cost on the hub is credits x this (an estimate: prepaid packs can cost less per credit). */
+export const CREDIT_PRICE = 0.01;
+
+/** Credits as dollars: cents under 100 dollars, whole dollars above. */
+export function dollars(credits: number): string {
+  const v = Math.max(0, credits) * CREDIT_PRICE;
+  return v < 100 ? `$${v.toFixed(2)}` : `$${Math.round(v).toLocaleString('en-US')}`;
+}
+
+/** Credit services that are themselves an agent on the Agent usage page (matched by name). */
+export const SERVICE_AGENTS: Record<string, string[]> = { cowork: ['copilot cowork', 'cowork'], workiq: ['work iq'] };
+
 // ---- what the Credits tab shows ----------------------------------------------
 
 const SERVICE_NAMES: Record<string, string> = {

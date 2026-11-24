@@ -1,10 +1,11 @@
 import type { MSGraphClientFactory, MSGraphClientV3, SPHttpClient } from '@microsoft/sp-http';
 import { SPHttpClient as Http } from '@microsoft/sp-http';
 
-import { AdoptionError, HISTORY_LIST, withTimeout } from './adoptionData';
+import { AdoptionData, AdoptionError, HISTORY_LIST, withTimeout } from './adoptionData';
+import { SERVICE_AGENTS } from './creditsModel';
 import {
   addDays, buildAgents, cleanStore, emptyStore, mergeHits, normName, parseAuditRecord,
-  type IAgentHit, type IAgentStore, type IAgentsView, type ITimeSaving, type Row
+  type CreditDays, type IAgentHit, type IAgentStore, type IAgentsView, type ITimeSaving, type Row
 } from './agentsModel';
 
 // Everything the Agent usage page reads, all inside Cassin's Microsoft 365:
@@ -49,19 +50,23 @@ export class AgentsData {
                      private readonly _webUrl: string, private readonly _webRelUrl: string) {}
 
   public async load(): Promise<IAgentsLoad> {
-    const [stored, savingsRes, names] = await Promise.all([
+    // Copilot credits as the adoption page last saved them: Cowork's credits and cost.
+    const creditsP = withTimeout(new AdoptionData(this._factory, this._http, this._webUrl, this._webRelUrl).storedCredits(), 30e3, 'SharePoint')
+      .then(c => (c ? c.days as CreditDays : null)).catch(() => null);
+    const [stored, savingsRes, names, credits] = await Promise.all([
       withTimeout(this._readStore(), 30e3, 'SharePoint').catch(() => null),
       withTimeout(this._savings(), 30e3, 'SharePoint').then(v => ({ v, missing: false })).catch(() => ({ v: [] as ITimeSaving[], missing: true })),
-      withTimeout(this._names(), 45e3, 'Microsoft Graph').catch(() => new Map<string, string>())
+      withTimeout(this._names(), 45e3, 'Microsoft Graph').catch(() => new Map<string, string>()),
+      creditsP
     ]);
     const store = stored?.store || emptyStore();
     const savings = savingsRes.v;
-    const view = buildAgents(store, savings, names);
+    const view = buildAgents(store, savings, names, credits, SERVICE_AGENTS);
     const base = { savingsUrl: `${this._webUrl}/${SAVINGS_LIST}`, savingsMissing: savingsRes.missing };
     // Only people who can write the history list (owners, AI Hub Admins) can save new counts.
     if (!stored?.canWrite) return { view, problem: null, ...base };
     const refresh = this._refresh(store, stored.itemId, savings, names, savingsRes.missing)
-      .then(s => ({ view: s ? buildAgents(s, savings, names) : null, problem: null }))
+      .then(s => ({ view: s ? buildAgents(s, savings, names, credits, SERVICE_AGENTS) : null, problem: null }))
       .catch(err => {
         const e = (err as AdoptionError)?.isAdoptionError ? err as AdoptionError : new AdoptionError(String((err as Error)?.message || err), 'other');
         console.warn('Cassin AI Hub agents: could not refresh from the audit log', e.message);

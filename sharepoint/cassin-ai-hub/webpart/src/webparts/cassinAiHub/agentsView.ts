@@ -1,6 +1,7 @@
 import type { AdoptionError } from './adoptionData';
 import type { IAgentRow, IAgentsView } from './agentsModel';
 import { esc } from './render';
+import { CREDIT_PRICE, dollars } from './creditsModel';
 
 // The admin "Agent usage" page: which agents are used, how often, who built them, and the
 // time they save. Every value from Microsoft or a list goes through esc().
@@ -135,16 +136,19 @@ export class AgentsView {
         <td>${r.lastUsed ? shortDate(r.lastUsed) : '–'}</td>
         <td class="n">${n(r.runsAll)}</td>
         <td class="n">${r.minutes === null ? '<span class="faint">–</span>' : n(r.minutes)}</td>
-        <td class="n">${r.savedAll === null ? '<span class="faint">Add minutes</span>' : `<b>${hours(r.savedAll)}</b>`}</td></tr>`;
+        <td class="n">${r.savedAll === null ? '<span class="faint">Add minutes</span>' : `<b>${hours(r.savedAll)}</b>`}</td>
+        ${v.hasCredits ? (r.credits28 === null ? '<td class="n"><span class="faint">–</span></td><td class="n"><span class="faint">–</span></td>'
+          : `<td class="n">${n(r.credits28)}</td><td class="n">${dollars(r.credits28)}</td>`) : ''}</tr>`;
       if (!open) return main;
       const people = r.users.slice(0, 50).map(u => `<li><span>${esc(u.name || u.upn)}</span><span class="faint">${n(u.runs28)} in 28 days · ${n(u.runsAll)} in all</span></li>`).join('');
-      return `${main}<tr class="ag-detail"><td colspan="9"><div class="ag-people"><b>Who uses it</b> <span class="faint">(${r.users.length})</span><ul>${people}</ul>${r.users.length > 50 ? '<p class="faint">Top 50 shown.</p>' : ''}</div></td></tr>`;
+      return `${main}<tr class="ag-detail"><td colspan="${v.hasCredits ? 11 : 9}"><div class="ag-people"><b>Who uses it</b> <span class="faint">(${r.users.length})</span><ul>${people}</ul>${r.users.length > 50 ? '<p class="faint">Top 50 shown.</p>' : ''}</div></td></tr>`;
     }).join('');
     return `<div class="ad-panel"><h3>Agents <span class="count">(${v.rows.length})</span></h3>
       <p class="hint">Each conversation with an agent counts as one run. Select an agent to see who uses it. Time saved is runs × the agent's minutes per run.</p>
       <div class="scroll"><table class="ag-table"><thead><tr>
         ${th('name', 'Agent', '')}<th>Built by</th>${th('runs28', 'Runs, 28 days')}<th class="n">People</th><th>Last 8 weeks</th><th>Last used</th>
         ${th('runsAll', `Runs since ${since}`)}<th class="n">Min per run</th>${th('saved', 'Time saved')}
+        ${v.hasCredits ? `<th class="n" title="Copilot credits, last 28 days">Credits, 28 days</th><th class="n" title="Credits x $${CREDIT_PRICE.toFixed(2)} per credit (estimate)">Cost, 28 days</th>` : ''}
       </tr></thead><tbody>${body}</tbody></table></div></div>`;
   }
 
@@ -160,6 +164,6 @@ export class AgentsView {
     const v = this._v;
     return `<p class="ad-note">Source: Microsoft Purview's audit log of Copilot use, through Microsoft Graph${v.through ? `, counted up to ${longDate(v.through)}` : ''}. Microsoft's log runs a day or two behind, and new days are added when an account that can search it (such as AI Admin) opens this page. A run counts once the agent answers: Microsoft doesn't record whether an agent's task was finished.
       Time saved is an estimate: the minutes per run and "built by" come from the admin-only <a href="${esc(this._links.savingsUrl)}">Agent Time Savings list</a>, where you can change them (a change applies to every run counted). Agents seen for the first time are added to that list for you to fill in.
-      Everything stays in Cassin's Microsoft 365. This page counts use only; it never reads what anyone asks an agent.</p>`;
+      ${v.hasCredits ? `Credits and cost: Microsoft's credit reports split Copilot credits by service and person, not by agent, so they're shown for agents that are themselves a billed service (Copilot Cowork), from the figures the Copilot adoption page last saved. Agents built in Copilot Studio and Microsoft's included agents don't use these credits; Copilot Studio usage is billed separately. Cost is credits × $${CREDIT_PRICE.toFixed(2)}, the pay-as-you-go price (an estimate). ` : ''}Everything stays in Cassin's Microsoft 365. This page counts use only; it never reads what anyone asks an agent.</p>`;
   }
 }
